@@ -1,0 +1,28 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+export type ExpenseCategory = 'Food' | 'Transport' | 'Bills' | 'Shopping' | 'Health' | 'Grocery' | 'Other';
+
+export interface Expense {
+  id: string;
+  name: string;
+  amount: number;
+  category: ExpenseCategory;
+  date: string;
+  notes?: string;
+}
+
+export interface Budget {
+  total: number;
+  categories: Record<ExpenseCategory, number>;
+}
+
+export function autoCategorize(name: string): ExpenseCategory {
+  const lower = name.toLowerCase();
+  if (lower.match(/uber|taxi|metro|train|bus|fuel|gas|lyft|careem/)) return 'Transport';
+  if (lower.match(/grocery|supermarket|mart|store|milk|bread|eggs|fruits|vegetables/)) return 'Grocery';
+  if (lower.match(/kfc|mcdonald|coffee|starbucks|food|lunch|dinner|restaurant|bakery/)) return 'Food';
+  if (lower.match(/electric|water|internet|bill|rent|utility|wapda|ptcl/)) return 'Bills';
+  if (lower.match(/amazon|mall|clothes|shopping|shoes|daraz|outfitters/)) return 'Shopping';
+  if (lower.match(/pharmacy|doctor|hospital|medicine|clinic|chughtai/)) return 'Health';
+  return 'Other';
+}
