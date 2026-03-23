@@ -80,15 +80,15 @@ export default function DashboardScreen() {
           {/* Daily Allowance KPI */}
           <View style={[styles.kpiCard, { width: '100%' }]}>
             <View style={styles.kpiRowSplit}>
-              <View>
-                <Text style={styles.kpiLabel}>DAILY ALLOWANCE ({daysLeft} DAYS LEFT)</Text>
+              <View style={{ flex: 1, marginRight: 12 }}>
+                <Text style={styles.kpiLabel} numberOfLines={1} adjustsFontSizeToFit>DAILY ALLOWANCE ({daysLeft} DAYS LEFT)</Text>
                 <View style={styles.kpiValueRow}>
                   <Text style={styles.kpiCurrency}>PKR</Text>
-                  <Text style={styles.kpiValueLarge}>{Math.floor(dailyAllowance).toLocaleString()}</Text>
+                  <Text style={styles.kpiValueLarge} numberOfLines={1} adjustsFontSizeToFit>{Math.floor(dailyAllowance).toLocaleString()}</Text>
                 </View>
               </View>
-              <View style={[styles.badge, isOverspent ? styles.badgeDanger : styles.badgeSuccess]}>
-                <Text style={[styles.badgeText, isOverspent ? styles.badgeTextDanger : styles.badgeTextSuccess]}>
+              <View style={[styles.badge, isOverspent ? styles.badgeDanger : styles.badgeSuccess, { flexShrink: 0 }]}>
+                <Text style={[styles.badgeText, isOverspent ? styles.badgeTextDanger : styles.badgeTextSuccess]} numberOfLines={1} adjustsFontSizeToFit>
                   {isOverspent ? 'REDUCE SPENDING' : 'HEALTHY LIMIT'}
                 </Text>
               </View>
