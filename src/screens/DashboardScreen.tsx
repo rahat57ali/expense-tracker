@@ -24,7 +24,11 @@ export default function DashboardScreen() {
 
   const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
   const remainingBudget = budget.total - totalSpent;
-  const savingsRate = Math.max(0, (remainingBudget / budget.total) * 100);
+  
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysLeft = daysInMonth - now.getDate() + 1;
+  const dailyAllowance = Math.max(0, remainingBudget / daysLeft);
   
   const categoryTotals: Record<string, number> = {};
   expenses.forEach(e => {
@@ -73,16 +77,19 @@ export default function DashboardScreen() {
             </View>
           </View>
 
-          {/* Progress KPI */}
+          {/* Daily Allowance KPI */}
           <View style={[styles.kpiCard, { width: '100%' }]}>
             <View style={styles.kpiRowSplit}>
               <View>
-                <Text style={styles.kpiLabel}>SAVINGS RATE</Text>
-                <Text style={styles.kpiValueLarge}>{Math.round(savingsRate)}%</Text>
+                <Text style={styles.kpiLabel}>DAILY ALLOWANCE ({daysLeft} DAYS LEFT)</Text>
+                <View style={styles.kpiValueRow}>
+                  <Text style={styles.kpiCurrency}>PKR</Text>
+                  <Text style={styles.kpiValueLarge}>{Math.floor(dailyAllowance).toLocaleString()}</Text>
+                </View>
               </View>
               <View style={[styles.badge, isOverspent ? styles.badgeDanger : styles.badgeSuccess]}>
                 <Text style={[styles.badgeText, isOverspent ? styles.badgeTextDanger : styles.badgeTextSuccess]}>
-                  {isOverspent ? 'OVER BUDGET' : 'ON TRACK'}
+                  {isOverspent ? 'REDUCE SPENDING' : 'HEALTHY LIMIT'}
                 </Text>
               </View>
             </View>
