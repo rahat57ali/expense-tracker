@@ -4,8 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLedgr } from '../lib/LedgrContext';
 import { ExpenseCategory, Expense } from '../lib/store';
-import { Wallet, Target, TrendingUp, Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, AlertCircle, ShoppingBasket } from 'lucide-react-native';
+import { Wallet, Target, TrendingUp, Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, AlertCircle, ShoppingBasket, CheckCircle2, Minus, Info, TrendingDown } from 'lucide-react-native';
 import EditExpenseModal from '../components/EditExpenseModal';
+import DailyDetailModal from '../components/DailyDetailModal';
 
 const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
   Food: Coffee,
@@ -21,6 +22,7 @@ export default function DashboardScreen() {
   const { expenses, budget, isLoaded } = useLedgr();
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [isDailyDetailVisible, setIsDailyDetailVisible] = useState(false);
 
   const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
   const remainingBudget = budget.total - totalSpent;
@@ -29,6 +31,54 @@ export default function DashboardScreen() {
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const daysLeft = daysInMonth - now.getDate() + 1;
   const dailyAllowance = Math.max(0, remainingBudget / daysLeft);
+  
+  const dailyTarget = budget.total / daysInMonth;
+  const ratio = dailyAllowance / dailyTarget;
+
+  const getDailyStatus = () => {
+    if (ratio >= 1.5) return { 
+      label: 'COMFORTABLE', 
+      color: '#10B981', 
+      bgColor: 'rgba(16, 185, 129, 0.1)',
+      description: "You're spending significantly less than your planned daily average. You have breathing room for miscellaneous costs.",
+      threshold: ">= 1.5x target",
+      icon: CheckCircle2
+    };
+    if (ratio >= 1.0) return { 
+      label: 'ON TRACK', 
+      color: '#F59E0B', 
+      bgColor: 'rgba(245, 158, 11, 0.1)',
+      description: "Your daily spending is perfectly aligned with your monthly budget goal. Keep maintaining this pace.",
+      threshold: "1.0x to 1.5x target",
+      icon: TrendingUp
+    };
+    if (ratio >= 0.6) return { 
+      label: 'TIGHT', 
+      color: '#F97316', 
+      bgColor: 'rgba(249, 115, 22, 0.1)',
+      description: "You're slightly below your daily target. It's time to prioritize essential spending only to finish the month on budget.",
+      threshold: "0.6x to 1.0x target",
+      icon: Minus
+    };
+    if (ratio >= 0.3) return { 
+      label: 'CRITICAL', 
+      color: '#EF4444', 
+      bgColor: 'rgba(239, 68, 68, 0.1)',
+      description: "Your available daily budget is very low. High alert! Immediate reduction in non-essential spending is required.",
+      threshold: "0.3x to 0.6x target",
+      icon: AlertCircle
+    };
+    return { 
+      label: 'OVERSPENT', 
+      color: '#7F1D1D', 
+      bgColor: 'rgba(127, 29, 29, 0.2)',
+      description: "You have exceeded your sustainable daily limit. Every rupee spent now contributes to a monthly deficit.",
+      threshold: "< 0.3x target",
+      icon: TrendingDown
+    };
+  };
+
+  const dailyStatus = getDailyStatus();
   
   const categoryTotals: Record<string, number> = {};
   expenses.forEach(e => {
@@ -87,11 +137,14 @@ export default function DashboardScreen() {
                   <Text style={styles.kpiValueLarge} numberOfLines={1} adjustsFontSizeToFit>{Math.floor(dailyAllowance).toLocaleString()}</Text>
                 </View>
               </View>
-              <View style={[styles.badge, isOverspent ? styles.badgeDanger : styles.badgeSuccess, { flexShrink: 0 }]}>
-                <Text style={[styles.badgeText, isOverspent ? styles.badgeTextDanger : styles.badgeTextSuccess]} numberOfLines={1} adjustsFontSizeToFit>
-                  {isOverspent ? 'REDUCE SPENDING' : 'HEALTHY LIMIT'}
+              <TouchableOpacity 
+                style={[styles.badge, { backgroundColor: dailyStatus.bgColor, borderColor: dailyStatus.color, flexShrink: 0 }]}
+                onPress={() => setIsDailyDetailVisible(true)}
+              >
+                <Text style={[styles.badgeText, { color: dailyStatus.color }]} numberOfLines={1} adjustsFontSizeToFit>
+                  {dailyStatus.label}
                 </Text>
-              </View>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -181,6 +234,18 @@ export default function DashboardScreen() {
         visible={isEditModalVisible}
         onClose={() => setIsEditModalVisible(false)}
         expense={editingExpense}
+      />
+
+      <DailyDetailModal
+        visible={isDailyDetailVisible}
+        onClose={() => setIsDailyDetailVisible(false)}
+        data={{
+          dailyTarget,
+          dailyRemaining: dailyAllowance,
+          ratio,
+          daysLeft,
+          status: dailyStatus
+        }}
       />
     </SafeAreaView>
   );
