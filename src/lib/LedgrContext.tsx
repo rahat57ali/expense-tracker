@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Expense, Budget, ExpenseCategory, autoCategorize } from './store';
+import { Expense, Budget, ExpenseCategory, autoCategorize, Bill } from './store';
+import { addDays, isBefore, isAfter, startOfDay } from 'date-fns';
 
 interface LedgrContextType {
   expenses: Expense[];
@@ -10,6 +11,11 @@ interface LedgrContextType {
   updateBudget: (newBudget: Budget) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
   updateExpense: (updatedExpense: Expense) => Promise<void>;
+  bills: Bill[];
+  addBill: (bill: Omit<Bill, 'id'>) => Promise<void>;
+  updateBill: (updatedBill: Bill) => Promise<void>;
+  deleteBill: (id: string) => Promise<void>;
+  isBillDueSoon: boolean;
 }
 
 const DEFAULT_BUDGET: Budget = {
@@ -30,6 +36,7 @@ const LedgrContext = createContext<LedgrContextType | undefined>(undefined);
 export const LedgrProvider = ({ children }: { children: ReactNode }) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [budget, setBudget] = useState<Budget>(DEFAULT_BUDGET);
+  const [bills, setBills] = useState<Bill[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -37,7 +44,9 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
       try {
         const savedExpenses = await AsyncStorage.getItem('ledgr_expenses');
         const savedBudget = await AsyncStorage.getItem('ledgr_budget');
+        const savedBills = await AsyncStorage.getItem('ledgr_bills');
         if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
+        if (savedBills) setBills(JSON.parse(savedBills));
         if (savedBudget) {
           const parsed = JSON.parse(savedBudget);
           setBudget({
@@ -87,8 +96,38 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
     await AsyncStorage.setItem('ledgr_expenses', JSON.stringify(updated));
   };
 
+  const addBill = async (bill: Omit<Bill, 'id'>) => {
+    const newBill = { ...bill, id: generateId() };
+    const updated = [newBill, ...bills];
+    setBills(updated);
+    await AsyncStorage.setItem('ledgr_bills', JSON.stringify(updated));
+  };
+
+  const updateBill = async (updatedBill: Bill) => {
+    const updated = bills.map(b => b.id === updatedBill.id ? updatedBill : b);
+    setBills(updated);
+    await AsyncStorage.setItem('ledgr_bills', JSON.stringify(updated));
+  };
+
+  const deleteBill = async (id: string) => {
+    const updated = bills.filter(b => b.id !== id);
+    setBills(updated);
+    await AsyncStorage.setItem('ledgr_bills', JSON.stringify(updated));
+  };
+
+  const isBillDueSoon = bills.some(bill => {
+    if (bill.isPaid) return false;
+    const dueDate = startOfDay(new Date(bill.dueDate));
+    const today = startOfDay(new Date());
+    const threeDaysFromNow = addDays(today, 3);
+    return isBefore(dueDate, threeDaysFromNow);
+  });
+
   return (
-    <LedgrContext.Provider value={{ expenses, budget, isLoaded, addExpense, updateBudget, deleteExpense, updateExpense }}>
+    <LedgrContext.Provider value={{ 
+      expenses, budget, isLoaded, addExpense, updateBudget, deleteExpense, updateExpense,
+      bills, addBill, updateBill, deleteBill, isBillDueSoon
+    }}>
       {children}
     </LedgrContext.Provider>
   );

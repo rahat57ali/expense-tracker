@@ -11,6 +11,15 @@ export interface Expense {
   notes?: string;
 }
 
+export interface Bill {
+  id: string;
+  name: string;
+  amount: number;
+  dueDate: string; // ISO date for next occurrence
+  category: ExpenseCategory;
+  isPaid?: boolean;
+}
+
 export interface Budget {
   total: number;
   categories: Record<ExpenseCategory, number>;
