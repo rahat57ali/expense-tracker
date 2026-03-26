@@ -5,7 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLedgr } from '../lib/LedgrContext';
 import { ExpenseCategory, autoCategorize } from '../lib/store';
-import { Search, Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, Plus, ShoppingBasket } from 'lucide-react-native';
+import { Search, Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, Plus, ShoppingBasket, Calendar } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSnackbar } from '../components/Snackbar';
 import EditExpenseModal from '../components/EditExpenseModal';
 import { Expense } from '../lib/store';
@@ -28,6 +29,8 @@ export default function TrackScreen() {
   const [desc, setDesc] = useState('');
   const [amountStr, setAmountStr] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | null>(null);
+  const [expenseDate, setExpenseDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 
@@ -41,12 +44,19 @@ export default function TrackScreen() {
     addExpense({ 
       name: desc, 
       amount: amt, 
-      category: selectedCategory || autoCategorize(desc) 
+      category: selectedCategory || autoCategorize(desc),
+      date: expenseDate.toISOString()
     });
     setDesc('');
     setAmountStr('');
     setSelectedCategory(null);
+    setExpenseDate(new Date());
     showSnackbar('Expense added!', 'success');
+  };
+
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) setExpenseDate(selectedDate);
   };
 
   const handleEditPress = (expense: Expense) => {
@@ -57,7 +67,8 @@ export default function TrackScreen() {
   const getCategoryStatus = (cat: ExpenseCategory) => {
     const limit = budget.categories[cat] || 0;
     const spent = expenses.filter(e => e.category === cat).reduce((sum, e) => sum + e.amount, 0);
-    return { spent, limit, isOver: spent > limit };
+    const remaining = limit - spent;
+    return { spent, limit, remaining, isOver: spent > limit };
   };
 
   return (
@@ -117,12 +128,45 @@ export default function TrackScreen() {
             />
           </View>
 
-          <Text style={styles.sectionLabel}>Select Category</Text>
+          <TouchableOpacity style={styles.dateSelector} onPress={() => setShowDatePicker(true)}>
+            <View style={styles.dateContent}>
+              <Calendar size={18} color="#00F0FF" />
+              <Text style={styles.dateText}>
+                {expenseDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+              </Text>
+            </View>
+            <View style={styles.dateLabelBox}>
+               <Text style={styles.dateLabelText}>{expenseDate.toDateString() === new Date().toDateString() ? 'TODAY' : 'CUSTOM DATE'}</Text>
+            </View>
+          </TouchableOpacity>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={expenseDate}
+              mode="date"
+              display="default"
+              onChange={onDateChange}
+              maximumDate={new Date()}
+            />
+          )}
+
+          <View style={styles.sectionLabelRow}>
+            <Text style={styles.sectionLabel}>Select Category</Text>
+            {selectedCategory && (
+              <View style={styles.smartHint}>
+                <Text style={[styles.smartHintText, getCategoryStatus(selectedCategory).isOver && { color: '#EF4444' }]}>
+                  PKR {getCategoryStatus(selectedCategory).remaining.toLocaleString()} remaining
+                </Text>
+              </View>
+            )}
+          </View>
+
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll} contentContainerStyle={styles.catScrollContent}>
             <View style={styles.catRow}>
               {CATEGORIES.map(cat => {
                 const Icon = CATEGORY_ICONS[cat];
                 const isSelected = selectedCategory === cat;
+                const { remaining, isOver } = getCategoryStatus(cat);
                 return (
                   <TouchableOpacity 
                     key={cat} 
@@ -130,7 +174,14 @@ export default function TrackScreen() {
                     onPress={() => setSelectedCategory(cat)}
                   >
                     <Icon color={isSelected ? "#0A0A0A" : "#A0A0A0"} size={14} />
-                    <Text style={[styles.miniCatText, isSelected && styles.miniCatTextActive]}>{cat}</Text>
+                    <View>
+                      <Text style={[styles.miniCatText, isSelected && styles.miniCatTextActive]}>{cat}</Text>
+                      {isSelected && (
+                        <Text style={[styles.miniCatSubtext, isOver && { color: '#EF4444' }]}>
+                          PKR {remaining.toLocaleString()}
+                        </Text>
+                      )}
+                    </View>
                   </TouchableOpacity>
                 );
               })}
@@ -218,10 +269,22 @@ const styles = StyleSheet.create({
   catScroll: { marginHorizontal: -20 },
   catScrollContent: { paddingHorizontal: 20, paddingRight: 40 },
   catRow: { flexDirection: 'row', gap: 8 },
-  miniCatPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, gap: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  miniCatPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10, gap: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   miniCatPillActive: { backgroundColor: '#FFFFFF', borderColor: '#FFFFFF' },
-  miniCatText: { color: '#A0A0A0', fontSize: 12, fontFamily: 'Inter_500Medium' },
+  miniCatText: { color: '#A0A0A0', fontSize: 13, fontFamily: 'Inter_500Medium' },
   miniCatTextActive: { color: '#0A0A0A', fontFamily: 'Inter_700Bold' },
+  miniCatSubtext: { color: '#606060', fontSize: 9, fontFamily: 'Inter_700Bold' },
+  
+  dateSelector: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16, height: 54, paddingHorizontal: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  dateContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  dateText: { color: '#FFFFFF', fontFamily: 'Inter_500Medium', fontSize: 14 },
+  dateLabelBox: { backgroundColor: 'rgba(0, 240, 255, 0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  dateLabelText: { color: '#00F0FF', fontSize: 8, fontFamily: 'Inter_800ExtraBold', letterSpacing: 0.5 },
+
+  sectionLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, marginTop: 8 },
+  smartHint: { backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  smartHintText: { color: '#A0A0A0', fontSize: 10, fontFamily: 'Inter_700Bold' },
+
   bigAddButton: { backgroundColor: '#FFFFFF', borderRadius: 16, height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 24 },
   addBtnLabel: { color: '#0A0A0A', fontFamily: 'Outfit_800ExtraBold', fontSize: 16 },
   addButtonDisabled: { opacity: 0.3 },

@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, Platform, Dimensions } from 'react-native';
-import Slider from '@react-native-community/slider';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, Platform } from 'react-native';
+// Remove Slider import
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLedgr } from '../lib/LedgrContext';
 import { ExpenseCategory, Budget, autoCategorize } from '../lib/store';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, ShoppingBasket, Calendar, PlusCircle } from 'lucide-react-native';
+import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, ShoppingBasket, Calendar, PlusCircle, Pencil } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSnackbar } from '../components/Snackbar';
 
@@ -32,39 +32,16 @@ const PAKISTANI_PRESETS: Record<ExpenseCategory, number> = {
   Other: 10
 };
 
-const { width } = Dimensions.get('window');
+// Dimensions width unused now for sliders
 
 export default function SettingsScreen() {
   const { budget, updateBudget, addExpense, isLoaded } = useLedgr();
   const { showSnackbar } = useSnackbar();
   const [localBudget, setLocalBudget] = useState<Budget>(budget);
-  
-  // Historical Entry State
-  const [histDesc, setHistDesc] = useState('');
-  const [histAmount, setHistAmount] = useState('');
-  const [histCategory, setHistCategory] = useState<ExpenseCategory | null>(null);
-  const [histDate, setHistDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-
-  const histAmountRef = React.useRef<TextInput>(null);
-
-  // Wizard State
-  const [wizardStep, setWizardStep] = useState(0); // 0: Settings Home, 1: Set Total, 2: Allocate
-  const [tempTotal, setTempTotal] = useState('');
-  const [tempPercs, setTempPercs] = useState<Record<ExpenseCategory, number>>(PAKISTANI_PRESETS);
 
   useEffect(() => {
     if (isLoaded) {
       setLocalBudget(budget);
-      setTempTotal(budget.total.toString());
-      // Calculate percentages from existing budget if available
-      if (budget.total > 0) {
-        const percs = { ...PAKISTANI_PRESETS };
-        CATEGORIES.forEach(cat => {
-          percs[cat] = Math.round((budget.categories[cat] / budget.total) * 100);
-        });
-        setTempPercs(percs);
-      }
     }
   }, [budget, isLoaded]);
 
@@ -72,24 +49,11 @@ export default function SettingsScreen() {
     Object.values(localBudget.categories).reduce((sum, val) => sum + val, 0),
   [localBudget.categories]);
 
-  const wizardAllocatedPerc = useMemo(() => 
-    Object.values(tempPercs).reduce((sum, val) => sum + val, 0),
-  [tempPercs]);
+  const unallocated = localBudget.total - totalAllocated;
+  const isOverAllocated = unallocated < 0;
 
   const handleSaveBudget = () => {
-    const newTotal = parseInt(tempTotal) || 0;
-    const newCategories = { ...budget.categories };
-    
-    CATEGORIES.forEach(cat => {
-      newCategories[cat] = Math.round((tempPercs[cat] / 100) * newTotal);
-    });
-
-    updateBudget({
-      total: newTotal,
-      categories: newCategories
-    });
-    
-    setWizardStep(0);
+    updateBudget(localBudget);
     showSnackbar('Budget configuration saved!', 'success');
   };
 
@@ -99,35 +63,6 @@ export default function SettingsScreen() {
       ...prev,
       categories: { ...prev.categories, [cat]: num }
     }));
-  };
-
-  const onDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      setHistDate(selectedDate);
-    }
-  };
-
-  const handleRecordHistorical = async () => {
-    if (!histDesc || !histAmount) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-    const amt = parseFloat(histAmount);
-    if (isNaN(amt) || amt <= 0) return;
-
-    await addExpense({
-      name: histDesc,
-      amount: amt,
-      category: histCategory || autoCategorize(histDesc),
-      date: histDate.toISOString()
-    });
-
-    setHistDesc('');
-    setHistAmount('');
-    setHistCategory(null);
-    setHistDate(new Date());
-    showSnackbar('Historical transaction recorded!', 'success');
   };
 
   if (!isLoaded) return <View style={styles.container} />;
@@ -153,301 +88,92 @@ export default function SettingsScreen() {
           <Text style={styles.subtitle}>Manage your profile & data</Text>
         </View>
 
-        {/* Historical Data Entry Section */}
+        {/* Budget Configuration Section */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Historical Data Entry</Text>
-          <Text style={styles.sectionSubtitle}>Backdate a past transaction</Text>
+          <Text style={styles.sectionTitle}>Budget Configuration</Text>
+          <Text style={styles.sectionSubtitle}>Define your monthly spending limits</Text>
         </View>
 
-        <View style={styles.formCard}>
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.inputText}
-              placeholder="Description (e.g. Flight 2024)"
-              placeholderTextColor="rgba(160,160,160,0.4)"
-              value={histDesc}
-              onChangeText={setHistDesc}
-              returnKeyType="next"
-              onSubmitEditing={() => histAmountRef.current?.focus()}
-              blurOnSubmit={false}
-            />
-          </View>
-          
-          <View style={styles.inputRow}>
-            <Text style={styles.currencyPrefix}>PKR</Text>
-            <TextInput
-              ref={histAmountRef}
-              style={styles.inputText}
-              placeholder="0.00"
-              placeholderTextColor="rgba(160,160,160,0.4)"
-              keyboardType="numeric"
-              value={histAmount}
-              onChangeText={setHistAmount}
-              returnKeyType="done"
-              onSubmitEditing={handleRecordHistorical}
-            />
-          </View>
-
-          <TouchableOpacity style={styles.dateSelector} onPress={() => setShowDatePicker(true)}>
-            <Calendar size={18} color="#00F0FF" />
-            <Text style={styles.dateText}>Date: {histDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</Text>
-          </TouchableOpacity>
-
-          {showDatePicker && (
-            <DateTimePicker
-              value={histDate}
-              mode="date"
-              display="default"
-              onChange={onDateChange}
-              maximumDate={new Date()}
-            />
-          )}
-
-          <Text style={styles.labelSmall}>SELECT CATEGORY</Text>
-          <View style={{ marginHorizontal: -20 }}>
-            <View style={{ paddingHorizontal: 20 }}>
-              <View style={styles.catRow}>
-                {CATEGORIES.map(cat => {
-                  const Icon = CATEGORY_ICONS[cat];
-                  const isSelected = histCategory === cat;
-                  return (
-                    <TouchableOpacity 
-                      key={cat} 
-                      style={[styles.catPill, isSelected && styles.catPillActive]} 
-                      onPress={() => setHistCategory(cat)}
-                    >
-                      <Icon color={isSelected ? "#0A0A0A" : "#A0A0A0"} size={14} />
-                      <Text style={[styles.catPillText, isSelected && styles.catPillTextActive]}>{cat}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
+        <View style={styles.budgetMainCard}>
+          <View style={styles.allocationHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.allocationLabel}>TOTAL MONTHLY BUDGET</Text>
+              <View style={styles.totalInputWrapper}>
+                <View style={styles.totalInputRow}>
+                  <Text style={styles.totalCurrency}>PKR</Text>
+                  <TextInput
+                    style={styles.totalInput}
+                    keyboardType="numeric"
+                    value={localBudget.total.toString()}
+                    onChangeText={(val) => setLocalBudget(p => ({ ...p, total: parseInt(val) || 0 }))}
+                  />
+                  <Pencil size={18} color="rgba(0, 240, 255, 0.4)" style={{ marginLeft: 12 }} />
+                </View>
               </View>
+            </View>
+            <View style={[styles.allocationPill, isOverAllocated ? styles.pillDanger : styles.pillSuccess]}>
+               <Text style={[styles.pillText, isOverAllocated ? styles.pillTextDanger : styles.pillTextSuccess]}>
+                 {isOverAllocated ? 'OVER-ALLOCATED' : 'ALLOCATED'}
+               </Text>
             </View>
           </View>
 
-          <TouchableOpacity style={styles.recordButton} onPress={handleRecordHistorical}>
-            <Text style={styles.recordButtonText}>Record Past Expense</Text>
-            <PlusCircle color="#0A0A0A" size={18} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Action Button for Budget */}
-        <View style={{ position: 'absolute', top: 24, right: 24, zIndex: 10 }}>
-           <TouchableOpacity 
-             style={[styles.miniSaveBtn, { opacity: (JSON.stringify(localBudget) !== JSON.stringify(budget)) ? 1 : 0.5 }]} 
-             onPress={handleSaveBudget}
-             disabled={JSON.stringify(localBudget) === JSON.stringify(budget)}
-           >
-             <Text style={styles.miniSaveBtnText}>Save</Text>
-           </TouchableOpacity>
-        </View>
-
-        {wizardStep === 0 && (
-          <>
-            {/* Historical Data Entry Section */}
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Quick Actions</Text>
-            </View>
-
-            <View style={styles.formCard}>
-              <TouchableOpacity 
-                style={styles.wizardStartCard} 
-                onPress={() => setWizardStep(1)}
-              >
-                <LinearGradient colors={['#8A2BE2', '#4B0082']} style={styles.wizardGradient}>
-                  <View style={styles.wizardInfo}>
-                    <Text style={styles.wizardTitle}>Guided Budget Setup</Text>
-                    <Text style={styles.wizardSub}>Recalculate your monthly limits with sliders</Text>
-                  </View>
-                  <PlusCircle color="#FFFFFF" size={24} />
-                </LinearGradient>
-              </TouchableOpacity>
-
-              <View style={styles.divider} />
-
-              <Text style={styles.labelSmall}>OR BACKDATE A TRANSACTION</Text>
-              <View style={styles.inputRow}>
-                <TextInput
-                  style={styles.inputText}
-                  placeholder="Description (e.g. Flight 2024)"
-                  placeholderTextColor="rgba(160,160,160,0.4)"
-                  value={histDesc}
-                  onChangeText={setHistDesc}
-                  returnKeyType="next"
-                  onSubmitEditing={() => histAmountRef.current?.focus()}
-                  blurOnSubmit={false}
-                />
-              </View>
-              
-              <View style={styles.inputRow}>
-                <Text style={styles.currencyPrefix}>PKR</Text>
-                <TextInput
-                  ref={histAmountRef}
-                  style={styles.inputText}
-                  placeholder="0.00"
-                  placeholderTextColor="rgba(160,160,160,0.4)"
-                  keyboardType="numeric"
-                  value={histAmount}
-                  onChangeText={setHistAmount}
-                  returnKeyType="done"
-                  onSubmitEditing={handleRecordHistorical}
-                />
-              </View>
-
-              <TouchableOpacity style={styles.dateSelector} onPress={() => setShowDatePicker(true)}>
-                <Calendar size={18} color="#00F0FF" />
-                <Text style={styles.dateText}>Date: {histDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</Text>
-              </TouchableOpacity>
-
-              {showDatePicker && (
-                <DateTimePicker
-                  value={histDate}
-                  mode="date"
-                  display="default"
-                  onChange={onDateChange}
-                  maximumDate={new Date()}
-                />
-              )}
-
-              <Text style={styles.labelSmall}>SELECT CATEGORY</Text>
-              <View style={styles.catRow}>
-                {CATEGORIES.map(cat => {
-                  const Icon = CATEGORY_ICONS[cat];
-                  const isSelected = histCategory === cat;
-                  return (
-                    <TouchableOpacity 
-                      key={cat} 
-                      style={[styles.catPill, isSelected && styles.catPillActive]} 
-                      onPress={() => setHistCategory(cat)}
-                    >
-                      <Icon color={isSelected ? "#0A0A0A" : "#A0A0A0"} size={14} />
-                      <Text style={[styles.catPillText, isSelected && styles.catPillTextActive]}>{cat}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              <TouchableOpacity style={styles.recordButton} onPress={handleRecordHistorical}>
-                <Text style={styles.recordButtonText}>Record Past Expense</Text>
-                <PlusCircle color="#0A0A0A" size={18} />
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-
-        {wizardStep === 1 && (
-          <View style={styles.wizardLayout}>
-            <Text style={styles.wizardStepLabel}>STEP 1 OF 2</Text>
-            <Text style={styles.wizardBigTitle}>Total monthly budget</Text>
-            <Text style={styles.wizardBigSub}>How much PKR are you planning to spend this month in total?</Text>
-            
-            <View style={styles.bigInputContainer}>
-              <Text style={styles.bigCurrency}>PKR</Text>
-              <TextInput
-                style={styles.bigInput}
-                keyboardType="numeric"
-                value={tempTotal}
-                onChangeText={setTempTotal}
-                placeholder="0"
-                placeholderTextColor="rgba(255,255,255,0.1)"
-                autoFocus
+          <View style={styles.allocationBarContainer}>
+            <View style={styles.allocationBarBg}>
+              <View 
+                style={[
+                  styles.allocationBarFill, 
+                  { width: `${Math.min(100, (totalAllocated / localBudget.total) * 100)}%` },
+                  isOverAllocated && styles.allocationBarFillDanger
+                ]} 
               />
             </View>
-
-            <View style={styles.wizardActions}>
-              <TouchableOpacity style={styles.backBtn} onPress={() => setWizardStep(0)}>
-                <Text style={styles.backBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.nextBtn, !tempTotal && { opacity: 0.5 }]} 
-                onPress={() => tempTotal && setWizardStep(2)}
-                disabled={!tempTotal}
-              >
-                <Text style={styles.nextBtnText}>Allocation</Text>
-              </TouchableOpacity>
+            <View style={styles.allocationStats}>
+              <Text style={styles.statText}>Allocated: PKR {totalAllocated.toLocaleString()}</Text>
+              <Text style={[styles.statValue, isOverAllocated && styles.textDanger]}>
+                {isOverAllocated ? `Exceeded by: PKR ${Math.abs(unallocated).toLocaleString()}` : `Remaining: PKR ${unallocated.toLocaleString()}`}
+              </Text>
             </View>
           </View>
-        )}
+        </View>
 
-        {wizardStep === 2 && (
-          <View style={styles.wizardLayout}>
-            <View style={styles.allocationHeaderFixed}>
-               <Text style={styles.wizardStepLabel}>STEP 2 OF 2</Text>
-               <View style={styles.allocationHeaderRow}>
-                 <View>
-                   <Text style={[styles.allocTotal, wizardAllocatedPerc > 100 && { color: '#EF4444' }]}>
-                     {wizardAllocatedPerc}% Allocated
-                   </Text>
-                   <Text style={styles.allocSub}>
-                     {wizardAllocatedPerc === 100 ? 'Perfect balance' : `${Math.abs(100 - wizardAllocatedPerc)}% ${wizardAllocatedPerc > 100 ? 'excess' : 'remaining'}`}
-                   </Text>
-                 </View>
-                 <View style={styles.allocMainAmt}>
-                    <Text style={styles.allocAmtLabel}>TOTAL</Text>
-                    <Text style={styles.allocAmtValue}>PKR {parseInt(tempTotal).toLocaleString()}</Text>
-                 </View>
-               </View>
-               <View style={styles.allocBarBg}>
-                  <View 
-                    style={[
-                      styles.allocBarFill, 
-                      { width: `${Math.min(100, wizardAllocatedPerc)}%` },
-                      wizardAllocatedPerc > 100 && { backgroundColor: '#EF4444' }
-                    ]} 
-                  />
-               </View>
-            </View>
-
-            <View style={styles.slidersList}>
-              {CATEGORIES.map(cat => {
-                const Icon = CATEGORY_ICONS[cat];
-                const percentage = tempPercs[cat];
-                const pkrAmount = Math.round((percentage / 100) * (parseInt(tempTotal) || 0));
-
-                return (
-                  <View key={cat} style={styles.sliderCard}>
-                    <View style={styles.sliderHeader}>
-                      <View style={styles.catInfoRow}>
-                        <View style={styles.miniIconBox}>
-                           <Icon color="#00F0FF" size={14} />
-                        </View>
-                        <Text style={styles.catNameText}>{cat}</Text>
-                      </View>
-                      <View style={styles.valRow}>
-                        <Text style={styles.percVal}>{percentage}%</Text>
-                        <Text style={styles.pkrVal}>PKR {pkrAmount.toLocaleString()}</Text>
-                      </View>
-                    </View>
-                    <Slider
-                      style={{ width: '100%', height: 40 }}
-                      minimumValue={0}
-                      maximumValue={100}
-                      step={1}
-                      value={percentage}
-                      onValueChange={(val) => setTempPercs(prev => ({ ...prev, [cat]: val }))}
-                      minimumTrackTintColor="#8A2BE2"
-                      maximumTrackTintColor="rgba(255,255,255,0.1)"
-                      thumbTintColor="#FFFFFF"
-                    />
+        <Text style={styles.catSectionLabel}>CATEGORY ALLOCATION</Text>
+        <View style={styles.catBudgetGrid}>
+          {CATEGORIES.map(cat => {
+            const Icon = CATEGORY_ICONS[cat];
+            const amount = localBudget.categories[cat];
+            const percentage = localBudget.total > 0 ? ((amount / localBudget.total) * 100).toFixed(1) : '0.0';
+            
+            return (
+              <View key={cat} style={styles.modernCatCard}>
+                <View style={styles.catCardHeader}>
+                  <View style={styles.catIconBox}>
+                    <Icon color="#00F0FF" size={16} />
                   </View>
-                );
-              })}
-            </View>
+                  <Text style={styles.catName}>{cat}</Text>
+                  <Text style={styles.catPercent}>{percentage}%</Text>
+                </View>
+                <View style={styles.catInputContainer}>
+                  <Text style={styles.catInputCurrency}>PKR</Text>
+                  <TextInput
+                    style={styles.catInput}
+                    keyboardType="numeric"
+                    value={amount.toString()}
+                    onChangeText={(val) => handleCatChange(cat, val)}
+                  />
+                </View>
+              </View>
+            );
+          })}
+        </View>
 
-            <View style={styles.wizardActions}>
-              <TouchableOpacity style={styles.backBtn} onPress={() => setWizardStep(1)}>
-                <Text style={styles.backBtnText}>Back</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.saveBtnFull, wizardAllocatedPerc > 100 && { opacity: 0.5 }]} 
-                onPress={handleSaveBudget}
-                disabled={wizardAllocatedPerc > 100}
-              >
-                <Text style={styles.saveBtnText}>Save Configuration</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+        <TouchableOpacity 
+          style={[styles.mainSaveButton, { opacity: (JSON.stringify(localBudget) !== JSON.stringify(budget)) ? 1 : 0.6 }]} 
+          onPress={handleSaveBudget}
+          disabled={JSON.stringify(localBudget) === JSON.stringify(budget)}
+        >
+           <Text style={styles.mainSaveText}>Update Budget Configuration</Text>
+        </TouchableOpacity>
 
       </KeyboardAwareScrollView>
     </SafeAreaView>
@@ -488,57 +214,15 @@ const styles = StyleSheet.create({
   miniSaveBtn: { backgroundColor: '#8A2BE2', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 },
   miniSaveBtnText: { color: '#FFFFFF', fontFamily: 'Inter_700Bold', fontSize: 12 },
 
-  wizardStartCard: { borderRadius: 20, overflow: 'hidden', marginBottom: 20 },
-  wizardGradient: { flexDirection: 'row', alignItems: 'center', padding: 20, gap: 16 },
-  wizardInfo: { flex: 1 },
-  wizardTitle: { color: '#FFFFFF', fontSize: 18, fontFamily: 'Outfit_600SemiBold' },
-  wizardSub: { color: 'rgba(255,255,10,0.7)', fontSize: 12, fontFamily: 'Inter_500Medium', marginTop: 2 },
-
-  divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginVertical: 20 },
-
-  wizardLayout: { marginTop: 20 },
-  wizardStepLabel: { color: '#8A2BE2', fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 2, marginBottom: 16 },
-  wizardBigTitle: { color: '#FFFFFF', fontSize: 28, fontFamily: 'Outfit_700Bold' },
-  wizardBigSub: { color: '#606060', fontSize: 14, fontFamily: 'Inter_500Medium', marginTop: 8, lineHeight: 22 },
-  
-  bigInputContainer: { flexDirection: 'row', alignItems: 'baseline', marginTop: 40, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)', paddingBottom: 10 },
-  bigCurrency: { color: '#8A2BE2', fontSize: 20, fontFamily: 'Inter_700Bold', marginRight: 12 },
-  bigInput: { color: '#FFFFFF', fontSize: 48, fontFamily: 'Outfit_300Light', flex: 1 },
-
-  allocationHeaderFixed: { backgroundColor: '#0A0A0A', paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)', marginBottom: 20 },
-  allocationHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 15 },
-  allocTotal: { color: '#FFFFFF', fontSize: 24, fontFamily: 'Outfit_600SemiBold' },
-  allocSub: { color: '#606060', fontSize: 12, fontFamily: 'Inter_500Medium', marginTop: 4 },
-  allocMainAmt: { alignItems: 'flex-end' },
-  allocAmtLabel: { color: '#404040', fontSize: 9, fontFamily: 'Inter_700Bold' },
-  allocAmtValue: { color: '#FFFFFF', fontSize: 16, fontFamily: 'Outfit_400Regular' },
-  allocBarBg: { height: 6, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' },
-  allocBarFill: { height: '100%', backgroundColor: '#00F0FF' },
-
-  slidersList: { gap: 20, marginBottom: 40 },
-  sliderCard: { backgroundColor: 'rgba(255,255,255,0.02)', padding: 16, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-  sliderHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  catInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  miniIconBox: { width: 28, height: 28, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' },
-  catNameText: { color: '#FFFFFF', fontSize: 14, fontFamily: 'Outfit_600SemiBold' },
-  valRow: { alignItems: 'flex-end' },
-  percVal: { color: '#00F0FF', fontSize: 16, fontFamily: 'Outfit_700Bold' },
-  pkrVal: { color: '#606060', fontSize: 11, fontFamily: 'Inter_500Medium' },
-
-  wizardActions: { flexDirection: 'row', gap: 16, marginTop: 40 },
-  backBtn: { flex: 1, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.03)' },
-  backBtnText: { color: '#A0A0A0', fontSize: 15, fontFamily: 'Inter_700Bold' },
-  nextBtn: { flex: 2, height: 56, borderRadius: 28, backgroundColor: '#8A2BE2', alignItems: 'center', justifyContent: 'center' },
-  nextBtnText: { color: '#FFFFFF', fontSize: 15, fontFamily: 'Outfit_800ExtraBold' },
-  saveBtnFull: { flex: 2, height: 56, borderRadius: 28, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-  saveBtnText: { color: '#0A0A0A', fontSize: 15, fontFamily: 'Outfit_800ExtraBold' },
+  divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginVertical: 32 },
 
   budgetMainCard: { backgroundColor: 'rgba(20,20,20,0.95)', padding: 24, borderRadius: 32, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginBottom: 24 },
   allocationHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
   allocationLabel: { color: '#606060', fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.5, marginBottom: 8 },
-  totalInputRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  totalCurrency: { color: '#A0A0A0', fontSize: 16, fontFamily: 'Inter_500Medium' },
-  totalInput: { color: '#FFFFFF', fontSize: 32, fontFamily: 'Outfit_300Light' },
+  totalInputWrapper: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: 12, marginTop: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  totalInputRow: { flexDirection: 'row', alignItems: 'center' },
+  totalCurrency: { color: '#00F0FF', fontSize: 16, fontFamily: 'Inter_700Bold', marginRight: 12 },
+  totalInput: { color: '#FFFFFF', fontSize: 32, fontFamily: 'Outfit_300Light', flex: 1 },
   
   allocationPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1 },
   pillSuccess: { backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.2)' },
