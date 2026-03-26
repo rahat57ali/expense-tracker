@@ -24,7 +24,7 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
 const CATEGORIES: ExpenseCategory[] = ['Food', 'Grocery', 'Transport', 'Bills', 'Shopping', 'Health', 'Other'];
 
 export default function TrackScreen() {
-  const { expenses, budget, addExpense, isLoaded } = useLedgr();
+  const { expenses, budget, addExpense, isLoaded, allCategories } = useLedgr();
   const { showSnackbar } = useSnackbar();
   const [desc, setDesc] = useState('');
   const [amountStr, setAmountStr] = useState('');
@@ -152,19 +152,12 @@ export default function TrackScreen() {
 
           <View style={styles.sectionLabelRow}>
             <Text style={styles.sectionLabel}>Select Category</Text>
-            {selectedCategory && (
-              <View style={styles.smartHint}>
-                <Text style={[styles.smartHintText, getCategoryStatus(selectedCategory).isOver && { color: '#EF4444' }]}>
-                  PKR {getCategoryStatus(selectedCategory).remaining.toLocaleString()} remaining
-                </Text>
-              </View>
-            )}
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll} contentContainerStyle={styles.catScrollContent}>
             <View style={styles.catRow}>
-              {CATEGORIES.map(cat => {
-                const Icon = CATEGORY_ICONS[cat];
+              {allCategories.map(cat => {
+                const Icon = CATEGORY_ICONS[cat] || MoreHorizontal;
                 const isSelected = selectedCategory === cat;
                 const { remaining, isOver } = getCategoryStatus(cat);
                 return (
@@ -176,11 +169,9 @@ export default function TrackScreen() {
                     <Icon color={isSelected ? "#0A0A0A" : "#A0A0A0"} size={14} />
                     <View>
                       <Text style={[styles.miniCatText, isSelected && styles.miniCatTextActive]}>{cat}</Text>
-                      {isSelected && (
-                        <Text style={[styles.miniCatSubtext, isOver && { color: '#EF4444' }]}>
-                          PKR {remaining.toLocaleString()}
-                        </Text>
-                      )}
+                      <Text style={[styles.miniCatSubtext, isOver && { color: '#EF4444' }, isSelected && { color: 'rgba(10,10,10,0.6)' }]}>
+                        PKR {remaining.toLocaleString()}
+                      </Text>
                     </View>
                   </TouchableOpacity>
                 );

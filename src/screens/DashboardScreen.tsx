@@ -19,7 +19,7 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
 };
 
 export default function DashboardScreen() {
-  const { expenses, budget, isLoaded } = useLedgr();
+  const { expenses, budget, isLoaded, allCategories } = useLedgr();
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isDailyDetailVisible, setIsDailyDetailVisible] = useState(false);
@@ -85,7 +85,7 @@ export default function DashboardScreen() {
     categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.amount;
   });
   
-  const categories = Object.keys(CATEGORY_ICONS) as ExpenseCategory[];
+  const categories = allCategories;
   const biggestCategory = Object.entries(categoryTotals).sort((a,b) => b[1] - a[1])[0] || ['None', 0];
   const isOverspent = remainingBudget < 0;
 
@@ -156,12 +156,12 @@ export default function DashboardScreen() {
 
         <View style={styles.catBudgetGrid}>
           {categories.map(cat => {
-            const Icon = CATEGORY_ICONS[cat];
+            const Icon = CATEGORY_ICONS[cat as ExpenseCategory] || MoreHorizontal;
             const spent = categoryTotals[cat] || 0;
             const limit = budget.categories[cat] || 0;
             const remaining = limit - spent;
             const isOver = remaining < 0;
-            const progress = Math.min(1, spent / limit);
+            const progress = Math.min(1, spent / (limit || 1));
 
             return (
               <View key={cat} style={styles.catBudgetCard}>

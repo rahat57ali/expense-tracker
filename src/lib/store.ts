@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type ExpenseCategory = 'Food' | 'Transport' | 'Bills' | 'Shopping' | 'Health' | 'Grocery' | 'Other';
+export type ExpenseCategory = string;
+
+export const DEFAULT_CATEGORIES: ExpenseCategory[] = ['Food', 'Grocery', 'Transport', 'Bills', 'Shopping', 'Health', 'Other'];
 
 export interface Expense {
   id: string;
