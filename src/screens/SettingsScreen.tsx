@@ -106,25 +106,24 @@ export default function SettingsScreen() {
 
         <View style={styles.budgetMainCard}>
           <View style={styles.allocationHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.allocationLabel}>TOTAL MONTHLY BUDGET</Text>
-              <View style={styles.totalInputWrapper}>
-                <View style={styles.totalInputRow}>
-                  <Text style={styles.totalCurrency}>PKR</Text>
-                  <TextInput
-                    style={styles.totalInput}
-                    keyboardType="numeric"
-                    value={localBudget.total.toString()}
-                    onChangeText={(val) => setLocalBudget(p => ({ ...p, total: parseInt(val) || 0 }))}
-                  />
-                  <Pencil size={20} color="#00F0FF" style={{ marginLeft: 12 }} />
-                </View>
-              </View>
-            </View>
+            <Text style={styles.allocationLabel}>TOTAL MONTHLY BUDGET</Text>
             <View style={[styles.allocationPill, isOverAllocated ? styles.pillDanger : styles.pillSuccess]}>
               <Text style={[styles.pillText, isOverAllocated ? styles.pillTextDanger : styles.pillTextSuccess]}>
                 {isOverAllocated ? 'OVER-ALLOCATED' : 'ALLOCATED'}
               </Text>
+            </View>
+          </View>
+
+          <View style={styles.totalInputWrapper}>
+            <View style={styles.totalInputRow}>
+              <Text style={styles.totalCurrency}>PKR</Text>
+              <TextInput
+                style={styles.totalInput}
+                keyboardType="numeric"
+                value={localBudget.total.toString()}
+                onChangeText={(val) => setLocalBudget(p => ({ ...p, total: parseInt(val) || 0 }))}
+              />
+              <Pencil size={20} color="#00F0FF" style={{ marginLeft: 12 }} />
             </View>
           </View>
 
@@ -253,12 +252,12 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginVertical: 32 },
 
   budgetMainCard: { backgroundColor: 'rgba(20,20,20,0.95)', padding: 24, borderRadius: 32, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginBottom: 24 },
-  allocationHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20, gap: 16 },
-  allocationLabel: { color: '#606060', fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.5, marginBottom: 6 },
-  totalInputWrapper: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, marginTop: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', minHeight: 64, justifyContent: 'center' },
+  allocationHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  allocationLabel: { color: '#606060', fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.5 },
+  totalInputWrapper: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 16, marginTop: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', minHeight: 74, justifyContent: 'center' },
   totalInputRow: { flexDirection: 'row', alignItems: 'center' },
-  totalCurrency: { color: '#00F0FF', fontSize: 18, fontFamily: 'Inter_800ExtraBold', marginRight: 12 },
-  totalInput: { color: '#FFFFFF', fontSize: 18, fontFamily: 'Outfit_600SemiBold', flex: 1, height: 40, padding: 0, textAlignVertical: 'center' },
+  totalCurrency: { color: '#00F0FF', fontSize: 18, fontFamily: 'Outfit_600SemiBold', marginRight: 12 },
+  totalInput: { color: '#FFFFFF', fontSize: 22, fontFamily: 'Outfit_600SemiBold', flex: 1, height: 48, padding: 0, textAlignVertical: 'center' },
 
   allocationPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1 },
   pillSuccess: { backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.2)' },
@@ -276,9 +275,9 @@ const styles = StyleSheet.create({
   statValue: { color: '#A0A0A0', fontSize: 11, fontFamily: 'Inter_700Bold' },
   textDanger: { color: '#EF4444' },
 
-  catSectionLabel: { color: '#606060', fontSize: 10, fontFamily: 'Inter_800ExtraBold', letterSpacing: 2, marginBottom: 16 },
-  catGridHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  addCatBtnSmall: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0, 240, 255, 0.1)', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14, gap: 6 },
+  catSectionLabel: { color: '#606060', fontSize: 10, fontFamily: 'Inter_800ExtraBold', letterSpacing: 2 },
+  catGridHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  addCatBtnSmall: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0, 240, 255, 0.1)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, gap: 4 },
   addCatBtnTextSmall: { color: '#00F0FF', fontSize: 10, fontFamily: 'Outfit_800ExtraBold' },
 
   quickAddCat: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1A1A1A', padding: 8, borderRadius: 16, marginBottom: 16, borderWidth: 1, borderColor: '#333', gap: 8 },

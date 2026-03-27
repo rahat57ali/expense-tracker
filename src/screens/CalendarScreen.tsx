@@ -124,8 +124,8 @@ export default function CalendarScreen() {
           </View>
         ) : (
           dailyExpenses.map((expense) => {
-            const Icon = CATEGORY_ICONS[expense.category];
-            const { isOver } = getCategoryStatus(expense.category);
+            const Icon = CATEGORY_ICONS[expense.category as ExpenseCategory] || MoreHorizontal;
+            const { isOver } = getCategoryStatus(expense.category as ExpenseCategory);
 
             return (
               <TouchableOpacity 

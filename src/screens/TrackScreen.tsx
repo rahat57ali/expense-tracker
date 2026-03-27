@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLedgr } from '../lib/LedgrContext';
 import { ExpenseCategory, autoCategorize } from '../lib/store';
-import { Search, Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, Plus, ShoppingBasket, Calendar } from 'lucide-react-native';
+import { Search, Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, Plus, ShoppingBasket, Calendar, Pencil, TrendingUp, TrendingDown } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSnackbar } from '../components/Snackbar';
 import EditExpenseModal from '../components/EditExpenseModal';
@@ -33,6 +33,47 @@ export default function TrackScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  };
+
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  const thisMonthSpent = expenses
+    .filter(e => {
+      const d = new Date(e.date);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    })
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const lastMonthSpent = expenses
+    .filter(e => {
+      const d = new Date(e.date);
+      const m = currentMonth === 0 ? 11 : currentMonth - 1;
+      const y = currentMonth === 0 ? currentYear - 1 : currentYear;
+      return d.getMonth() === m && d.getFullYear() === y;
+    })
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const budgetUsage = budget.total > 0 ? (thisMonthSpent / budget.total) : 0;
+  const isOverBudget = thisMonthSpent > budget.total;
+
+  let insight = "First month tracking!";
+  let insightColor = '#00F0FF';
+  let InsightIcon = TrendingUp;
+
+  if (lastMonthSpent > 0) {
+    const diff = ((thisMonthSpent - lastMonthSpent) / lastMonthSpent) * 100;
+    insight = `${Math.abs(Math.round(diff))}% ${diff > 0 ? 'more' : 'less'} than last month`;
+    insightColor = diff > 0 ? '#EF4444' : '#10B981';
+    InsightIcon = diff > 0 ? TrendingUp : TrendingDown;
+  }
 
   const amountRef = useRef<TextInput>(null);
 
@@ -85,22 +126,55 @@ export default function TrackScreen() {
       >
         
         <View style={styles.header}>
-          <Image 
-            source={require('../../assets/logo.png')} 
-            style={styles.logo} 
-            resizeMode="contain" 
-          />
-          <Text style={styles.brandName}>LEDGR</Text>
-          <View style={styles.tagContainer}>
-            <Text style={styles.tagText}>SMART EXPENSE TRACKING</Text>
+          <View style={styles.headerTop}>
+            <Image 
+              source={require('../../assets/logo.png')} 
+              style={styles.logoSmall} 
+              resizeMode="contain" 
+            />
+            <Text style={styles.brandNameSmall}>LEDGR</Text>
           </View>
-          <Text style={styles.title}>Track Any</Text>
-          <Text style={[styles.title, { color: '#00F0FF' }]}>Expense</Text>
+          <Text style={styles.greetingText}>{getGreeting()} —</Text>
+          
+          <LinearGradient 
+            colors={['rgba(30,30,30,0.8)', 'rgba(10,10,10,0.95)']} 
+            style={styles.summaryCard}
+          >
+            <View style={styles.summaryRow}>
+              <View>
+                <Text style={styles.summaryLabel}>SPENT THIS MONTH</Text>
+                <View style={styles.summaryAmountRow}>
+                  <Text style={styles.summaryCurrency}>PKR</Text>
+                  <Text style={styles.summaryAmount}>{thisMonthSpent.toLocaleString()}</Text>
+                </View>
+              </View>
+              <View style={[styles.insightPill, { backgroundColor: `${insightColor}15` }]}>
+                <InsightIcon color={insightColor} size={12} style={{ marginRight: 4 }} />
+                <Text style={[styles.insightText, { color: insightColor }]}>{insight}</Text>
+              </View>
+            </View>
+
+            <View style={styles.usageContainer}>
+              <View style={styles.usageHeader}>
+                <Text style={styles.usageLabel}>Budget Usage</Text>
+                <Text style={[styles.usagePercent, isOverBudget && { color: '#EF4444' }]}>
+                  {Math.round(budgetUsage * 100)}%
+                </Text>
+              </View>
+              <View style={styles.usageBarBg}>
+                <View style={[
+                  styles.usageBarFill, 
+                  { width: `${Math.min(100, budgetUsage * 100)}%` },
+                  isOverBudget && { backgroundColor: '#EF4444' }
+                ]} />
+              </View>
+            </View>
+          </LinearGradient>
         </View>
 
         <View style={styles.inputCard}>
           <View style={styles.inputRow}>
-            <Search color="#A0A0A0" size={18} style={{ marginRight: 12 }} />
+            <Pencil color="#A0A0A0" size={18} style={{ marginRight: 12 }} />
             <TextInput
               style={styles.inputDesc}
               placeholder="Description (e.g. Lunch)"
@@ -152,6 +226,9 @@ export default function TrackScreen() {
 
           <View style={styles.sectionLabelRow}>
             <Text style={styles.sectionLabel}>Select Category</Text>
+            <View style={styles.scrollHint}>
+              <Text style={styles.scrollHintText}>Scroll for more ›</Text>
+            </View>
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll} contentContainerStyle={styles.catScrollContent}>
@@ -196,7 +273,7 @@ export default function TrackScreen() {
 
         <View style={styles.expensesList}>
           {expenses.slice(0, 10).map((expense) => {
-            const Icon = CATEGORY_ICONS[expense.category];
+            const Icon = CATEGORY_ICONS[expense.category as ExpenseCategory] || MoreHorizontal;
             const { isOver } = getCategoryStatus(expense.category);
             return (
               <TouchableOpacity 
@@ -244,12 +321,32 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0A0A0A' },
   glow: { position: 'absolute', width: 300, height: 300, borderRadius: 150 },
   scrollContent: { padding: 24, paddingBottom: 120 },
-  header: { alignItems: 'center', marginBottom: 32, marginTop: 10 },
-  logo: { width: 36, height: 36, marginBottom: 8 },
-  brandName: { fontFamily: 'Outfit_800ExtraBold', color: '#FFFFFF', fontSize: 12, letterSpacing: 4, marginBottom: 16 },
-  tagContainer: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.05)', marginBottom: 16 },
-  tagText: { fontFamily: 'Inter_700Bold', fontSize: 10, color: '#A0A0A0', letterSpacing: 1.5 },
-  title: { fontFamily: 'Outfit_800ExtraBold', fontSize: 44, color: '#FFFFFF', lineHeight: 48 },
+  header: { marginBottom: 32, marginTop: 10 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  logoSmall: { width: 20, height: 20 },
+  brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', color: '#606060', fontSize: 10, letterSpacing: 4 },
+  greetingText: { fontFamily: 'Outfit_600SemiBold', fontSize: 18, color: '#FFFFFF', marginBottom: 12 },
+  
+  summaryCard: { borderRadius: 20, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginTop: 4 },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+  summaryLabel: { color: '#606060', fontSize: 9, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
+  summaryAmountRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 4 },
+  summaryCurrency: { color: '#606060', fontSize: 12, fontFamily: 'Outfit_400Regular' },
+  summaryAmount: { color: '#FFFFFF', fontSize: 22, fontFamily: 'Outfit_600SemiBold' },
+  insightPill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 },
+  insightText: { fontSize: 10, fontFamily: 'Inter_700Bold' },
+  usageContainer: { marginTop: 4 },
+  usageHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  usageLabel: { color: '#A0A0A0', fontSize: 10, fontFamily: 'Inter_500Medium' },
+  usagePercent: { color: '#00F0FF', fontSize: 11, fontFamily: 'Outfit_700Bold' },
+  usageBarBg: { height: 4, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' },
+  usageBarFill: { height: '100%', backgroundColor: '#00F0FF', borderRadius: 2 },
+
+  logo: { width: 44, height: 44, marginBottom: 16 },
+  brandName: { fontFamily: 'Outfit_800ExtraBold', color: '#606060', fontSize: 10, letterSpacing: 6, marginBottom: 24 },
+  tagContainer: { backgroundColor: 'rgba(0, 240, 255, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, alignSelf: 'flex-start', marginBottom: 16 },
+  tagText: { color: '#00F0FF', fontSize: 9, fontFamily: 'Inter_800ExtraBold', letterSpacing: 1 },
+  title: { fontFamily: 'Outfit_800ExtraBold', fontSize: 44, color: '#FFFFFF', lineHeight: 50 },
   
   inputCard: { backgroundColor: '#141414', borderRadius: 28, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginBottom: 40 },
   inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0A0A0A', borderRadius: 16, height: 54, paddingHorizontal: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
@@ -275,6 +372,8 @@ const styles = StyleSheet.create({
   sectionLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, marginTop: 8 },
   smartHint: { backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   smartHintText: { color: '#A0A0A0', fontSize: 10, fontFamily: 'Inter_700Bold' },
+  scrollHint: { backgroundColor: 'rgba(255,255,255,0.03)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  scrollHintText: { color: '#A0A0A0', fontSize: 9, fontFamily: 'Inter_500Medium' },
 
   bigAddButton: { backgroundColor: '#FFFFFF', borderRadius: 16, height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 24 },
   addBtnLabel: { color: '#0A0A0A', fontFamily: 'Outfit_800ExtraBold', fontSize: 16 },

@@ -191,7 +191,7 @@ export default function DashboardScreen() {
 
         <View style={styles.expensesList}>
           {expenses.slice(0, 10).map((expense) => {
-            const Icon = CATEGORY_ICONS[expense.category];
+            const Icon = CATEGORY_ICONS[expense.category as ExpenseCategory] || MoreHorizontal;
             return (
               <TouchableOpacity 
                 key={expense.id} 
@@ -254,7 +254,7 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0A0A0A' },
   scrollContent: { padding: 24, paddingBottom: 120 },
-  header: { marginBottom: 32, marginTop: 10, alignItems: 'center' },
+  header: { alignItems: 'center', marginBottom: 32, marginTop: 10 },
   logo: { width: 36, height: 36, marginBottom: 8 },
   brandName: { fontFamily: 'Outfit_800ExtraBold', color: '#FFFFFF', fontSize: 12, letterSpacing: 4, marginBottom: 12 },
   title: { fontFamily: 'Outfit_800ExtraBold', fontSize: 36, color: '#FFFFFF' },

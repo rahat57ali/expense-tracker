@@ -124,7 +124,8 @@ export default function SummaryScreen() {
           </View>
         ) : (
           categoryData.map(([cat, data]) => {
-            const Icon = CATEGORY_ICONS[cat as ExpenseCategory];
+            const Icon = CATEGORY_ICONS[cat as ExpenseCategory] || MoreHorizontal;
+            const catColor = CATEGORY_COLORS[cat as ExpenseCategory] || '#6B7280';
             const isExpanded = expandedCategory === cat;
             const percentage = totalMonthly > 0 ? (data.total / totalMonthly) * 100 : 0;
             
@@ -136,8 +137,8 @@ export default function SummaryScreen() {
                   activeOpacity={0.7}
                 >
                   <View style={styles.catLeft}>
-                    <View style={[styles.catIconBox, { backgroundColor: `${CATEGORY_COLORS[cat as ExpenseCategory]}20` }]}>
-                      <Icon color={CATEGORY_COLORS[cat as ExpenseCategory]} size={20} />
+                    <View style={[styles.catIconBox, { backgroundColor: `${catColor}20` }]}>
+                      <Icon color={catColor} size={20} />
                     </View>
                     <View>
                       <Text style={styles.catName}>{cat}</Text>
