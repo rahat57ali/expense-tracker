@@ -40,10 +40,10 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [budget, setBudget] = useState<Budget>(DEFAULT_BUDGET);
   const [bills, setBills] = useState<Bill[]>([]);
-  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [activeCategories, setActiveCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  const allCategories = [...DEFAULT_CATEGORIES, ...customCategories];
+  const allCategories = activeCategories;
 
   useEffect(() => {
     const loadData = async () => {
@@ -51,15 +51,26 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
         const savedExpenses = await AsyncStorage.getItem('ledgr_expenses');
         const savedBudget = await AsyncStorage.getItem('ledgr_budget');
         const savedBills = await AsyncStorage.getItem('ledgr_bills');
+        const savedCategories = await AsyncStorage.getItem('ledgr_categories');
         const savedCustomCats = await AsyncStorage.getItem('ledgr_custom_cats');
 
         if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
         if (savedBills) setBills(JSON.parse(savedBills));
-        if (savedCustomCats) setCustomCategories(JSON.parse(savedCustomCats));
+
+        // Migration logic for categories
+        if (savedCategories) {
+          setActiveCategories(JSON.parse(savedCategories));
+        } else if (savedCustomCats) {
+          const combined = [...DEFAULT_CATEGORIES, ...JSON.parse(savedCustomCats)];
+          const unique = Array.from(new Set(combined));
+          setActiveCategories(unique);
+          await AsyncStorage.setItem('ledgr_categories', JSON.stringify(unique));
+        } else {
+          setActiveCategories(DEFAULT_CATEGORIES);
+        }
 
         if (savedBudget) {
           const parsed = JSON.parse(savedBudget);
-          // Merge parsed categories with DEFAULT_BUDGET categories to ensure new defaults/customs exist
           const mergedCategories = { ...DEFAULT_BUDGET.categories, ...parsed.categories };
           setBudget({
             ...DEFAULT_BUDGET,
@@ -129,9 +140,9 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
 
   const addCategory = async (name: string) => {
     if (!name || allCategories.includes(name)) return;
-    const updated = [...customCategories, name];
-    setCustomCategories(updated);
-    await AsyncStorage.setItem('ledgr_custom_cats', JSON.stringify(updated));
+    const updated = [...activeCategories, name];
+    setActiveCategories(updated);
+    await AsyncStorage.setItem('ledgr_categories', JSON.stringify(updated));
     
     // Also initialize budget for this category
     const updatedBudget = {
@@ -144,29 +155,33 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteCategory = async (name: string) => {
     if (DEFAULT_CATEGORIES.includes(name)) return;
+    if (activeCategories.length <= 1) return;
 
-    // 1. Remove from customCategories
-    const newCustomCats = customCategories.filter(c => c !== name);
-    setCustomCategories(newCustomCats);
-    await AsyncStorage.setItem('ledgr_custom_cats', JSON.stringify(newCustomCats));
+    // 1. Identify fallback (first category that is NOT the one being deleted)
+    const newCategories = activeCategories.filter(c => c !== name);
+    const fallbackCategory = newCategories[0];
 
-    // 2. Remove from budget
+    // 2. Update state and storage
+    setActiveCategories(newCategories);
+    await AsyncStorage.setItem('ledgr_categories', JSON.stringify(newCategories));
+
+    // 3. Remove from budget
     const newBudgetCats = { ...budget.categories };
     delete newBudgetCats[name];
     const updatedBudget = { ...budget, categories: newBudgetCats };
     setBudget(updatedBudget);
     await AsyncStorage.setItem('ledgr_budget', JSON.stringify(updatedBudget));
 
-    // 3. Move expenses to "Other"
+    // 4. Move expenses to Fallback
     const updatedExpenses = expenses.map(e => 
-      e.category === name ? { ...e, category: 'Other' as ExpenseCategory } : e
+      e.category === name ? { ...e, category: fallbackCategory as ExpenseCategory } : e
     );
     setExpenses(updatedExpenses);
     await AsyncStorage.setItem('ledgr_expenses', JSON.stringify(updatedExpenses));
 
-    // 4. Update bills
+    // 5. Update bills
     const updatedBills = bills.map(b => 
-      b.category === name ? { ...b, category: 'Other' as ExpenseCategory } : b
+      b.category === name ? { ...b, category: fallbackCategory as ExpenseCategory } : b
     );
     setBills(updatedBills);
     await AsyncStorage.setItem('ledgr_bills', JSON.stringify(updatedBills));

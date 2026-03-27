@@ -76,9 +76,10 @@ export default function SettingsScreen() {
   };
 
   const handleDeleteCategory = (cat: string) => {
+    const fallback = allCategories.find(c => c !== cat) || 'Other';
     Alert.alert(
       "Delete Category",
-      `Are you sure you want to delete "${cat}"? All related expenses will be moved to "Other".`,
+      `Are you sure you want to delete "${cat}"? All related expenses will be moved to "${fallback}".`,
       [
         { text: "Cancel", style: "cancel" },
         { 

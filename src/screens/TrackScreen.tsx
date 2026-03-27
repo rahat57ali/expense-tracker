@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Platform, ScrollView } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -34,12 +34,21 @@ export default function TrackScreen() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 18) return "Good afternoon";
-    return "Good evening";
-  };
+  const MOTIVATIONAL_PROMPT = useMemo(() => {
+    const prompts = [
+      "Let's see where the money went 👀",
+      "You showed up. That already counts.",
+      "Quick log. Clear mind. Let's go.",
+      "Your wallet called. It needs you.",
+      "Don't let today's expenses become tomorrow's mystery.",
+      "A minute now saves stress later.",
+      "You're doing better than you think. Keep logging.",
+      "New day, fresh start. Let's track it.",
+      "Got something to add? Let's do it.",
+      "The best time to log was earlier. Second best? Right now."
+    ];
+    return prompts[Math.floor(Math.random() * prompts.length)];
+  }, []);
 
   const now = new Date();
   const currentMonth = now.getMonth();
@@ -134,7 +143,9 @@ export default function TrackScreen() {
             />
             <Text style={styles.brandNameSmall}>LEDGR</Text>
           </View>
-          <Text style={styles.greetingText}>{getGreeting()} —</Text>
+          <Text style={styles.greetingText} numberOfLines={2}>
+            {MOTIVATIONAL_PROMPT}
+          </Text>
           
           <LinearGradient 
             colors={['rgba(30,30,30,0.8)', 'rgba(10,10,10,0.95)']} 
