@@ -17,6 +17,7 @@ interface LedgrContextType {
   deleteBill: (id: string) => Promise<void>;
   isBillDueSoon: boolean;
   addCategory: (name: string) => Promise<void>;
+  deleteCategory: (name: string) => Promise<void>;
   allCategories: ExpenseCategory[];
 }
 
@@ -141,6 +142,36 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
     await AsyncStorage.setItem('ledgr_budget', JSON.stringify(updatedBudget));
   };
 
+  const deleteCategory = async (name: string) => {
+    if (DEFAULT_CATEGORIES.includes(name)) return;
+
+    // 1. Remove from customCategories
+    const newCustomCats = customCategories.filter(c => c !== name);
+    setCustomCategories(newCustomCats);
+    await AsyncStorage.setItem('ledgr_custom_cats', JSON.stringify(newCustomCats));
+
+    // 2. Remove from budget
+    const newBudgetCats = { ...budget.categories };
+    delete newBudgetCats[name];
+    const updatedBudget = { ...budget, categories: newBudgetCats };
+    setBudget(updatedBudget);
+    await AsyncStorage.setItem('ledgr_budget', JSON.stringify(updatedBudget));
+
+    // 3. Move expenses to "Other"
+    const updatedExpenses = expenses.map(e => 
+      e.category === name ? { ...e, category: 'Other' as ExpenseCategory } : e
+    );
+    setExpenses(updatedExpenses);
+    await AsyncStorage.setItem('ledgr_expenses', JSON.stringify(updatedExpenses));
+
+    // 4. Update bills
+    const updatedBills = bills.map(b => 
+      b.category === name ? { ...b, category: 'Other' as ExpenseCategory } : b
+    );
+    setBills(updatedBills);
+    await AsyncStorage.setItem('ledgr_bills', JSON.stringify(updatedBills));
+  };
+
   const isBillDueSoon = bills.some(bill => {
     if (bill.isPaid) return false;
     const dueDate = startOfDay(new Date(bill.dueDate));
@@ -152,7 +183,7 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
   return (
     <LedgrContext.Provider value={{ 
       expenses, budget, isLoaded, addExpense, updateBudget, deleteExpense, updateExpense,
-      bills, addBill, updateBill, deleteBill, isBillDueSoon, addCategory, allCategories
+      bills, addBill, updateBill, deleteBill, isBillDueSoon, addCategory, deleteCategory, allCategories
     }}>
       {children}
     </LedgrContext.Provider>

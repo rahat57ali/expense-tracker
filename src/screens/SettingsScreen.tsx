@@ -4,9 +4,9 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, Plat
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLedgr } from '../lib/LedgrContext';
-import { ExpenseCategory, Budget, autoCategorize } from '../lib/store';
+import { ExpenseCategory, Budget, autoCategorize, DEFAULT_CATEGORIES } from '../lib/store';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, ShoppingBasket, Calendar, PlusCircle, Pencil } from 'lucide-react-native';
+import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, ShoppingBasket, Calendar, PlusCircle, Pencil, Trash2 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSnackbar } from '../components/Snackbar';
 
@@ -35,7 +35,7 @@ const PAKISTANI_PRESETS: Record<ExpenseCategory, number> = {
 // Dimensions width unused now for sliders
 
 export default function SettingsScreen() {
-  const { budget, updateBudget, addExpense, isLoaded, allCategories, addCategory } = useLedgr();
+  const { budget, updateBudget, addExpense, isLoaded, allCategories, addCategory, deleteCategory } = useLedgr();
   const { showSnackbar } = useSnackbar();
   const [localBudget, setLocalBudget] = useState<Budget>(budget);
   const [newCatName, setNewCatName] = useState('');
@@ -73,6 +73,24 @@ export default function SettingsScreen() {
     setNewCatName('');
     setIsAddingCat(false);
     showSnackbar('Category added!', 'success');
+  };
+
+  const handleDeleteCategory = (cat: string) => {
+    Alert.alert(
+      "Delete Category",
+      `Are you sure you want to delete "${cat}"? All related expenses will be moved to "Other".`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive", 
+          onPress: async () => {
+            await deleteCategory(cat);
+            showSnackbar(`Category "${cat}" deleted`, 'success');
+          }
+        }
+      ]
+    );
   };
 
   if (!isLoaded) return <View style={styles.container} />;
@@ -186,6 +204,17 @@ export default function SettingsScreen() {
                     <Icon color="#00F0FF" size={14} />
                   </View>
                   <Text style={styles.catName} numberOfLines={1}>{cat}</Text>
+                  
+                  {!DEFAULT_CATEGORIES.includes(cat) && (
+                    <TouchableOpacity 
+                      style={styles.deleteCatBtn} 
+                      onPress={() => handleDeleteCategory(cat)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Trash2 size={12} color="#EF4444" opacity={0.6} />
+                    </TouchableOpacity>
+                  )}
+                  
                   <Text style={styles.catPercent}>{percentage}%</Text>
                 </View>
                 <View style={styles.catInputContainer}>
@@ -296,6 +325,7 @@ const styles = StyleSheet.create({
   catInputContainer: { flexDirection: 'row', alignItems: 'baseline', backgroundColor: 'rgba(0,0,0,0.3)', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12 },
   catInputCurrency: { color: '#606060', fontSize: 10, fontFamily: 'Inter_700Bold', marginRight: 6 },
   catInput: { color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 14, flex: 1 },
+  deleteCatBtn: { padding: 4, marginRight: 4 },
 
   mainSaveButton: { backgroundColor: '#FFFFFF', borderRadius: 24, height: 64, alignItems: 'center', justifyContent: 'center', marginBottom: 40 },
   mainSaveText: { color: '#000000', fontFamily: 'Outfit_800ExtraBold', fontSize: 16 },
