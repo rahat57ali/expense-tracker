@@ -38,8 +38,8 @@ export default function DeleteCategoryModal({
           >
             <View style={styles.header}>
               <View style={styles.titleRow}>
-                <Info color="#00F0FF" size={20} />
-                <Text style={styles.headerTitle}>Delete Category</Text>
+                <AlertCircle color="#EF4444" size={20} />
+                <Text style={styles.headerTitle}>Confirm Deletion</Text>
               </View>
               <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
                 <X color="#A0A0A0" size={20} />
@@ -47,22 +47,14 @@ export default function DeleteCategoryModal({
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} style={{ flexShrink: 1 }}>
-              <View style={styles.statusBanner}>
-                <AlertCircle color="#EF4444" size={24} />
-                <View style={styles.statusTextContainer}>
-                  <Text style={styles.statusLabel}>CONFIRM DELETION</Text>
-                  <Text style={styles.statusTarget}>Target: {categoryName}</Text>
-                </View>
-              </View>
-
               <Text style={styles.descriptionText}>
-                Are you sure you want to remove <Text style={styles.highlight}>"{categoryName}"</Text>? This action will hide the category from your active lists.
+                <Text style={styles.highlight}>"{categoryName}"</Text> will be removed from your active categories. Your past expenses and stats will stay under their original category.
               </Text>
 
               <View style={styles.infoBox}>
                 <Info color="#606060" size={16} />
                 <Text style={styles.infoText}>
-                  Internal records and historical statistics will <Text style={styles.infoHighlight}>retain the original classification</Text> to ensure your financial history remains accurate.
+                  This only affects new entries — historical data remains unchanged.
                 </Text>
               </View>
             </ScrollView>
@@ -73,7 +65,7 @@ export default function DeleteCategoryModal({
               </TouchableOpacity>
               
               <TouchableOpacity style={styles.deleteBtn} onPress={onConfirm}>
-                <Text style={styles.deleteText}>Delete Permanently</Text>
+                <Text style={styles.deleteText}>Delete</Text>
               </TouchableOpacity>
             </View>
           </LinearGradient>
@@ -127,32 +119,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center' 
   },
   
-  statusBanner: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    padding: 16, 
-    borderRadius: 20, 
-    borderWidth: 1, 
-    marginBottom: 16, 
-    gap: 16,
-    backgroundColor: 'rgba(239, 68, 68, 0.05)',
-    borderColor: 'rgba(239, 68, 68, 0.2)'
-  },
-  statusTextContainer: { 
-    flex: 1 
-  },
-  statusLabel: { 
-    fontFamily: 'Outfit_800ExtraBold', 
-    fontSize: 16, 
-    letterSpacing: 1,
-    color: '#EF4444'
-  },
-  statusTarget: { 
-    color: '#A0A0A0', 
-    fontFamily: 'Inter_500Medium', 
-    fontSize: 11, 
-    marginTop: 2 
-  },
+
   
   descriptionText: { 
     color: '#FFFFFF', 
