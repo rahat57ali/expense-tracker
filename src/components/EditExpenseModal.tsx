@@ -176,8 +176,8 @@ export default function EditExpenseModal({ visible, onClose, expense }: EditExpe
 
                 <Text style={styles.label}>CATEGORY</Text>
                 <View style={styles.catGrid}>
-                  {allCategories.map((cat) => {
-                    const Icon = CATEGORY_ICONS[cat] || MoreHorizontal;
+                  {(allCategories.includes(category) ? allCategories : [category, ...allCategories]).map((cat) => {
+                    const Icon = CATEGORY_ICONS[cat as ExpenseCategory] || MoreHorizontal;
                     const isSelected = category === cat;
                     return (
                       <TouchableOpacity

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Platform } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLedgr } from '../lib/LedgrContext';
@@ -7,6 +7,7 @@ import { ExpenseCategory, Budget, DEFAULT_CATEGORIES } from '../lib/store';
 import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, ShoppingBasket, PlusCircle, Pencil, Trash2 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSnackbar } from '../components/Snackbar';
+import DeleteCategoryModal from '../components/DeleteCategoryModal';
 
 const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
   Food: Coffee,
@@ -25,6 +26,10 @@ export default function SettingsScreen() {
   const [localBudget, setLocalBudget] = useState<Budget>(budget);
   const [newCatName, setNewCatName] = useState('');
   const [isAddingCat, setIsAddingCat] = useState(false);
+  
+  // Delete Category Modal State
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (isLoaded) {
@@ -61,22 +66,20 @@ export default function SettingsScreen() {
   };
 
   const handleDeleteCategory = (cat: string) => {
-    const fallback = allCategories.find(c => c !== cat) || 'Other';
-    Alert.alert(
-      "Delete Category",
-      `Are you sure you want to delete "${cat}"? All related expenses will be moved to "${fallback}".`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Delete", 
-          style: "destructive", 
-          onPress: async () => {
-            await deleteCategory(cat);
-            showSnackbar(`Category "${cat}" deleted`, 'success');
-          }
-        }
-      ]
-    );
+    setCategoryToDelete(cat);
+    setIsDeleteModalVisible(true);
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+    const catName = categoryToDelete;
+    
+    // Close modal first for smooth UX
+    setIsDeleteModalVisible(false);
+    setCategoryToDelete(null);
+
+    await deleteCategory(catName);
+    showSnackbar(`Category "${catName}" deleted`, 'success');
   };
 
   if (!isLoaded) return <View style={styles.container} />;
@@ -226,6 +229,13 @@ export default function SettingsScreen() {
         </TouchableOpacity>
 
       </KeyboardAwareScrollView>
+
+      <DeleteCategoryModal
+        visible={isDeleteModalVisible}
+        onClose={() => setIsDeleteModalVisible(false)}
+        onConfirm={confirmDeleteCategory}
+        categoryName={categoryToDelete || ''}
+      />
     </SafeAreaView>
   );
 }

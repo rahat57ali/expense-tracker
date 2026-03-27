@@ -157,34 +157,20 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
     if (DEFAULT_CATEGORIES.includes(name)) return;
     if (activeCategories.length <= 1) return;
 
-    // 1. Identify fallback (first category that is NOT the one being deleted)
+    // 1. Update active categories
     const newCategories = activeCategories.filter(c => c !== name);
-    const fallbackCategory = newCategories[0];
-
-    // 2. Update state and storage
     setActiveCategories(newCategories);
     await AsyncStorage.setItem('ledgr_categories', JSON.stringify(newCategories));
 
-    // 3. Remove from budget
+    // 2. Remove from budget config
     const newBudgetCats = { ...budget.categories };
     delete newBudgetCats[name];
     const updatedBudget = { ...budget, categories: newBudgetCats };
     setBudget(updatedBudget);
     await AsyncStorage.setItem('ledgr_budget', JSON.stringify(updatedBudget));
-
-    // 4. Move expenses to Fallback
-    const updatedExpenses = expenses.map(e => 
-      e.category === name ? { ...e, category: fallbackCategory as ExpenseCategory } : e
-    );
-    setExpenses(updatedExpenses);
-    await AsyncStorage.setItem('ledgr_expenses', JSON.stringify(updatedExpenses));
-
-    // 5. Update bills
-    const updatedBills = bills.map(b => 
-      b.category === name ? { ...b, category: fallbackCategory as ExpenseCategory } : b
-    );
-    setBills(updatedBills);
-    await AsyncStorage.setItem('ledgr_bills', JSON.stringify(updatedBills));
+    
+    // Note: We deliberately do NOT remap expenses or bills.
+    // This allows historical data to retain the original category name (Soft-Delete).
   };
 
   const isBillDueSoon = bills.some(bill => {
