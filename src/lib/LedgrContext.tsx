@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Expense, Budget, ExpenseCategory, autoCategorize, Bill, DEFAULT_CATEGORIES } from './store';
-import { addDays, isBefore, isAfter, startOfDay } from 'date-fns';
+import { addDays, isBefore, startOfDay } from 'date-fns';
 
 interface LedgrContextType {
   expenses: Expense[];
@@ -43,7 +43,7 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
   const [activeCategories, setActiveCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  const allCategories = activeCategories;
+  const allCategories = activeCategories; // alias for provider consistency
 
   useEffect(() => {
     const loadData = async () => {

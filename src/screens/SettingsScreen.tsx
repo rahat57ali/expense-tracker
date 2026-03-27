@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, Platform } from 'react-native';
-// Remove Slider import
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLedgr } from '../lib/LedgrContext';
-import { ExpenseCategory, Budget, autoCategorize, DEFAULT_CATEGORIES } from '../lib/store';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, ShoppingBasket, Calendar, PlusCircle, Pencil, Trash2 } from 'lucide-react-native';
+import { ExpenseCategory, Budget, DEFAULT_CATEGORIES } from '../lib/store';
+import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, ShoppingBasket, PlusCircle, Pencil, Trash2 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSnackbar } from '../components/Snackbar';
 
@@ -20,22 +18,9 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
   Other: MoreHorizontal,
 };
 
-const CATEGORIES: ExpenseCategory[] = ['Food', 'Grocery', 'Transport', 'Bills', 'Shopping', 'Health', 'Other'];
-
-const PAKISTANI_PRESETS: Record<ExpenseCategory, number> = {
-  Food: 25,
-  Bills: 20,
-  Grocery: 15,
-  Transport: 10,
-  Shopping: 15,
-  Health: 5,
-  Other: 10
-};
-
-// Dimensions width unused now for sliders
 
 export default function SettingsScreen() {
-  const { budget, updateBudget, addExpense, isLoaded, allCategories, addCategory, deleteCategory } = useLedgr();
+  const { budget, updateBudget, isLoaded, allCategories, addCategory, deleteCategory } = useLedgr();
   const { showSnackbar } = useSnackbar();
   const [localBudget, setLocalBudget] = useState<Budget>(budget);
   const [newCatName, setNewCatName] = useState('');

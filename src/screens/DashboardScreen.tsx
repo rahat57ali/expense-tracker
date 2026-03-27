@@ -85,7 +85,7 @@ export default function DashboardScreen() {
     categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.amount;
   });
   
-  const categories = allCategories;
+
   const biggestCategory = Object.entries(categoryTotals).sort((a,b) => b[1] - a[1])[0] || ['None', 0];
   const isOverspent = remainingBudget < 0;
 
@@ -155,7 +155,7 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.catBudgetGrid}>
-          {categories.map(cat => {
+          {allCategories.map(cat => {
             const Icon = CATEGORY_ICONS[cat as ExpenseCategory] || MoreHorizontal;
             const spent = categoryTotals[cat] || 0;
             const limit = budget.categories[cat] || 0;
@@ -271,11 +271,8 @@ const styles = StyleSheet.create({
   kpiValueLarge: { color: '#FFFFFF', fontSize: 36, fontFamily: 'Outfit_300Light' },
   
   badge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, borderWidth: 1 },
-  badgeSuccess: { backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.2)' },
-  badgeDanger: { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' },
   badgeText: { fontFamily: 'Outfit_800ExtraBold', fontSize: 10, letterSpacing: 1 },
-  badgeTextSuccess: { color: '#10B981' },
-  badgeTextDanger: { color: '#EF4444' },
+
 
   sectionHeader: { marginBottom: 16, marginTop: 8 },
   sectionTitle: { fontFamily: 'Outfit_600SemiBold', fontSize: 20, color: '#FFFFFF' },

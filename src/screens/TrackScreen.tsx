@@ -4,12 +4,12 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLedgr } from '../lib/LedgrContext';
-import { ExpenseCategory, autoCategorize } from '../lib/store';
-import { Search, Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, Plus, ShoppingBasket, Calendar, Pencil, TrendingUp, TrendingDown } from 'lucide-react-native';
+import { ExpenseCategory, Expense, autoCategorize } from '../lib/store';
+import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, Plus, ShoppingBasket, Calendar, Pencil, TrendingUp, TrendingDown } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSnackbar } from '../components/Snackbar';
 import EditExpenseModal from '../components/EditExpenseModal';
-import { Expense } from '../lib/store';
+
 
 const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
   Food: Coffee,
@@ -20,8 +20,6 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
   Health: Heart,
   Other: MoreHorizontal,
 };
-
-const CATEGORIES: ExpenseCategory[] = ['Food', 'Grocery', 'Transport', 'Bills', 'Shopping', 'Health', 'Other'];
 
 export default function TrackScreen() {
   const { expenses, budget, addExpense, isLoaded, allCategories } = useLedgr();
@@ -353,11 +351,7 @@ const styles = StyleSheet.create({
   usageBarBg: { height: 4, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' },
   usageBarFill: { height: '100%', backgroundColor: '#00F0FF', borderRadius: 2 },
 
-  logo: { width: 44, height: 44, marginBottom: 16 },
-  brandName: { fontFamily: 'Outfit_800ExtraBold', color: '#606060', fontSize: 10, letterSpacing: 6, marginBottom: 24 },
-  tagContainer: { backgroundColor: 'rgba(0, 240, 255, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, alignSelf: 'flex-start', marginBottom: 16 },
-  tagText: { color: '#00F0FF', fontSize: 9, fontFamily: 'Inter_800ExtraBold', letterSpacing: 1 },
-  title: { fontFamily: 'Outfit_800ExtraBold', fontSize: 44, color: '#FFFFFF', lineHeight: 50 },
+
   
   inputCard: { backgroundColor: '#141414', borderRadius: 28, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginBottom: 40 },
   inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0A0A0A', borderRadius: 16, height: 54, paddingHorizontal: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
@@ -381,8 +375,7 @@ const styles = StyleSheet.create({
   dateLabelText: { color: '#00F0FF', fontSize: 8, fontFamily: 'Inter_800ExtraBold', letterSpacing: 0.5 },
 
   sectionLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, marginTop: 8 },
-  smartHint: { backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  smartHintText: { color: '#A0A0A0', fontSize: 10, fontFamily: 'Inter_700Bold' },
+
   scrollHint: { backgroundColor: 'rgba(255,255,255,0.03)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   scrollHintText: { color: '#A0A0A0', fontSize: 9, fontFamily: 'Inter_500Medium' },
 

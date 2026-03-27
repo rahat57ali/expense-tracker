@@ -45,10 +45,10 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
   Other: MoreHorizontal,
 };
 
-const CATEGORIES: ExpenseCategory[] = ['Food', 'Grocery', 'Transport', 'Bills', 'Shopping', 'Health', 'Other'];
+
 
 export default function EditExpenseModal({ visible, onClose, expense }: EditExpenseModalProps) {
-  const { updateExpense, deleteExpense } = useLedgr();
+  const { updateExpense, deleteExpense, allCategories } = useLedgr();
   const { showSnackbar } = useSnackbar();
   
   const [name, setName] = useState('');
@@ -176,8 +176,8 @@ export default function EditExpenseModal({ visible, onClose, expense }: EditExpe
 
                 <Text style={styles.label}>CATEGORY</Text>
                 <View style={styles.catGrid}>
-                  {CATEGORIES.map((cat) => {
-                    const Icon = CATEGORY_ICONS[cat];
+                  {allCategories.map((cat) => {
+                    const Icon = CATEGORY_ICONS[cat] || MoreHorizontal;
                     const isSelected = category === cat;
                     return (
                       <TouchableOpacity
