@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Expense, Budget, ExpenseCategory, autoCategorize, Bill, DEFAULT_CATEGORIES } from './store';
+import { Expense, Budget, ExpenseCategory, autoCategorize, Bill, DEFAULT_CATEGORIES, RolloverRecoveryState } from './store';
 import { addDays, isBefore, startOfDay, format } from 'date-fns';
 
 export interface MonthEndData {
@@ -8,6 +8,7 @@ export interface MonthEndData {
   totalBudget: number;
   totalSpent: number;
   remaining: number;
+  recoveryState?: RolloverRecoveryState;
 }
 
 interface LedgrContextType {
@@ -27,10 +28,9 @@ interface LedgrContextType {
   deleteCategory: (name: string) => Promise<void>;
   allCategories: ExpenseCategory[];
   monthEndData: MonthEndData | null;
-  resolveMonthEnd: (rolloverAmount: number) => Promise<void>;
+  resolveMonthEnd: (rolloverAmount: number, updatedBudget?: Budget) => Promise<void>;
+  saveRolloverRecovery: (state: RolloverRecoveryState | null) => Promise<void>;
   reloadBudgetState: () => Promise<void>;
-  isPendingBudgetUpdate: boolean;
-  setPendingBudgetUpdate: (val: boolean) => void;
 }
 
 const DEFAULT_BUDGET: Budget = {
@@ -55,7 +55,6 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
   const [activeCategories, setActiveCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [monthEndData, setMonthEndData] = useState<MonthEndData | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isPendingBudgetUpdate, setPendingBudgetUpdate] = useState(false);
 
   const allCategories = activeCategories; // alias for provider consistency
 
@@ -104,11 +103,18 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
             
           const remaining = finalBudget.total - spent;
           
+          const rawRecovery = await AsyncStorage.getItem('ledgr_rollover_recovery');
+          let recoveryState: RolloverRecoveryState | undefined = undefined;
+          if (rawRecovery) {
+            recoveryState = JSON.parse(rawRecovery);
+          }
+          
           setMonthEndData({
             prevMonth,
             totalBudget: finalBudget.total,
             totalSpent: spent,
-            remaining
+            remaining,
+            recoveryState
           });
         } else if (!parsed.budgetMonth) {
           finalBudget.budgetMonth = currentMonth;
@@ -226,22 +232,33 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
     return isBefore(dueDate, threeDaysFromNow);
   });
 
-  const resolveMonthEnd = async (rolloverAmount: number) => {
+  const resolveMonthEnd = async (rolloverAmount: number, updatedBudget?: Budget) => {
     if (!monthEndData) return;
-    const newTotal = budget.total + rolloverAmount;
+    
+    const finalBudgetConfig = updatedBudget ? updatedBudget : budget;
+    const newTotal = finalBudgetConfig.total + rolloverAmount;
     const currentMonth = format(new Date(), 'yyyy-MM');
-    const updatedBudget = { ...budget, total: newTotal, budgetMonth: currentMonth };
-    setBudget(updatedBudget);
-    await AsyncStorage.setItem('ledgr_budget', JSON.stringify(updatedBudget));
+    const newBudgetObj = { ...finalBudgetConfig, total: newTotal, budgetMonth: currentMonth };
+    
+    setBudget(newBudgetObj);
+    await AsyncStorage.setItem('ledgr_budget', JSON.stringify(newBudgetObj));
+    await AsyncStorage.removeItem('ledgr_rollover_recovery');
     setMonthEndData(null);
+  };
+
+  const saveRolloverRecovery = async (state: RolloverRecoveryState | null) => {
+    if (state) {
+      await AsyncStorage.setItem('ledgr_rollover_recovery', JSON.stringify(state));
+    } else {
+      await AsyncStorage.removeItem('ledgr_rollover_recovery');
+    }
   };
 
   return (
     <LedgrContext.Provider value={{ 
       expenses, budget, isLoaded, addExpense, updateBudget, deleteExpense, updateExpense,
       bills, addBill, updateBill, deleteBill, isBillDueSoon, addCategory, deleteCategory, allCategories,
-      monthEndData, resolveMonthEnd, reloadBudgetState,
-      isPendingBudgetUpdate, setPendingBudgetUpdate
+      monthEndData, resolveMonthEnd, saveRolloverRecovery, reloadBudgetState
     }}>
       {children}
     </LedgrContext.Provider>

@@ -28,7 +28,10 @@ export interface Budget {
   budgetMonth?: string; // Format: YYYY-MM
 }
 
-
+export interface RolloverRecoveryState {
+  step: 2 | 3;
+  rolloverAmount: number;
+}
 export function autoCategorize(name: string): ExpenseCategory {
   const lower = name.toLowerCase();
   if (lower.match(/uber|taxi|metro|train|bus|fuel|gas|lyft|careem/)) return 'Transport';

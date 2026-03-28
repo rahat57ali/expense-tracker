@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLedgr } from '../lib/LedgrContext';
 import { ExpenseCategory, Budget, DEFAULT_CATEGORIES } from '../lib/store';
-import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, ShoppingBasket, PlusCircle, Pencil, Trash2, AlertCircle } from 'lucide-react-native';
+import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, ShoppingBasket, PlusCircle, Pencil, Trash2 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSnackbar } from '../components/Snackbar';
 import DeleteCategoryModal from '../components/DeleteCategoryModal';
@@ -23,7 +23,7 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
 const SHOW_DEV_TOOLS = true; // TODO: Remove before release
 
 export default function SettingsScreen() {
-  const { budget, updateBudget, isLoaded, allCategories, addCategory, deleteCategory, reloadBudgetState, isPendingBudgetUpdate, setPendingBudgetUpdate } = useLedgr();
+  const { budget, updateBudget, isLoaded, allCategories, addCategory, deleteCategory, reloadBudgetState } = useLedgr();
   const { showSnackbar } = useSnackbar();
   const [localBudget, setLocalBudget] = useState<Budget>(budget);
   const [newCatName, setNewCatName] = useState('');
@@ -48,9 +48,6 @@ export default function SettingsScreen() {
 
   const handleSaveBudget = () => {
     updateBudget(localBudget);
-    if (isPendingBudgetUpdate) {
-      setPendingBudgetUpdate(false);
-    }
     showSnackbar('Budget configuration saved!', 'success');
   };
 
@@ -91,14 +88,6 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {isPendingBudgetUpdate && (
-        <View style={styles.pendingUpdateBanner}>
-          <AlertCircle color="#FFFFFF" size={20} />
-          <Text style={styles.pendingUpdateText}>
-            Please configure and save your new base budget for the month to unlock navigation.
-          </Text>
-        </View>
-      )}
       <KeyboardAwareScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -392,9 +381,6 @@ const styles = StyleSheet.create({
 
   mainSaveButton: { backgroundColor: '#FFFFFF', borderRadius: 24, height: 64, alignItems: 'center', justifyContent: 'center', marginBottom: 40 },
   mainSaveText: { color: '#000000', fontFamily: 'Outfit_800ExtraBold', fontSize: 16 },
-
-  pendingUpdateBanner: { flexDirection: 'row', backgroundColor: '#EF4444', padding: 16, alignItems: 'center', gap: 12 },
-  pendingUpdateText: { color: '#FFFFFF', fontFamily: 'Inter_600SemiBold', fontSize: 13, flex: 1, lineHeight: 20 },
 
   devSection: { marginTop: 40, padding: 20, backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.2)' },
   devHeader: { color: '#EF4444', fontFamily: 'Outfit_800ExtraBold', fontSize: 16, marginBottom: 16, textAlign: 'center', letterSpacing: 2 },
