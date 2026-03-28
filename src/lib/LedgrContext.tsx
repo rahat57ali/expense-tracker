@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Expense, Budget, ExpenseCategory, autoCategorize, Bill, DEFAULT_CATEGORIES, SavingsEntry } from './store';
+import { Expense, Budget, ExpenseCategory, autoCategorize, Bill, DEFAULT_CATEGORIES } from './store';
 import { addDays, isBefore, startOfDay, format } from 'date-fns';
 
 export interface MonthEndData {
@@ -26,12 +26,11 @@ interface LedgrContextType {
   addCategory: (name: string) => Promise<void>;
   deleteCategory: (name: string) => Promise<void>;
   allCategories: ExpenseCategory[];
-  savings: SavingsEntry[];
   monthEndData: MonthEndData | null;
-  rollOverBudget: () => Promise<void>;
-  saveRemaining: () => Promise<void>;
-  resetBudget: () => Promise<void>;
+  resolveMonthEnd: (rolloverAmount: number) => Promise<void>;
   reloadBudgetState: () => Promise<void>;
+  isPendingBudgetUpdate: boolean;
+  setPendingBudgetUpdate: (val: boolean) => void;
 }
 
 const DEFAULT_BUDGET: Budget = {
@@ -54,9 +53,9 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
   const [budget, setBudget] = useState<Budget>(DEFAULT_BUDGET);
   const [bills, setBills] = useState<Bill[]>([]);
   const [activeCategories, setActiveCategories] = useState<string[]>(DEFAULT_CATEGORIES);
-  const [savings, setSavings] = useState<SavingsEntry[]>([]);
   const [monthEndData, setMonthEndData] = useState<MonthEndData | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isPendingBudgetUpdate, setPendingBudgetUpdate] = useState(false);
 
   const allCategories = activeCategories; // alias for provider consistency
 
@@ -67,11 +66,9 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
       const savedBills = await AsyncStorage.getItem('ledgr_bills');
       const savedCategories = await AsyncStorage.getItem('ledgr_categories');
       const savedCustomCats = await AsyncStorage.getItem('ledgr_custom_cats');
-      const savedSavings = await AsyncStorage.getItem('ledgr_savings');
 
       if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
       if (savedBills) setBills(JSON.parse(savedBills));
-      if (savedSavings) setSavings(JSON.parse(savedSavings));
 
       // Migration logic for categories
       if (savedCategories) {
@@ -107,18 +104,12 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
             
           const remaining = finalBudget.total - spent;
           
-          if (remaining > 0) {
-            setMonthEndData({
-              prevMonth,
-              totalBudget: finalBudget.total,
-              totalSpent: spent,
-              remaining
-            });
-          } else {
-            // Auto-reset
-            finalBudget.budgetMonth = currentMonth;
-            await AsyncStorage.setItem('ledgr_budget', JSON.stringify(finalBudget));
-          }
+          setMonthEndData({
+            prevMonth,
+            totalBudget: finalBudget.total,
+            totalSpent: spent,
+            remaining
+          });
         } else if (!parsed.budgetMonth) {
           finalBudget.budgetMonth = currentMonth;
           await AsyncStorage.setItem('ledgr_budget', JSON.stringify(finalBudget));
@@ -235,39 +226,11 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
     return isBefore(dueDate, threeDaysFromNow);
   });
 
-  const rollOverBudget = async () => {
+  const resolveMonthEnd = async (rolloverAmount: number) => {
     if (!monthEndData) return;
-    const newTotal = budget.total + monthEndData.remaining;
+    const newTotal = budget.total + rolloverAmount;
     const currentMonth = format(new Date(), 'yyyy-MM');
     const updatedBudget = { ...budget, total: newTotal, budgetMonth: currentMonth };
-    setBudget(updatedBudget);
-    await AsyncStorage.setItem('ledgr_budget', JSON.stringify(updatedBudget));
-    setMonthEndData(null);
-  };
-
-  const saveRemaining = async () => {
-    if (!monthEndData) return;
-    const currentMonth = format(new Date(), 'yyyy-MM');
-    const newSavings: SavingsEntry = {
-      id: generateId(),
-      amount: monthEndData.remaining,
-      month: monthEndData.prevMonth,
-      date: new Date().toISOString()
-    };
-    const updatedSavings = [newSavings, ...savings];
-    setSavings(updatedSavings);
-    await AsyncStorage.setItem('ledgr_savings', JSON.stringify(updatedSavings));
-    
-    const updatedBudget = { ...budget, budgetMonth: currentMonth };
-    setBudget(updatedBudget);
-    await AsyncStorage.setItem('ledgr_budget', JSON.stringify(updatedBudget));
-    setMonthEndData(null);
-  };
-
-  const resetBudget = async () => {
-    if (!monthEndData) return;
-    const currentMonth = format(new Date(), 'yyyy-MM');
-    const updatedBudget = { ...budget, budgetMonth: currentMonth };
     setBudget(updatedBudget);
     await AsyncStorage.setItem('ledgr_budget', JSON.stringify(updatedBudget));
     setMonthEndData(null);
@@ -277,7 +240,8 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
     <LedgrContext.Provider value={{ 
       expenses, budget, isLoaded, addExpense, updateBudget, deleteExpense, updateExpense,
       bills, addBill, updateBill, deleteBill, isBillDueSoon, addCategory, deleteCategory, allCategories,
-      savings, monthEndData, rollOverBudget, saveRemaining, resetBudget, reloadBudgetState
+      monthEndData, resolveMonthEnd, reloadBudgetState,
+      isPendingBudgetUpdate, setPendingBudgetUpdate
     }}>
       {children}
     </LedgrContext.Provider>

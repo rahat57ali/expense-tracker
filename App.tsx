@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, useNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { 
   useFonts, 
@@ -42,11 +42,30 @@ const LedgrTheme = {
 };
 
 function Navigation() {
-  const { isBillDueSoon, monthEndData, rollOverBudget, saveRemaining, resetBudget } = useLedgr();
+  const { isBillDueSoon, monthEndData, resolveMonthEnd, isPendingBudgetUpdate, setPendingBudgetUpdate } = useLedgr();
+  const navigationRef = useNavigationContainerRef();
+
+  const handleMonthEndResolve = async (rolloverAmount: number, requestUpdate: boolean) => {
+    await resolveMonthEnd(rolloverAmount);
+    if (requestUpdate) {
+      setPendingBudgetUpdate(true);
+      if (navigationRef.isReady()) {
+        // @ts-ignore
+        navigationRef.navigate('Settings');
+      }
+    }
+  };
 
   return (
-    <NavigationContainer theme={LedgrTheme}>
+    <NavigationContainer theme={LedgrTheme} ref={navigationRef}>
       <Tab.Navigator
+        screenListeners={({ route }) => ({
+          tabPress: (e) => {
+            if (isPendingBudgetUpdate && route.name !== 'Settings') {
+              e.preventDefault();
+            }
+          }
+        })}
         screenOptions={{
           headerShown: false,
           tabBarStyle: {
@@ -117,9 +136,7 @@ function Navigation() {
       <MonthEndModal 
         visible={!!monthEndData} 
         data={monthEndData} 
-        onRollOver={rollOverBudget} 
-        onSave={saveRemaining} 
-        onReset={resetBudget} 
+        onResolve={handleMonthEndResolve}
       />
     </NavigationContainer>
   );

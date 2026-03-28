@@ -28,12 +28,6 @@ export interface Budget {
   budgetMonth?: string; // Format: YYYY-MM
 }
 
-export interface SavingsEntry {
-  id: string;
-  amount: number;
-  month: string; // The month it was saved from (YYYY-MM)
-  date: string; // ISO timestamp of when it was saved
-}
 
 export function autoCategorize(name: string): ExpenseCategory {
   const lower = name.toLowerCase();
