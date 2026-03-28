@@ -1,7 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Expense, Budget, ExpenseCategory, autoCategorize, Bill, DEFAULT_CATEGORIES } from './store';
-import { addDays, isBefore, startOfDay } from 'date-fns';
+import { Expense, Budget, ExpenseCategory, autoCategorize, Bill, DEFAULT_CATEGORIES, SavingsEntry } from './store';
+import { addDays, isBefore, startOfDay, format } from 'date-fns';
+
+export interface MonthEndData {
+  prevMonth: string;
+  totalBudget: number;
+  totalSpent: number;
+  remaining: number;
+}
 
 interface LedgrContextType {
   expenses: Expense[];
@@ -19,6 +26,12 @@ interface LedgrContextType {
   addCategory: (name: string) => Promise<void>;
   deleteCategory: (name: string) => Promise<void>;
   allCategories: ExpenseCategory[];
+  savings: SavingsEntry[];
+  monthEndData: MonthEndData | null;
+  rollOverBudget: () => Promise<void>;
+  saveRemaining: () => Promise<void>;
+  resetBudget: () => Promise<void>;
+  reloadBudgetState: () => Promise<void>;
 }
 
 const DEFAULT_BUDGET: Budget = {
@@ -41,49 +54,90 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
   const [budget, setBudget] = useState<Budget>(DEFAULT_BUDGET);
   const [bills, setBills] = useState<Bill[]>([]);
   const [activeCategories, setActiveCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [savings, setSavings] = useState<SavingsEntry[]>([]);
+  const [monthEndData, setMonthEndData] = useState<MonthEndData | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   const allCategories = activeCategories; // alias for provider consistency
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const savedExpenses = await AsyncStorage.getItem('ledgr_expenses');
-        const savedBudget = await AsyncStorage.getItem('ledgr_budget');
-        const savedBills = await AsyncStorage.getItem('ledgr_bills');
-        const savedCategories = await AsyncStorage.getItem('ledgr_categories');
-        const savedCustomCats = await AsyncStorage.getItem('ledgr_custom_cats');
+  const reloadBudgetState = async () => {
+    try {
+      const savedExpenses = await AsyncStorage.getItem('ledgr_expenses');
+      const savedBudget = await AsyncStorage.getItem('ledgr_budget');
+      const savedBills = await AsyncStorage.getItem('ledgr_bills');
+      const savedCategories = await AsyncStorage.getItem('ledgr_categories');
+      const savedCustomCats = await AsyncStorage.getItem('ledgr_custom_cats');
+      const savedSavings = await AsyncStorage.getItem('ledgr_savings');
 
-        if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
-        if (savedBills) setBills(JSON.parse(savedBills));
+      if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
+      if (savedBills) setBills(JSON.parse(savedBills));
+      if (savedSavings) setSavings(JSON.parse(savedSavings));
 
-        // Migration logic for categories
-        if (savedCategories) {
-          setActiveCategories(JSON.parse(savedCategories));
-        } else if (savedCustomCats) {
-          const combined = [...DEFAULT_CATEGORIES, ...JSON.parse(savedCustomCats)];
-          const unique = Array.from(new Set(combined));
-          setActiveCategories(unique);
-          await AsyncStorage.setItem('ledgr_categories', JSON.stringify(unique));
-        } else {
-          setActiveCategories(DEFAULT_CATEGORIES);
-        }
-
-        if (savedBudget) {
-          const parsed = JSON.parse(savedBudget);
-          const mergedCategories = { ...DEFAULT_BUDGET.categories, ...parsed.categories };
-          setBudget({
-            ...DEFAULT_BUDGET,
-            ...parsed,
-            categories: mergedCategories
-          });
-        }
-      } catch (e) {
-        console.error("Failed to load ledgr data", e);
+      // Migration logic for categories
+      if (savedCategories) {
+        setActiveCategories(JSON.parse(savedCategories));
+      } else if (savedCustomCats) {
+        const combined = [...DEFAULT_CATEGORIES, ...JSON.parse(savedCustomCats)];
+        const unique = Array.from(new Set(combined));
+        setActiveCategories(unique);
+        await AsyncStorage.setItem('ledgr_categories', JSON.stringify(unique));
+      } else {
+        setActiveCategories(DEFAULT_CATEGORIES);
       }
-      setIsLoaded(true);
-    };
-    loadData();
+
+      const currentMonth = format(new Date(), 'yyyy-MM');
+      if (savedBudget) {
+        const parsed = JSON.parse(savedBudget);
+        const mergedCategories = { ...DEFAULT_BUDGET.categories, ...parsed.categories };
+        let finalBudget = {
+          ...DEFAULT_BUDGET,
+          ...parsed,
+          categories: mergedCategories
+        };
+
+        // Month End Detection Logic
+        if (parsed.budgetMonth && parsed.budgetMonth !== currentMonth) {
+          const prevMonth = parsed.budgetMonth;
+          
+          // Calculate spent in prevMonth using parsed expenses
+          const expensesList: Expense[] = savedExpenses ? JSON.parse(savedExpenses) : [];
+          const spent = expensesList
+            .filter(e => e.date.startsWith(prevMonth))
+            .reduce((sum, e) => sum + e.amount, 0);
+            
+          const remaining = finalBudget.total - spent;
+          
+          if (remaining > 0) {
+            setMonthEndData({
+              prevMonth,
+              totalBudget: finalBudget.total,
+              totalSpent: spent,
+              remaining
+            });
+          } else {
+            // Auto-reset
+            finalBudget.budgetMonth = currentMonth;
+            await AsyncStorage.setItem('ledgr_budget', JSON.stringify(finalBudget));
+          }
+        } else if (!parsed.budgetMonth) {
+          finalBudget.budgetMonth = currentMonth;
+          await AsyncStorage.setItem('ledgr_budget', JSON.stringify(finalBudget));
+        }
+
+        setBudget(finalBudget);
+      } else {
+        const initialBudget = { ...DEFAULT_BUDGET, budgetMonth: currentMonth };
+        setBudget(initialBudget);
+        await AsyncStorage.setItem('ledgr_budget', JSON.stringify(initialBudget));
+      }
+    } catch (e) {
+      console.error("Failed to load ledgr data", e);
+    }
+    setIsLoaded(true);
+  };
+
+  useEffect(() => {
+    reloadBudgetState();
   }, []);
 
   const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
@@ -181,10 +235,49 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
     return isBefore(dueDate, threeDaysFromNow);
   });
 
+  const rollOverBudget = async () => {
+    if (!monthEndData) return;
+    const newTotal = budget.total + monthEndData.remaining;
+    const currentMonth = format(new Date(), 'yyyy-MM');
+    const updatedBudget = { ...budget, total: newTotal, budgetMonth: currentMonth };
+    setBudget(updatedBudget);
+    await AsyncStorage.setItem('ledgr_budget', JSON.stringify(updatedBudget));
+    setMonthEndData(null);
+  };
+
+  const saveRemaining = async () => {
+    if (!monthEndData) return;
+    const currentMonth = format(new Date(), 'yyyy-MM');
+    const newSavings: SavingsEntry = {
+      id: generateId(),
+      amount: monthEndData.remaining,
+      month: monthEndData.prevMonth,
+      date: new Date().toISOString()
+    };
+    const updatedSavings = [newSavings, ...savings];
+    setSavings(updatedSavings);
+    await AsyncStorage.setItem('ledgr_savings', JSON.stringify(updatedSavings));
+    
+    const updatedBudget = { ...budget, budgetMonth: currentMonth };
+    setBudget(updatedBudget);
+    await AsyncStorage.setItem('ledgr_budget', JSON.stringify(updatedBudget));
+    setMonthEndData(null);
+  };
+
+  const resetBudget = async () => {
+    if (!monthEndData) return;
+    const currentMonth = format(new Date(), 'yyyy-MM');
+    const updatedBudget = { ...budget, budgetMonth: currentMonth };
+    setBudget(updatedBudget);
+    await AsyncStorage.setItem('ledgr_budget', JSON.stringify(updatedBudget));
+    setMonthEndData(null);
+  };
+
   return (
     <LedgrContext.Provider value={{ 
       expenses, budget, isLoaded, addExpense, updateBudget, deleteExpense, updateExpense,
-      bills, addBill, updateBill, deleteBill, isBillDueSoon, addCategory, deleteCategory, allCategories
+      bills, addBill, updateBill, deleteBill, isBillDueSoon, addCategory, deleteCategory, allCategories,
+      savings, monthEndData, rollOverBudget, saveRemaining, resetBudget, reloadBudgetState
     }}>
       {children}
     </LedgrContext.Provider>

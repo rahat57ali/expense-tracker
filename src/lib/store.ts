@@ -25,6 +25,14 @@ export interface Bill {
 export interface Budget {
   total: number;
   categories: Record<ExpenseCategory, number>;
+  budgetMonth?: string; // Format: YYYY-MM
+}
+
+export interface SavingsEntry {
+  id: string;
+  amount: number;
+  month: string; // The month it was saved from (YYYY-MM)
+  date: string; // ISO timestamp of when it was saved
 }
 
 export function autoCategorize(name: string): ExpenseCategory {

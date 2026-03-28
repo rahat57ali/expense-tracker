@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Platform } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLedgr } from '../lib/LedgrContext';
 import { ExpenseCategory, Budget, DEFAULT_CATEGORIES } from '../lib/store';
 import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, ShoppingBasket, PlusCircle, Pencil, Trash2 } from 'lucide-react-native';
@@ -19,9 +20,10 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
   Other: MoreHorizontal,
 };
 
+const SHOW_DEV_TOOLS = true; // TODO: Remove before release
 
 export default function SettingsScreen() {
-  const { budget, updateBudget, isLoaded, allCategories, addCategory, deleteCategory } = useLedgr();
+  const { budget, updateBudget, isLoaded, allCategories, addCategory, deleteCategory, reloadBudgetState } = useLedgr();
   const { showSnackbar } = useSnackbar();
   const [localBudget, setLocalBudget] = useState<Budget>(budget);
   const [newCatName, setNewCatName] = useState('');
@@ -228,6 +230,60 @@ export default function SettingsScreen() {
           <Text style={styles.mainSaveText}>Update Budget Configuration</Text>
         </TouchableOpacity>
 
+        {/* ========== DEV ONLY - Remove before release ========== */}
+        {SHOW_DEV_TOOLS && (
+          <View style={styles.devSection}>
+            <Text style={styles.devHeader}>🛠 DEV TOOLS</Text>
+            
+            <TouchableOpacity 
+              style={styles.devBtn} 
+              onPress={async () => {
+                try {
+                  const savedBudget = await AsyncStorage.getItem('ledgr_budget');
+                  if (savedBudget) {
+                    const parsed = JSON.parse(savedBudget);
+                    parsed.budgetMonth = '2020-01'; // Force past month
+                    await AsyncStorage.setItem('ledgr_budget', JSON.stringify(parsed));
+                    await reloadBudgetState();
+                    showSnackbar('Simulated Month Rollover', 'success');
+                  }
+                } catch (e) {
+                  showSnackbar('Dev Error', 'error');
+                }
+              }}
+            >
+              <Text style={styles.devBtnText}>Simulate Month Rollover</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.devBtn} 
+              onPress={async () => {
+                await AsyncStorage.removeItem('ledgr_savings');
+                await reloadBudgetState();
+                showSnackbar('Cleared Savings', 'success');
+              }}
+            >
+              <Text style={styles.devBtnText}>Clear All Savings</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.devBtn} 
+              onPress={async () => {
+                const keys = await AsyncStorage.getAllKeys();
+                console.log('--- AsyncStorage Keys ---');
+                for (const key of keys) {
+                  const val = await AsyncStorage.getItem(key);
+                  console.log(`${key}:`, val);
+                }
+                showSnackbar('Logged to Console', 'success');
+              }}
+            >
+              <Text style={styles.devBtnText}>Log AsyncStorage Data</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {/* ====================================================== */}
+
       </KeyboardAwareScrollView>
 
       <DeleteCategoryModal
@@ -325,4 +381,9 @@ const styles = StyleSheet.create({
 
   mainSaveButton: { backgroundColor: '#FFFFFF', borderRadius: 24, height: 64, alignItems: 'center', justifyContent: 'center', marginBottom: 40 },
   mainSaveText: { color: '#000000', fontFamily: 'Outfit_800ExtraBold', fontSize: 16 },
+
+  devSection: { marginTop: 40, padding: 20, backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.2)' },
+  devHeader: { color: '#EF4444', fontFamily: 'Outfit_800ExtraBold', fontSize: 16, marginBottom: 16, textAlign: 'center', letterSpacing: 2 },
+  devBtn: { backgroundColor: '#EF4444', padding: 12, borderRadius: 12, alignItems: 'center', marginBottom: 10 },
+  devBtnText: { color: '#0A0A0A', fontFamily: 'Inter_700Bold', fontSize: 13, letterSpacing: 1 }
 });

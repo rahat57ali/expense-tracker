@@ -25,6 +25,7 @@ import SummaryScreen from './src/screens/SummaryScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import BillsScreen from './src/screens/BillsScreen';
+import MonthEndModal from './src/components/MonthEndModal';
 
 const Tab = createBottomTabNavigator();
 
@@ -41,7 +42,7 @@ const LedgrTheme = {
 };
 
 function Navigation() {
-  const { isBillDueSoon } = useLedgr();
+  const { isBillDueSoon, monthEndData, rollOverBudget, saveRemaining, resetBudget } = useLedgr();
 
   return (
     <NavigationContainer theme={LedgrTheme}>
@@ -112,6 +113,14 @@ function Navigation() {
           }}
         />
       </Tab.Navigator>
+
+      <MonthEndModal 
+        visible={!!monthEndData} 
+        data={monthEndData} 
+        onRollOver={rollOverBudget} 
+        onSave={saveRemaining} 
+        onReset={resetBudget} 
+      />
     </NavigationContainer>
   );
 }
