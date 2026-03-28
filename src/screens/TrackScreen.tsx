@@ -273,46 +273,15 @@ export default function TrackScreen() {
             <Text style={styles.addBtnLabel}>Add Expense</Text>
             <Plus color="#0A0A0A" size={20} strokeWidth={3} />
           </TouchableOpacity>
-        </View>
+          {expenses.length > 0 && (
+            <View style={styles.latestChip}>
+              <Text style={styles.latestChipText} numberOfLines={1}>
+                <Text style={{ fontFamily: 'Inter_700Bold', color: '#00F0FF' }}>LAST ADDED: </Text>
+                {expenses[0].name} · PKR {expenses[0].amount.toLocaleString()} · {expenses[0].category}
+              </Text>
+            </View>
+          )}
 
-        <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Recent History</Text>
-          <Text style={styles.listCount}>{expenses.length} total</Text>
-        </View>
-
-        <View style={styles.expensesList}>
-          {expenses.slice(0, 10).map((expense) => {
-            const Icon = CATEGORY_ICONS[expense.category as ExpenseCategory] || MoreHorizontal;
-            const { isOver } = getCategoryStatus(expense.category);
-            return (
-              <TouchableOpacity 
-                key={expense.id} 
-                onPress={() => handleEditPress(expense)}
-              >
-                <LinearGradient 
-                  colors={['rgba(25,25,25,0.7)', 'rgba(15,15,15,0.8)']} 
-                  style={styles.strip}
-                >
-                  <View style={styles.stripLeft}>
-                    <View style={[styles.stripIconBox, isOver && styles.iconBoxDanger]}>
-                      <Icon color={isOver ? "#EF4444" : "#FFFFFF"} size={16} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.stripName}>{expense.name}</Text>
-                      <Text style={styles.stripCat}>{expense.category}</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.stripRight}>
-                    <Text style={[styles.stripAmount, isOver && styles.textDanger]}>
-                      <Text style={styles.pkSmall}>PKR </Text>{expense.amount.toLocaleString()}
-                    </Text>
-                    <Text style={styles.stripDate}>{new Date(expense.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</Text>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            );
-          })}
         </View>
 
       </KeyboardAwareScrollView>
@@ -329,8 +298,8 @@ export default function TrackScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0A0A0A' },
   glow: { position: 'absolute', width: 300, height: 300, borderRadius: 150 },
-  scrollContent: { padding: 24, paddingBottom: 120 },
-  header: { marginBottom: 32, marginTop: 10 },
+  scrollContent: { padding: 20, paddingBottom: 40 },
+  header: { marginBottom: 20, marginTop: 10 },
   headerTop: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   logoSmall: { width: 20, height: 20 },
   brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', color: '#606060', fontSize: 10, letterSpacing: 4 },
@@ -353,8 +322,8 @@ const styles = StyleSheet.create({
 
 
   
-  inputCard: { backgroundColor: '#141414', borderRadius: 28, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginBottom: 40 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0A0A0A', borderRadius: 16, height: 54, paddingHorizontal: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  inputCard: { backgroundColor: '#141414', borderRadius: 28, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginBottom: 20 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0A0A0A', borderRadius: 16, height: 50, paddingHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   inputDesc: { flex: 1, color: '#FFFFFF', fontFamily: 'Inter_500Medium', fontSize: 16 },
   currencyPrefix: { fontFamily: 'Inter_700Bold', color: '#00F0FF', fontSize: 12, marginRight: 12 },
   inputAmount: { flex: 1, color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 20 },
@@ -379,24 +348,11 @@ const styles = StyleSheet.create({
   scrollHint: { backgroundColor: 'rgba(255,255,255,0.03)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   scrollHintText: { color: '#A0A0A0', fontSize: 9, fontFamily: 'Inter_500Medium' },
 
-  bigAddButton: { backgroundColor: '#FFFFFF', borderRadius: 16, height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 24 },
+  bigAddButton: { backgroundColor: '#FFFFFF', borderRadius: 16, height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16 },
   addBtnLabel: { color: '#0A0A0A', fontFamily: 'Outfit_800ExtraBold', fontSize: 16 },
   addButtonDisabled: { opacity: 0.3 },
 
-  listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16, paddingHorizontal: 4 },
-  listTitle: { fontFamily: 'Outfit_600SemiBold', fontSize: 20, color: '#FFFFFF' },
-  listCount: { fontFamily: 'Inter_500Medium', fontSize: 12, color: '#A0A0A0' },
-  
-  expensesList: { gap: 10 },
-  strip: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderRadius: 18, borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.1)' },
-  stripLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  stripIconBox: { width: 34, height: 34, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' },
-  iconBoxDanger: { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
-  stripName: { color: '#FFFFFF', fontFamily: 'Inter_500Medium', fontSize: 14, marginBottom: 1 },
-  stripCat: { color: '#606060', fontFamily: 'Inter_700Bold', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
-  stripRight: { alignItems: 'flex-end' },
-  stripAmount: { color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 16 },
-  pkSmall: { fontSize: 10, color: '#A0A0A0' },
-  stripDate: { color: '#606060', fontFamily: 'Inter_500Medium', fontSize: 10, marginTop: 2 },
+  latestChip: { marginTop: 12, backgroundColor: 'rgba(0, 240, 255, 0.05)', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0, 240, 255, 0.15)', alignItems: 'center' },
+  latestChipText: { color: '#A0A0A0', fontFamily: 'Inter_500Medium', fontSize: 11, letterSpacing: 0.5 },
   textDanger: { color: '#EF4444' }
 });

@@ -69,7 +69,7 @@ function Navigation() {
         }}
       >
         <Tab.Screen 
-          name="Home" 
+          name="Track" 
           component={TrackScreen} 
           options={{
             tabBarIcon: ({ color, focused }) => <Target color={focused ? '#00F0FF' : color} size={22} />
@@ -83,7 +83,7 @@ function Navigation() {
           }}
         />
         <Tab.Screen 
-          name="Dash" 
+          name="Overview" 
           component={DashboardScreen} 
           options={{
             tabBarIcon: ({ color, focused }) => <LayoutDashboard color={focused ? '#8A2BE2' : color} size={22} />

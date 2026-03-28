@@ -102,7 +102,7 @@ export default function DashboardScreen() {
             resizeMode="contain" 
           />
           <Text style={styles.brandName}>LEDGR</Text>
-          <Text style={styles.title}>Dashboard</Text>
+          <Text style={styles.title}>Overview</Text>
           <Text style={styles.subtitle}>Your real-time financial health</Text>
         </View>
 
