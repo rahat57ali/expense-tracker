@@ -7,31 +7,21 @@ import {
   TouchableOpacity, 
   TextInput 
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Calendar as CalendarIcon, ArrowRightCircle, Trash2, CheckCircle2, Settings as SettingsIcon, AlertCircle, Pencil, MoreHorizontal } from 'lucide-react-native';
 import { useLedgr } from '../lib/LedgrContext';
-import { Budget, ExpenseCategory, DEFAULT_CATEGORIES } from '../lib/store';
-import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, ShoppingBasket } from 'lucide-react-native';
-
-const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
-  Food: Coffee,
-  Transport: Car,
-  Bills: HomeIcon,
-  Shopping: ShoppingBag,
-  Grocery: ShoppingBasket,
-  Health: Heart,
-  Other: MoreHorizontal,
-};
+import { Budget } from '../lib/store';
 
 export default function MonthEndModal({ visible, data }: { visible: boolean; data: any }) {
-  const { resolveMonthEnd, saveRolloverRecovery, budget, allCategories } = useLedgr();
+  const { resolveMonthEnd, saveRolloverRecovery, budget } = useLedgr();
+  const navigation = useNavigation<any>();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [rolloverCache, setRolloverCache] = useState<number>(0);
   
-  // Step 3 state
-  const [localBudget, setLocalBudget] = useState<Budget>(budget);
+  const [localTotal, setLocalTotal] = useState<number>(budget.total);
 
   useEffect(() => {
     if (visible && data) {
@@ -45,8 +35,8 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
         setStep(1);
         setRolloverCache(0);
       }
-      // Always pull the active budget (which is previous month's locked config)
-      setLocalBudget(budget);
+      // Always pull the active budget total
+      setLocalTotal(budget.total);
     }
   }, [visible, data, budget]);
 
@@ -67,14 +57,6 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
     setStep(3);
   };
 
-  // Step 3 Handlers
-  const totalAllocated = useMemo(() =>
-    Object.values(localBudget.categories).reduce((sum, val) => sum + val, 0),
-    [localBudget.categories]);
-
-  const unallocated = localBudget.total - totalAllocated;
-  const isOverAllocated = unallocated < 0;
-
   if (!data) return null;
 
   const { prevMonth, totalBudget, totalSpent, remaining } = data;
@@ -83,16 +65,11 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
   const dateObj = new Date(prevMonth + '-02');
   const monthName = dateObj.toLocaleString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
 
-  const handleCatChange = (cat: ExpenseCategory, val: string) => {
-    const num = parseInt(val) || 0;
-    setLocalBudget(prev => ({
-      ...prev,
-      categories: { ...prev.categories, [cat]: num }
-    }));
-  };
-
   const handleFinalSave = async () => {
-    await resolveMonthEnd(rolloverCache, localBudget);
+    // Preserve existing categories, just update total
+    const updatedBudget = { ...budget, total: localTotal };
+    await resolveMonthEnd(rolloverCache, updatedBudget);
+    navigation.navigate('Settings');
   };
 
   return (
@@ -211,16 +188,11 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
               {/* STEP 3 */}
               {step === 3 && (
                 <View style={styles.stepContainer}>
-                  <Text style={styles.promptText}>Adjust your base budget categories to start fresh</Text>
+                  <Text style={styles.promptText}>Set your new base budget for the month</Text>
                   
                   <View style={styles.budgetMainCard}>
                     <View style={styles.allocationHeader}>
                       <Text style={styles.allocationLabel}>BASE MONTHLY BUDGET</Text>
-                      <View style={[styles.allocationPill, isOverAllocated ? styles.pillDanger : styles.pillSuccess]}>
-                        <Text style={[styles.pillText, isOverAllocated ? styles.pillTextDanger : styles.pillTextSuccess]}>
-                          {isOverAllocated ? 'OVER-ALLOCATED' : 'ALLOCATED'}
-                        </Text>
-                      </View>
                     </View>
 
                     <View style={styles.totalInputWrapper}>
@@ -229,67 +201,20 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
                         <TextInput
                           style={styles.totalInput}
                           keyboardType="numeric"
-                          value={localBudget.total.toString()}
-                          onChangeText={(val) => setLocalBudget(p => ({ ...p, total: parseInt(val) || 0 }))}
+                          value={localTotal.toString()}
+                          onChangeText={(val) => setLocalTotal(parseInt(val) || 0)}
                         />
                         <Pencil size={20} color="#00F0FF" style={{ marginLeft: 12 }} />
                       </View>
                     </View>
-
-                    <View style={styles.allocationBarContainer}>
-                      <View style={styles.allocationBarBg}>
-                        <View
-                          style={[
-                            styles.allocationBarFill,
-                            { width: `${Math.min(100, localBudget.total > 0 ? (totalAllocated / localBudget.total) * 100 : 0)}%` },
-                            isOverAllocated && styles.allocationBarFillDanger
-                          ]}
-                        />
-                      </View>
-                      <View style={styles.allocationStats}>
-                        <Text style={styles.statText}>Allocated: PKR {totalAllocated.toLocaleString()}</Text>
-                        <Text style={[styles.allocStatValue, isOverAllocated && styles.textDanger]}>
-                          {isOverAllocated ? `Exceeded: PKR ${Math.abs(unallocated).toLocaleString()}` : `Remaining: PKR ${unallocated.toLocaleString()}`}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  <View style={styles.catBudgetGrid}>
-                    {allCategories.map(cat => {
-                      const Icon = CATEGORY_ICONS[cat as ExpenseCategory] || MoreHorizontal;
-                      const amount = localBudget.categories[cat] || 0;
-                      const percentage = localBudget.total > 0 ? ((amount / localBudget.total) * 100).toFixed(1) : '0.0';
-
-                      return (
-                        <View key={cat} style={styles.modernCatCard}>
-                          <View style={styles.catCardHeader}>
-                            <View style={styles.catIconBox}>
-                              <Icon color="#00F0FF" size={14} />
-                            </View>
-                            <Text style={styles.catName} numberOfLines={1}>{cat}</Text>
-                            <Text style={styles.catPercent}>{percentage}%</Text>
-                          </View>
-                          <View style={styles.catInputContainer}>
-                            <Text style={styles.catInputCurrency}>PKR</Text>
-                            <TextInput
-                              style={styles.catInput}
-                              keyboardType="numeric"
-                              value={amount.toString()}
-                              onChangeText={(val) => handleCatChange(cat as ExpenseCategory, val)}
-                            />
-                          </View>
-                        </View>
-                      );
-                    })}
                   </View>
 
                   <TouchableOpacity
-                    style={[styles.mainSaveButton, { opacity: isOverAllocated ? 0.6 : 1 }]}
+                    style={[styles.mainSaveButton, { opacity: localTotal > 0 ? 1 : 0.6 }]}
                     onPress={handleFinalSave}
-                    disabled={isOverAllocated}
+                    disabled={localTotal <= 0}
                   >
-                    <Text style={styles.mainSaveText}>Finalize & Start Month</Text>
+                    <Text style={styles.mainSaveText}>Save & Allocate Categories</Text>
                   </TouchableOpacity>
 
                 </View>
@@ -352,32 +277,6 @@ const styles = StyleSheet.create({
   totalInputRow: { flexDirection: 'row', alignItems: 'center' },
   totalCurrency: { color: '#00F0FF', fontSize: 18, fontFamily: 'Outfit_600SemiBold', marginRight: 12 },
   totalInput: { color: '#FFFFFF', fontSize: 22, fontFamily: 'Outfit_600SemiBold', flex: 1, height: 48, padding: 0, textAlignVertical: 'center' },
-  
-  allocationBarContainer: { marginTop: 20 },
-  allocationBarBg: { height: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' },
-  allocationBarFill: { height: '100%', backgroundColor: '#00F0FF', borderRadius: 4 },
-  allocationBarFillDanger: { backgroundColor: '#EF4444' },
-  allocationStats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
-  statText: { color: '#A0A0A0', fontFamily: 'Inter_500Medium', fontSize: 12 },
-  allocStatValue: { color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 12 },
-  textDanger: { color: '#EF4444' },
-  
-  allocationPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1 },
-  pillSuccess: { backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.2)' },
-  pillDanger: { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' },
-  pillText: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
-  pillTextSuccess: { color: '#10B981' },
-  pillTextDanger: { color: '#EF4444' },
-  
-  catBudgetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
-  modernCatCard: { width: '48%', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-  catCardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  catIconBox: { width: 28, height: 28, borderRadius: 8, backgroundColor: 'rgba(0, 240, 255, 0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 8 },
-  catName: { color: '#FFFFFF', fontFamily: 'Inter_600SemiBold', fontSize: 13, flex: 1 },
-  catPercent: { color: '#606060', fontFamily: 'Inter_700Bold', fontSize: 10 },
-  catInputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-  catInputCurrency: { color: '#606060', fontSize: 10, fontFamily: 'Inter_700Bold', marginRight: 6 },
-  catInput: { color: '#FFFFFF', fontSize: 16, fontFamily: 'Outfit_600SemiBold', flex: 1, padding: 0, textAlignVertical: 'center' },
   
   mainSaveButton: { backgroundColor: '#FFFFFF', borderRadius: 20, height: 60, alignItems: 'center', justifyContent: 'center', marginTop: 10, marginBottom: 20 },
   mainSaveText: { color: '#0A0A0A', fontFamily: 'Outfit_800ExtraBold', fontSize: 16 }
