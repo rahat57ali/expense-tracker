@@ -61,7 +61,7 @@ export default function BillsScreen() {
       name,
       amount: parseFloat(amount),
       dueDate: date.toISOString(),
-      category: autoCategorize(name),
+      category: 'Bills',
       isPaid: false
     });
     
@@ -77,7 +77,7 @@ export default function BillsScreen() {
     await addExpense({
       name: `Paid: ${bill.name}`,
       amount: bill.amount,
-      category: bill.category,
+      category: 'Bills',
       date: new Date().toISOString()
     });
 

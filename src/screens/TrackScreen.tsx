@@ -273,14 +273,20 @@ export default function TrackScreen() {
             <Text style={styles.addBtnLabel}>Add Expense</Text>
             <Plus color="#0A0A0A" size={20} strokeWidth={3} />
           </TouchableOpacity>
-          {expenses.length > 0 && (
-            <View style={styles.latestChip}>
-              <Text style={styles.latestChipText} numberOfLines={1}>
-                <Text style={{ fontFamily: 'Inter_700Bold', color: '#00F0FF' }}>LAST ADDED: </Text>
-                {expenses[0].name} · PKR {expenses[0].amount.toLocaleString()} · {expenses[0].category}
-              </Text>
-            </View>
-          )}
+          {expenses.length > 0 && (() => {
+            const exp = expenses[0];
+            const desc = exp.name.replace(/^Paid:\s*/i, '');
+            return (
+              <View style={styles.latestChipRow}>
+                <Text style={styles.latestChipLabel}>LAST</Text>
+                <View style={styles.latestChipCat}>
+                  <Text style={styles.latestChipCatText}>{exp.category.toUpperCase()}</Text>
+                </View>
+                <Text style={styles.latestChipDesc} numberOfLines={1}>{desc}</Text>
+                <Text style={styles.latestChipAmount}>PKR {exp.amount.toLocaleString()}</Text>
+              </View>
+            );
+          })()}
 
         </View>
 
@@ -352,7 +358,11 @@ const styles = StyleSheet.create({
   addBtnLabel: { color: '#0A0A0A', fontFamily: 'Outfit_800ExtraBold', fontSize: 16 },
   addButtonDisabled: { opacity: 0.3 },
 
-  latestChip: { marginTop: 12, backgroundColor: 'rgba(0, 240, 255, 0.05)', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0, 240, 255, 0.15)', alignItems: 'center' },
-  latestChipText: { color: '#A0A0A0', fontFamily: 'Inter_500Medium', fontSize: 11, letterSpacing: 0.5 },
+  latestChipRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12, backgroundColor: 'rgba(0, 240, 255, 0.05)', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0, 240, 255, 0.15)' },
+  latestChipLabel: { color: '#606060', fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1, marginRight: 8 },
+  latestChipCat: { backgroundColor: 'rgba(0, 240, 255, 0.1)', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6, marginRight: 8 },
+  latestChipCatText: { color: '#00F0FF', fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 0.5 },
+  latestChipDesc: { flex: 1, color: '#E0E0E0', fontFamily: 'Inter_500Medium', fontSize: 13, marginRight: 8 },
+  latestChipAmount: { color: '#00F0FF', fontFamily: 'Outfit_600SemiBold', fontSize: 14 },
   textDanger: { color: '#EF4444' }
 });
