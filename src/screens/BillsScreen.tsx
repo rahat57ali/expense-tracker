@@ -181,8 +181,8 @@ export default function BillsScreen() {
               return (
                 <LinearGradient 
                   key={bill.id}
-                  colors={['rgba(25,25,25,0.8)', 'rgba(15,15,15,0.9)']} 
-                  style={[styles.billCard, { borderColor: status.level === 'overdue' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(255,255,255,0.05)' }]}
+                  colors={isUrgent ? [`${status.color}10`, 'rgba(15,15,15,0.9)'] as const : ['rgba(25,25,25,0.8)', 'rgba(15,15,15,0.9)'] as const}
+                  style={[styles.billCard, { borderColor: status.level === 'overdue' ? `${status.color}40` : 'rgba(255,255,255,0.05)' }]}
                 >
                   <View style={styles.billRow}>
                     <View style={styles.billMain}>
