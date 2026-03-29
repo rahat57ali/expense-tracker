@@ -7,7 +7,7 @@ import {
   StyleSheet, 
   Modal, 
   Platform, 
-  ScrollView 
+  ScrollView
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -56,6 +56,7 @@ export default function EditExpenseModal({ visible, onClose, expense }: EditExpe
   const [category, setCategory] = useState<ExpenseCategory>('Other');
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   const amountRef = useRef<TextInput>(null);
 
@@ -65,6 +66,7 @@ export default function EditExpenseModal({ visible, onClose, expense }: EditExpe
       setAmount(expense.amount.toString());
       setCategory(expense.category);
       setDate(new Date(expense.date));
+      setShowDeleteConfirm(false);
     }
   }, [expense, visible]);
 
@@ -115,7 +117,6 @@ export default function EditExpenseModal({ visible, onClose, expense }: EditExpe
             <View style={styles.header}>
               <View>
                 <Text style={styles.headerTitle}>Edit Transaction</Text>
-                <Text style={styles.headerSubtitle}>Modify details or delete entry</Text>
               </View>
               <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
                 <X color="#A0A0A0" size={20} />
@@ -124,14 +125,15 @@ export default function EditExpenseModal({ visible, onClose, expense }: EditExpe
 
             <KeyboardAwareScrollView 
               showsVerticalScrollIndicator={false}
-              extraScrollHeight={50}
+              extraScrollHeight={20}
               keyboardShouldPersistTaps="handled"
+              scrollEnabled={true}
             >
               <View style={styles.form}>
                 <Text style={styles.label}>DESCRIPTION</Text>
                 <View style={styles.inputRow}>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { padding: 0 }]}
                     value={name}
                     onChangeText={setName}
                     placeholder="E.g. Starbucks Coffee"
@@ -145,7 +147,7 @@ export default function EditExpenseModal({ visible, onClose, expense }: EditExpe
                 <View style={styles.inputRow}>
                   <TextInput
                     ref={amountRef}
-                    style={styles.inputAmount}
+                    style={[styles.inputAmount, { padding: 0 }]}
                     value={amount}
                     onChangeText={setAmount}
                     placeholder="0.00"
@@ -193,15 +195,30 @@ export default function EditExpenseModal({ visible, onClose, expense }: EditExpe
                 </View>
 
                 <View style={styles.actions}>
-                  <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
-                    <Trash2 color="#EF4444" size={18} />
-                    <Text style={styles.deleteText}>Delete</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity style={styles.saveBtn} onPress={handleUpdate}>
-                    <Text style={styles.saveText}>Save Changes</Text>
-                    <Check color="#0A0A0A" size={18} strokeWidth={3} />
-                  </TouchableOpacity>
+                  {!showDeleteConfirm ? (
+                    <>
+                      <TouchableOpacity style={styles.deleteBtn} onPress={() => setShowDeleteConfirm(true)}>
+                        <Trash2 color="#EF4444" size={18} />
+                        <Text style={styles.deleteText}>Delete</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity style={styles.saveBtn} onPress={handleUpdate}>
+                        <Text style={styles.saveText}>Save Changes</Text>
+                        <Check color="#0A0A0A" size={18} strokeWidth={3} />
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <>
+                      <TouchableOpacity style={[styles.deleteBtn, { backgroundColor: '#EF4444', borderColor: '#EF4444' }]} onPress={handleDelete}>
+                        <Check color="#FFFFFF" size={18} strokeWidth={3} />
+                        <Text style={[styles.deleteText, { color: '#FFFFFF' }]}>Confirm</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity style={[styles.saveBtn, { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }]} onPress={() => setShowDeleteConfirm(false)}>
+                        <Text style={[styles.saveText, { color: '#A0A0A0' }]}>Cancel</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
                 </View>
               </View>
             </KeyboardAwareScrollView>
@@ -214,31 +231,30 @@ export default function EditExpenseModal({ visible, onClose, expense }: EditExpe
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
-  container: { height: '85%', width: '100%' },
-  modalContent: { flex: 1, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 },
+  container: { height: '68%', width: '100%' },
+  modalContent: { flex: 1, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 16, paddingBottom: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   headerTitle: { color: '#FFFFFF', fontFamily: 'Outfit_800ExtraBold', fontSize: 24 },
-  headerSubtitle: { color: '#606060', fontFamily: 'Inter_500Medium', fontSize: 13, marginTop: 4 },
   closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' },
   
-  form: { gap: 20 },
-  label: { color: '#A0A0A0', fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.5, marginBottom: 8 },
-  inputRow: { backgroundColor: '#020202', borderRadius: 16, height: 56, paddingHorizontal: 16, justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  form: { gap: 10 },
+  label: { color: '#A0A0A0', fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.5, marginBottom: 2 },
+  inputRow: { backgroundColor: '#020202', borderRadius: 16, height: 50, paddingHorizontal: 16, justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   input: { color: '#FFFFFF', fontFamily: 'Inter_500Medium', fontSize: 16 },
   inputAmount: { color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 20 },
   
-  dateSelector: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(0, 240, 255, 0.05)', height: 56, paddingHorizontal: 16, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0, 240, 255, 0.2)' },
+  dateSelector: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(0, 240, 255, 0.05)', height: 50, paddingHorizontal: 16, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0, 240, 255, 0.2)' },
   dateText: { color: '#FFFFFF', fontFamily: 'Inter_500Medium', fontSize: 16 },
   
-  catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  catPill: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: '#020202', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  catPill: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: '#020202', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   catPillActive: { backgroundColor: '#00F0FF', borderColor: '#00F0FF' },
   catPillText: { color: '#606060', fontFamily: 'Inter_500Medium', fontSize: 13 },
   catPillTextActive: { color: '#0A0A0A', fontFamily: 'Inter_700Bold' },
   
-  actions: { flexDirection: 'row', gap: 16, marginTop: 32, paddingBottom: 40 },
-  deleteBtn: { flex: 1, height: 56, borderRadius: 16, backgroundColor: 'rgba(239, 68, 68, 0.08)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.2)' },
-  deleteText: { color: '#EF4444', fontFamily: 'Outfit_700Bold', fontSize: 15 },
-  saveBtn: { flex: 2, height: 56, borderRadius: 16, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  saveText: { color: '#0A0A0A', fontFamily: 'Outfit_800ExtraBold', fontSize: 15 },
+  actions: { flexDirection: 'row', gap: 16, marginTop: 10, paddingBottom: 30 },
+  deleteBtn: { flex: 1, height: 52, borderRadius: 16, backgroundColor: 'rgba(239, 68, 68, 0.08)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.2)' },
+  deleteText: { color: '#EF4444', fontFamily: 'Outfit_800ExtraBold', fontSize: 16 },
+  saveBtn: { flex: 2, height: 52, borderRadius: 16, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  saveText: { color: '#0A0A0A', fontFamily: 'Outfit_800ExtraBold', fontSize: 16 },
 });
