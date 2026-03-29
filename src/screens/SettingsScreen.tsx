@@ -20,10 +20,10 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
   Other: MoreHorizontal,
 };
 
-const SHOW_DEV_TOOLS = true; // TODO: Remove before release
+
 
 export default function SettingsScreen() {
-  const { budget, updateBudget, isLoaded, allCategories, addCategory, deleteCategory, reloadBudgetState } = useLedgr();
+  const { budget, updateBudget, isLoaded, allCategories, addCategory, deleteCategory, reloadBudgetState, showDevTools } = useLedgr();
   const { showSnackbar } = useSnackbar();
   const [localBudget, setLocalBudget] = useState<Budget>(budget);
   const [newCatName, setNewCatName] = useState('');
@@ -231,7 +231,7 @@ export default function SettingsScreen() {
         </TouchableOpacity>
 
         {/* ========== DEV ONLY - Remove before release ========== */}
-        {/* {SHOW_DEV_TOOLS && (
+        {showDevTools && (
           <View style={styles.devSection}>
             <Text style={styles.devHeader}>🛠 DEV TOOLS</Text>
             
@@ -281,7 +281,8 @@ export default function SettingsScreen() {
               <Text style={styles.devBtnText}>Log AsyncStorage Data</Text>
             </TouchableOpacity>
           </View>
-        )} */}
+        )}
+        {/* ====================================================== */}
         {/* ====================================================== */}
 
       </KeyboardAwareScrollView>

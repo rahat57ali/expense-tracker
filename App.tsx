@@ -18,7 +18,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { Target, LayoutDashboard, Settings, BarChart2, Calendar as CalendarIcon, CreditCard } from 'lucide-react-native';
 
 import { LedgrProvider, useLedgr } from './src/lib/LedgrContext';
-import { SnackbarProvider } from './src/components/Snackbar';
+import { SnackbarProvider, useSnackbar } from './src/components/Snackbar';
 import TrackScreen from './src/screens/TrackScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import SummaryScreen from './src/screens/SummaryScreen';
@@ -42,7 +42,28 @@ const LedgrTheme = {
 };
 
 function Navigation() {
-  const { isBillDueSoon, monthEndData } = useLedgr();
+  const { isBillDueSoon, monthEndData, toggleDevTools } = useLedgr();
+  const { showSnackbar } = useSnackbar();
+  const [tapCount, setTapCount] = React.useState(0);
+  const [lastTap, setLastTap] = React.useState(0);
+
+  const handleSettingsTap = () => {
+    const now = Date.now();
+    if (now - lastTap > 2000) {
+      setTapCount(1);
+    } else {
+      const nextCount = tapCount + 1;
+      if (nextCount >= 10) {
+        toggleDevTools().then(enabled => {
+          showSnackbar(enabled ? "🛠️ Dev tools " + (enabled ? "enabled" : "disabled") : "Dev tools toggled");
+        });
+        setTapCount(0);
+      } else {
+        setTapCount(nextCount);
+      }
+    }
+    setLastTap(now);
+  };
 
   return (
     <NavigationContainer theme={LedgrTheme}>
@@ -108,6 +129,9 @@ function Navigation() {
         <Tab.Screen 
           name="Settings" 
           component={SettingsScreen} 
+          listeners={{
+            tabPress: () => handleSettingsTap(),
+          }}
           options={{
             tabBarIcon: ({ color, focused }) => <Settings color={focused ? '#10B981' : color} size={22} />
           }}

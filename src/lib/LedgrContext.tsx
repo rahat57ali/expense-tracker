@@ -31,6 +31,8 @@ interface LedgrContextType {
   resolveMonthEnd: (rolloverAmount: number, updatedBudget?: Budget) => Promise<void>;
   saveRolloverRecovery: (state: RolloverRecoveryState | null) => Promise<void>;
   reloadBudgetState: () => Promise<void>;
+  showDevTools: boolean;
+  toggleDevTools: () => Promise<boolean>;
 }
 
 const DEFAULT_BUDGET: Budget = {
@@ -54,6 +56,7 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
   const [bills, setBills] = useState<Bill[]>([]);
   const [activeCategories, setActiveCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [monthEndData, setMonthEndData] = useState<MonthEndData | null>(null);
+  const [showDevTools, setShowDevTools] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
   const allCategories = activeCategories; // alias for provider consistency
@@ -65,7 +68,9 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
       const savedBills = await AsyncStorage.getItem('ledgr_bills');
       const savedCategories = await AsyncStorage.getItem('ledgr_categories');
       const savedCustomCats = await AsyncStorage.getItem('ledgr_custom_cats');
-
+      const savedDevTools = await AsyncStorage.getItem('ledgr_dev_tools');
+      
+      if (savedDevTools) setShowDevTools(JSON.parse(savedDevTools));
       if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
       if (savedBills) setBills(JSON.parse(savedBills));
 
@@ -253,12 +258,20 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
       await AsyncStorage.removeItem('ledgr_rollover_recovery');
     }
   };
+  
+  const toggleDevTools = async () => {
+    const newState = !showDevTools;
+    setShowDevTools(newState);
+    await AsyncStorage.setItem('ledgr_dev_tools', JSON.stringify(newState));
+    return newState;
+  };
 
   return (
     <LedgrContext.Provider value={{ 
       expenses, budget, isLoaded, addExpense, updateBudget, deleteExpense, updateExpense,
       bills, addBill, updateBill, deleteBill, isBillDueSoon, addCategory, deleteCategory, allCategories,
-      monthEndData, resolveMonthEnd, saveRolloverRecovery, reloadBudgetState
+      monthEndData, resolveMonthEnd, saveRolloverRecovery, reloadBudgetState,
+      showDevTools, toggleDevTools
     }}>
       {children}
     </LedgrContext.Provider>
