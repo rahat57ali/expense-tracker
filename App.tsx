@@ -76,7 +76,7 @@ function Navigation() {
           }}
         />
         <Tab.Screen 
-          name="Stats" 
+          name="Insights" 
           component={SummaryScreen} 
           options={{
             tabBarIcon: ({ color, focused }) => <BarChart2 color={focused ? '#F59E0B' : color} size={22} />

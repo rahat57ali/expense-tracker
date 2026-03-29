@@ -92,7 +92,7 @@ export default function SummaryScreen() {
           resizeMode="contain" 
         />
         <Text style={styles.brandName}>LEDGR</Text>
-        <Text style={styles.headerTitle}>Monthly Summary</Text>
+        <Text style={styles.headerTitle}>Monthly Insights</Text>
         <View style={styles.monthPicker}>
           <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.pickerBtn}>
             <Text style={styles.pickerBtnText}>{"<"}</Text>
