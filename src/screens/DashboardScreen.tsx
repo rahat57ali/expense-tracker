@@ -174,6 +174,7 @@ export default function DashboardScreen() {
             const remaining = limit - spent;
             const isOver = remaining < 0;
             const progress = Math.min(1, spent / (limit || 1));
+            const percentUsed = limit > 0 ? Math.round((spent / limit) * 100) : 0;
 
             return (
               <View key={cat} style={styles.catBudgetCard}>
@@ -187,7 +188,10 @@ export default function DashboardScreen() {
                 <Text style={[styles.catRemaining, isOver && styles.textDanger]}>
                   PKR {Math.abs(remaining).toLocaleString()}
                 </Text>
-                <Text style={styles.catRemainingLabel}>{isOver ? 'OVER LIMIT' : 'REMAINING'}</Text>
+                <View style={styles.catMetaRow}>
+                  <Text style={styles.catRemainingLabel}>{isOver ? 'OVER LIMIT' : 'REMAINING'}</Text>
+                  <Text style={[styles.catPercentLabel, { color: isOver ? '#EF4444' : '#00F0FF' }]}>{percentUsed}%</Text>
+                </View>
                 
                 <View style={styles.progressBarBg}>
                   <View style={[styles.progressBarFill, { width: `${progress * 100}%` }, isOver && styles.progressBarFillDanger]} />
@@ -301,7 +305,9 @@ const styles = StyleSheet.create({
   catIconBoxDanger: { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
   catCardName: { color: '#A0A0A0', fontFamily: 'Inter_700Bold', fontSize: 10, textTransform: 'uppercase' },
   catRemaining: { color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 18 },
-  catRemainingLabel: { color: '#606060', fontFamily: 'Inter_700Bold', fontSize: 9, marginTop: 2, letterSpacing: 0.5 },
+  catRemainingLabel: { color: '#606060', fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 0.5 },
+  catMetaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 },
+  catPercentLabel: { fontFamily: 'Inter_800ExtraBold', fontSize: 9, letterSpacing: 0.5 },
   textDanger: { color: '#EF4444' },
   
   progressBarBg: { height: 4, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 2, marginTop: 12, overflow: 'hidden' },
