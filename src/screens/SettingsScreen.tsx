@@ -9,7 +9,7 @@ import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, Shop
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSnackbar } from '../components/Snackbar';
 import DeleteCategoryModal from '../components/DeleteCategoryModal';
-import { exportExpensesToCSV, importExpensesFromCSV } from '../lib/dateUtils';
+import { exportExpensesToXLSX, importExpensesFromFile } from '../lib/dateUtils';
 import { Download, Upload } from 'lucide-react-native';
 
 const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
@@ -71,7 +71,7 @@ export default function SettingsScreen() {
     }
     
     setIsExporting(true);
-    const success = await exportExpensesToCSV(expenses);
+    const success = await exportExpensesToXLSX(expenses);
     setIsExporting(false);
     
     if (success) {
@@ -81,7 +81,7 @@ export default function SettingsScreen() {
 
   const handleImport = async () => {
     setIsImporting(true);
-    const result = await importExpensesFromCSV(expenses);
+    const result = await importExpensesFromFile(expenses);
     setIsImporting(false);
 
     if (result && result.expenses && result.expenses.length > 0) {
@@ -278,8 +278,8 @@ export default function SettingsScreen() {
               <Download color="#00F0FF" size={20} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.dataActionTitle}>Export data to CSV</Text>
-              <Text style={styles.dataActionSub}>Share or save your expense history</Text>
+              <Text style={styles.dataActionTitle}>Export data to Excel</Text>
+              <Text style={styles.dataActionSub}>Share your history as a .xlsx file</Text>
             </View>
           </TouchableOpacity>
 
@@ -294,8 +294,8 @@ export default function SettingsScreen() {
               <Upload color="#8A2BE2" size={20} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.dataActionTitle}>Import data from CSV</Text>
-              <Text style={styles.dataActionSub}>Append external records to your list</Text>
+              <Text style={styles.dataActionTitle}>Import from Excel / CSV</Text>
+              <Text style={styles.dataActionSub}>Append .xlsx or .csv records</Text>
             </View>
           </TouchableOpacity>
         </View>

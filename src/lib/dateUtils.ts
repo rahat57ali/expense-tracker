@@ -2,7 +2,7 @@ import { startOfDay, endOfMonth, differenceInDays, format as formatDate, parse a
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
-import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 import { Expense, ExpenseCategory } from './store';
 
 /**
@@ -60,9 +60,9 @@ function normalizeDate(dateStr: string): string | null {
 }
 
 /**
- * Exports expenses to a CSV file and triggers the native share dialog.
+ * Exports expenses to an XLSX file and triggers the native share dialog.
  */
-export async function exportExpensesToCSV(expenses: Expense[]): Promise<boolean> {
+export async function exportExpensesToXLSX(expenses: Expense[]): Promise<boolean> {
   if (expenses.length === 0) return false;
 
   const data = expenses.map(e => ({
@@ -72,16 +72,20 @@ export async function exportExpensesToCSV(expenses: Expense[]): Promise<boolean>
     category: e.category
   }));
 
-  const csv = Papa.unparse(data);
-  const fileName = `ledgr_export_${formatDate(new Date(), 'yyyy-MM-dd')}.csv`;
-  const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
-
   try {
-    await FileSystem.writeAsStringAsync(fileUri, csv, { encoding: FileSystem.EncodingType.UTF8 });
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Expenses');
+    
+    const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+    const fileName = `ledgr_export_${formatDate(new Date(), 'yyyy-MM-dd')}.xlsx`;
+    const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+
+    await FileSystem.writeAsStringAsync(fileUri, wbout, { encoding: FileSystem.EncodingType.Base64 });
     await Sharing.shareAsync(fileUri, {
-      mimeType: 'text/csv',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       dialogTitle: 'Export Expenses',
-      UTI: 'public.comma-separated-values-text'
+      UTI: 'org.openxmlformats.spreadsheetml.sheet'
     });
     return true;
   } catch (error) {
@@ -91,31 +95,30 @@ export async function exportExpensesToCSV(expenses: Expense[]): Promise<boolean>
 }
 
 /**
- * Opens a file picker and imports expenses from a CSV file.
+ * Opens a file picker and imports expenses from a CSV or XLSX file.
  * Returns the number of successfully imported and skipped rows.
  */
-export async function importExpensesFromCSV(existingExpenses: Expense[]): Promise<{ imported: number, skipped: number, expenses: Expense[] } | null> {
+export async function importExpensesFromFile(existingExpenses: Expense[]): Promise<{ imported: number, skipped: number, expenses: Expense[] } | null> {
   try {
     const result = await DocumentPicker.getDocumentAsync({
-      type: 'text/csv',
+      type: ['text/csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
       copyToCacheDirectory: true
     });
 
     if (result.canceled) return null;
 
     const fileUri = result.assets[0].uri;
-    const csvContent = await FileSystem.readAsStringAsync(fileUri);
+    const isXlsx = fileUri.toLowerCase().endsWith('.xlsx');
     
-    const parsed = Papa.parse(csvContent, {
-      header: true,
-      skipEmptyLines: true
-    });
+    // Read based on type
+    const encoding = isXlsx ? FileSystem.EncodingType.Base64 : FileSystem.EncodingType.UTF8;
+    const content = await FileSystem.readAsStringAsync(fileUri, { encoding });
+    
+    const workbook = XLSX.read(content, { type: isXlsx ? 'base64' : 'string' });
+    const firstSheetName = workbook.SheetNames[0];
+    const firstSheet = workbook.Sheets[firstSheetName];
+    const rows = XLSX.utils.sheet_to_json(firstSheet) as any[];
 
-    if (parsed.errors.length > 0) {
-       console.warn('CSV Parse errors:', parsed.errors);
-    }
-
-    const rows = parsed.data as any[];
     let imported = 0;
     let skipped = 0;
     const newExpenses: Expense[] = [];
@@ -127,7 +130,16 @@ export async function importExpensesFromCSV(existingExpenses: Expense[]): Promis
       const rawAmount = row.amount || row.Amount;
       const rawCategory = row.category || row.Category || 'Other';
 
-      const normalizedDate = normalizeDate(rawDate);
+      // Excel dates might be numeric serials
+      let parsedDateString = '';
+      if (typeof rawDate === 'number') {
+        const d = XLSX.utils.format_cell({ v: rawDate, t: 'd' });
+        parsedDateString = d; 
+      } else {
+        parsedDateString = String(rawDate || '');
+      }
+
+      const normalizedDate = normalizeDate(parsedDateString);
       const amount = parseFloat(rawAmount);
 
       if (!normalizedDate || !rawDesc || isNaN(amount)) {
@@ -138,7 +150,7 @@ export async function importExpensesFromCSV(existingExpenses: Expense[]): Promis
       // Check for duplicates in existing data
       const isDuplicate = existingExpenses.some(e => 
         formatDate(new Date(e.date), 'yyyy-MM-dd') === formatDate(new Date(normalizedDate), 'yyyy-MM-dd') &&
-        e.name.trim().toLowerCase() === rawDesc.trim().toLowerCase() &&
+        e.name.trim().toLowerCase() === String(rawDesc).trim().toLowerCase() &&
         e.amount === amount
       );
 
@@ -150,14 +162,14 @@ export async function importExpensesFromCSV(existingExpenses: Expense[]): Promis
       newExpenses.push({
         id: Math.random().toString(36).substring(2, 11),
         date: normalizedDate,
-        name: rawDesc.trim(),
+        name: String(rawDesc).trim(),
         amount: amount,
-        category: rawCategory as ExpenseCategory
+        category: String(rawCategory) as ExpenseCategory
       });
       imported++;
     }
 
-    return { imported, skipped, expenses: newExpenses } as any;
+    return { imported, skipped, expenses: newExpenses };
   } catch (error) {
     console.error('Import failed:', error);
     return null;
