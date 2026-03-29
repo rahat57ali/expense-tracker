@@ -9,6 +9,7 @@ import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, Plus
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSnackbar } from '../components/Snackbar';
 import EditExpenseModal from '../components/EditExpenseModal';
+import { getDaysRemainingInMonth, isToday } from '../lib/dateUtils';
 
 
 const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
@@ -91,17 +92,11 @@ export default function TrackScreen() {
   }
 
   // Quick Stats Calculations
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
   const todaySpent = expenses
-    .filter(e => {
-      const d = new Date(e.date);
-      return d >= todayStart;
-    })
+    .filter(e => isToday(e.date))
     .reduce((sum, e) => sum + e.amount, 0);
 
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const daysLeft = daysInMonth - now.getDate();
+  const daysLeft = getDaysRemainingInMonth();
 
   const amountRef = useRef<TextInput>(null);
 

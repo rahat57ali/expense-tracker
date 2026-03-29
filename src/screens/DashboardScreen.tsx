@@ -7,6 +7,7 @@ import { ExpenseCategory, Expense } from '../lib/store';
 import { Wallet, Target, TrendingUp, Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, AlertCircle, ShoppingBasket, CheckCircle2, Minus, Info, TrendingDown } from 'lucide-react-native';
 import EditExpenseModal from '../components/EditExpenseModal';
 import DailyDetailModal from '../components/DailyDetailModal';
+import { getDaysRemainingInMonth } from '../lib/dateUtils';
 
 const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
   Food: Coffee,
@@ -29,7 +30,7 @@ export default function DashboardScreen() {
   
   const now = new Date();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const daysLeft = daysInMonth - now.getDate() + 1;
+  const daysLeft = getDaysRemainingInMonth();
   const dailyAllowance = Math.max(0, remainingBudget / daysLeft);
   
   const dailyTarget = budget.total / daysInMonth;
