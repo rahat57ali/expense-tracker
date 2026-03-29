@@ -277,14 +277,16 @@ export default function TrackScreen() {
             const exp = expenses[0];
             const desc = exp.name.replace(/^Paid:\s*/i, '');
             return (
-              <View style={styles.latestChipRow}>
-                <Text style={styles.latestChipLabel}>LAST</Text>
-                <View style={styles.latestChipCat}>
-                  <Text style={styles.latestChipCatText}>{exp.category.toUpperCase()}</Text>
+              <TouchableOpacity onPress={() => handleEditPress(exp)}>
+                <View style={styles.latestChipRow}>
+                  <Text style={styles.latestChipLabel}>LAST</Text>
+                  <View style={styles.latestChipCat}>
+                    <Text style={styles.latestChipCatText}>{exp.category.toUpperCase()}</Text>
+                  </View>
+                  <Text style={styles.latestChipDesc} numberOfLines={1}>{desc}</Text>
+                  <Text style={styles.latestChipAmount}>PKR {exp.amount.toLocaleString()}</Text>
                 </View>
-                <Text style={styles.latestChipDesc} numberOfLines={1}>{desc}</Text>
-                <Text style={styles.latestChipAmount}>PKR {exp.amount.toLocaleString()}</Text>
-              </View>
+              </TouchableOpacity>
             );
           })()}
 
