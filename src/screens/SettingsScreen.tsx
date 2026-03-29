@@ -9,6 +9,8 @@ import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, Shop
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSnackbar } from '../components/Snackbar';
 import DeleteCategoryModal from '../components/DeleteCategoryModal';
+import { exportExpensesToCSV, importExpensesFromCSV } from '../lib/dateUtils';
+import { Download, Upload } from 'lucide-react-native';
 
 const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
   Food: Coffee,
@@ -23,7 +25,7 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
 
 
 export default function SettingsScreen() {
-  const { budget, updateBudget, isLoaded, allCategories, addCategory, deleteCategory, reloadBudgetState, showDevTools } = useLedgr();
+  const { budget, updateBudget, isLoaded, expenses, allCategories, addCategory, deleteCategory, reloadBudgetState, showDevTools, importExpenses } = useLedgr();
   const { showSnackbar } = useSnackbar();
   const [localBudget, setLocalBudget] = useState<Budget>(budget);
   const [newCatName, setNewCatName] = useState('');
@@ -57,6 +59,37 @@ export default function SettingsScreen() {
       ...prev,
       categories: { ...prev.categories, [cat]: num }
     }));
+  };
+
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+
+  const handleExport = async () => {
+    if (expenses.length === 0) {
+      showSnackbar('No expenses to export', 'info');
+      return;
+    }
+    
+    setIsExporting(true);
+    const success = await exportExpensesToCSV(expenses);
+    setIsExporting(false);
+    
+    if (success) {
+      showSnackbar('Data exported successfully', 'success');
+    }
+  };
+
+  const handleImport = async () => {
+    setIsImporting(true);
+    const result = await importExpensesFromCSV(expenses);
+    setIsImporting(false);
+
+    if (result && result.expenses && result.expenses.length > 0) {
+      await importExpenses(result.expenses);
+      showSnackbar(`${result.imported} expenses imported, ${result.skipped} rows skipped`, 'success');
+    } else if (result) {
+      showSnackbar(`No new expenses to import (${result.skipped} duplicates/invalid skipped)`, 'info');
+    }
   };
 
   const handleAddCategory = () => {
@@ -230,6 +263,43 @@ export default function SettingsScreen() {
           <Text style={styles.mainSaveText}>Update Budget Configuration</Text>
         </TouchableOpacity>
 
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Data Management</Text>
+          <Text style={styles.sectionSubtitle}>Backup and restore your local records</Text>
+        </View>
+
+        <View style={styles.dataCard}>
+          <TouchableOpacity 
+            style={styles.dataAction} 
+            onPress={handleExport}
+            disabled={isExporting}
+          >
+            <View style={[styles.dataIconBox, { backgroundColor: 'rgba(0, 240, 255, 0.1)' }]}>
+              <Download color="#00F0FF" size={20} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.dataActionTitle}>Export data to CSV</Text>
+              <Text style={styles.dataActionSub}>Share or save your expense history</Text>
+            </View>
+          </TouchableOpacity>
+
+          <View style={styles.dataDivider} />
+
+          <TouchableOpacity 
+            style={styles.dataAction} 
+            onPress={handleImport}
+            disabled={isImporting}
+          >
+            <View style={[styles.dataIconBox, { backgroundColor: 'rgba(138, 43, 226, 0.1)' }]}>
+              <Upload color="#8A2BE2" size={20} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.dataActionTitle}>Import data from CSV</Text>
+              <Text style={styles.dataActionSub}>Append external records to your list</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
         {/* ========== DEV ONLY - Remove before release ========== */}
         {showDevTools && (
           <View style={styles.devSection}>
@@ -381,9 +451,46 @@ const styles = StyleSheet.create({
   deleteCatBtn: { padding: 4, marginRight: 4 },
 
   mainSaveButton: { backgroundColor: '#FFFFFF', borderRadius: 24, height: 64, alignItems: 'center', justifyContent: 'center', marginBottom: 40 },
-  mainSaveText: { color: '#000000', fontFamily: 'Outfit_800ExtraBold', fontSize: 16 },
+  mainSaveText: { color: '#0A0A0A', fontFamily: 'Outfit_800ExtraBold', fontSize: 13, letterSpacing: 0.5 },
 
-  devSection: { marginTop: 40, padding: 20, backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.2)' },
+  dataCard: { 
+    backgroundColor: 'rgba(20,20,20,0.95)', 
+    borderRadius: 28, 
+    borderWidth: 1, 
+    borderColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden'
+  },
+  dataAction: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    padding: 16, 
+    gap: 16 
+  },
+  dataIconBox: { 
+    width: 44, 
+    height: 44, 
+    borderRadius: 12, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+  dataActionTitle: { 
+    fontFamily: 'Outfit_600SemiBold', 
+    fontSize: 16, 
+    color: '#FFFFFF' 
+  },
+  dataActionSub: { 
+    fontFamily: 'Inter_500Medium', 
+    fontSize: 11, 
+    color: '#606060', 
+    marginTop: 2 
+  },
+  dataDivider: { 
+    height: 1, 
+    backgroundColor: 'rgba(255,255,255,0.05)', 
+    marginHorizontal: 16 
+  },
+
+  devSection: { marginTop: 20, padding: 20, backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.2)' },
   devHeader: { color: '#EF4444', fontFamily: 'Outfit_800ExtraBold', fontSize: 16, marginBottom: 16, textAlign: 'center', letterSpacing: 2 },
   devBtn: { backgroundColor: '#EF4444', padding: 12, borderRadius: 12, alignItems: 'center', marginBottom: 10 },
   devBtnText: { color: '#0A0A0A', fontFamily: 'Inter_700Bold', fontSize: 13, letterSpacing: 1 }

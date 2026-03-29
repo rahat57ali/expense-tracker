@@ -33,6 +33,7 @@ interface LedgrContextType {
   reloadBudgetState: () => Promise<void>;
   showDevTools: boolean;
   toggleDevTools: () => Promise<boolean>;
+  importExpenses: (newExpenses: Expense[]) => Promise<void>;
 }
 
 const DEFAULT_BUDGET: Budget = {
@@ -266,12 +267,18 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
     return newState;
   };
 
+  const importExpenses = async (newExpenses: Expense[]) => {
+    const updated = [...newExpenses, ...expenses];
+    setExpenses(updated);
+    await AsyncStorage.setItem('ledgr_expenses', JSON.stringify(updated));
+  };
+
   return (
     <LedgrContext.Provider value={{ 
       expenses, budget, isLoaded, addExpense, updateBudget, deleteExpense, updateExpense,
       bills, addBill, updateBill, deleteBill, isBillDueSoon, addCategory, deleteCategory, allCategories,
       monthEndData, resolveMonthEnd, saveRolloverRecovery, reloadBudgetState,
-      showDevTools, toggleDevTools
+      showDevTools, toggleDevTools, importExpenses
     }}>
       {children}
     </LedgrContext.Provider>
