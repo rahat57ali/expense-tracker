@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLedgr } from '../lib/LedgrContext';
 import { ExpenseCategory, Expense, autoCategorize } from '../lib/store';
-import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, Plus, ShoppingBasket, Calendar, Pencil, TrendingUp, TrendingDown } from 'lucide-react-native';
+import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, Plus, ShoppingBasket, Calendar, Pencil, TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSnackbar } from '../components/Snackbar';
 import EditExpenseModal from '../components/EditExpenseModal';
@@ -31,6 +31,14 @@ export default function TrackScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  
+  const catScrollRef = useRef<ScrollView>(null);
+  const [scrollX, setScrollX] = useState(0);
+  const [contentWidth, setContentWidth] = useState(0);
+  const [viewWidth, setViewWidth] = useState(0);
+
+  const isAtStart = scrollX <= 5;
+  const isAtEnd = scrollX >= (contentWidth - viewWidth - 5);
 
   const MOTIVATIONAL_PROMPT = useMemo(() => {
     const prompts = [
@@ -235,35 +243,60 @@ export default function TrackScreen() {
 
           <View style={styles.sectionLabelRow}>
             <Text style={styles.sectionLabel}>Select Category</Text>
-            <View style={styles.scrollHint}>
-              <Text style={styles.scrollHintText}>Scroll for more ›</Text>
-            </View>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll} contentContainerStyle={styles.catScrollContent}>
-            <View style={styles.catRow}>
-              {allCategories.map(cat => {
-                const Icon = CATEGORY_ICONS[cat] || MoreHorizontal;
-                const isSelected = selectedCategory === cat;
-                const { remaining, isOver } = getCategoryStatus(cat);
-                return (
-                  <TouchableOpacity 
-                    key={cat} 
-                    style={[styles.miniCatPill, isSelected && styles.miniCatPillActive]} 
-                    onPress={() => setSelectedCategory(cat)}
-                  >
-                    <Icon color={isSelected ? "#0A0A0A" : "#A0A0A0"} size={14} />
-                    <View>
-                      <Text style={[styles.miniCatText, isSelected && styles.miniCatTextActive]}>{cat}</Text>
-                      <Text style={[styles.miniCatSubtext, isOver && { color: '#EF4444' }, isSelected && { color: 'rgba(10,10,10,0.6)' }]}>
-                        PKR {remaining.toLocaleString()}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
+          <View style={styles.catScrollRow}>
+            <View style={styles.navIconContainer}>
+              {!isAtStart && (
+                <TouchableOpacity onPress={() => catScrollRef.current?.scrollTo({ x: 0, animated: true })}>
+                  <ChevronLeft color="#00F0FF" size={20} />
+                </TouchableOpacity>
+              )}
             </View>
-          </ScrollView>
+
+            <ScrollView 
+              ref={catScrollRef}
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              style={styles.catScroll} 
+              contentContainerStyle={styles.catScrollContent}
+              onScroll={(e) => setScrollX(e.nativeEvent.contentOffset.x)}
+              scrollEventThrottle={16}
+              onContentSizeChange={(w) => setContentWidth(w)}
+              onLayout={(e) => setViewWidth(e.nativeEvent.layout.width)}
+            >
+              <View style={styles.catRow}>
+                {allCategories.map(cat => {
+                  const Icon = CATEGORY_ICONS[cat] || MoreHorizontal;
+                  const isSelected = selectedCategory === cat;
+                  const { remaining, isOver } = getCategoryStatus(cat);
+                  return (
+                    <TouchableOpacity 
+                      key={cat} 
+                      style={[styles.miniCatPill, isSelected && styles.miniCatPillActive]} 
+                      onPress={() => setSelectedCategory(cat)}
+                    >
+                      <Icon color={isSelected ? "#0A0A0A" : "#A0A0A0"} size={14} />
+                      <View>
+                        <Text style={[styles.miniCatText, isSelected && styles.miniCatTextActive]}>{cat}</Text>
+                        <Text style={[styles.miniCatSubtext, isOver && { color: '#EF4444' }, isSelected && { color: 'rgba(10,10,10,0.6)' }]}>
+                          PKR {remaining.toLocaleString()}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+
+            <View style={styles.navIconContainer}>
+              {!isAtEnd && (
+                <TouchableOpacity onPress={() => catScrollRef.current?.scrollToEnd({ animated: true })}>
+                  <ChevronRight color="#00F0FF" size={20} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
 
           <TouchableOpacity 
             style={[styles.bigAddButton, (!desc || !amountStr) && styles.addButtonDisabled]} 
@@ -336,8 +369,11 @@ const styles = StyleSheet.create({
   currencyPrefix: { fontFamily: 'Inter_700Bold', color: '#00F0FF', fontSize: 12, marginRight: 12 },
   inputAmount: { flex: 1, color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 20, padding: 0 },
   sectionLabel: { color: '#A0A0A0', fontSize: 11, fontFamily: 'Inter_700Bold', letterSpacing: 1, marginBottom: 6, marginTop: 4 },
-  catScroll: { marginHorizontal: -16 },
-  catScrollContent: { paddingHorizontal: 16, paddingRight: 40 },
+  sectionLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, marginTop: 4 },
+  catScrollRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: -16, paddingHorizontal: 4 },
+  navIconContainer: { width: 32, alignItems: 'center', justifyContent: 'center' },
+  catScroll: { flex: 1 },
+  catScrollContent: { paddingHorizontal: 8 },
   catRow: { flexDirection: 'row', gap: 8 },
   miniCatPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8, gap: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   miniCatPillActive: { backgroundColor: '#FFFFFF', borderColor: '#FFFFFF' },
@@ -350,11 +386,6 @@ const styles = StyleSheet.create({
   dateText: { color: '#FFFFFF', fontFamily: 'Inter_500Medium', fontSize: 14 },
   dateLabelBox: { backgroundColor: 'rgba(0, 240, 255, 0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   dateLabelText: { color: '#00F0FF', fontSize: 8, fontFamily: 'Inter_800ExtraBold', letterSpacing: 0.5 },
-
-  sectionLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, marginTop: 4 },
-
-  scrollHint: { backgroundColor: 'rgba(255,255,255,0.03)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  scrollHintText: { color: '#A0A0A0', fontSize: 9, fontFamily: 'Inter_500Medium' },
 
   bigAddButton: { backgroundColor: '#FFFFFF', borderRadius: 16, height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10 },
   addBtnLabel: { color: '#0A0A0A', fontFamily: 'Outfit_800ExtraBold', fontSize: 16 },
