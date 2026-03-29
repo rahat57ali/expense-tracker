@@ -90,6 +90,19 @@ export default function TrackScreen() {
     InsightIcon = diff > 0 ? TrendingUp : TrendingDown;
   }
 
+  // Quick Stats Calculations
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todaySpent = expenses
+    .filter(e => {
+      const d = new Date(e.date);
+      return d >= todayStart;
+    })
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysLeft = daysInMonth - now.getDate();
+
   const amountRef = useRef<TextInput>(null);
 
   const handleAdd = () => {
@@ -323,6 +336,18 @@ export default function TrackScreen() {
             );
           })()}
 
+          {expenses.length > 0 && (
+            <View style={styles.quickStatsStrip}>
+              <Text style={styles.quickStatText}>
+                <Text style={styles.quickStatLabel}>Today: </Text>
+                <Text style={styles.quickStatValue}>PKR {todaySpent.toLocaleString()}</Text>
+                <Text style={styles.quickStatDivider}>  •  </Text>
+                <Text style={styles.quickStatValue}>{daysLeft} </Text>
+                <Text style={styles.quickStatLabel}>days left</Text>
+              </Text>
+            </View>
+          )}
+
         </View>
 
       </KeyboardAwareScrollView>
@@ -397,5 +422,22 @@ const styles = StyleSheet.create({
   latestChipCatText: { color: '#00F0FF', fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 0.5 },
   latestChipDesc: { flex: 1, color: '#E0E0E0', fontFamily: 'Inter_500Medium', fontSize: 13, marginRight: 8 },
   latestChipAmount: { color: '#00F0FF', fontFamily: 'Outfit_600SemiBold', fontSize: 14 },
+  
+  quickStatsStrip: { 
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginTop: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.03)'
+  },
+  quickStatText: { fontSize: 11, fontFamily: 'Inter_500Medium' },
+  quickStatLabel: { color: '#606060' },
+  quickStatValue: { color: '#00F0FF', fontFamily: 'Inter_700Bold' },
+  quickStatDivider: { color: '#303030', marginHorizontal: 8 },
+  
   textDanger: { color: '#EF4444' }
 });

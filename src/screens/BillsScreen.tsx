@@ -18,9 +18,10 @@ import {
   ArrowLeft, 
   Clock, 
   AlertCircle, 
-  CheckCircle2, 
   RefreshCw,
   Trash2,
+  Check,
+  X,
   Music,
   Tv,
   Zap,
@@ -33,6 +34,7 @@ import { Bill, autoCategorize } from '../lib/store';
 import { format, differenceInDays, addDays, isBefore, startOfDay } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSnackbar } from '../components/Snackbar';
+import BillPaymentModal from '../components/BillPaymentModal';
 
 const SUGGESTIONS = [
   { name: 'Electricity', icon: Zap, color: '#F59E0B' },
@@ -50,6 +52,13 @@ export default function BillsScreen() {
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  
+  // Bill Payment Modal State
+  const [isPayModalVisible, setIsPayModalVisible] = useState(false);
+  const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
+
+  // Inline Delete State
+  const [deletingBillId, setDeletingBillId] = useState<string | null>(null);
 
   const handleAddBill = async () => {
     if (!name || !amount) {
@@ -72,24 +81,32 @@ export default function BillsScreen() {
     showSnackbar('Bill added successfully');
   };
 
-  const handlePayBill = async (bill: Bill) => {
+  const handlePayBill = (bill: Bill) => {
+    setSelectedBill(bill);
+    setIsPayModalVisible(true);
+  };
+
+  const handleConfirmPayment = async (amount: number) => {
+    if (!selectedBill) return;
+
     // Record as expense
     await addExpense({
-      name: `Paid: ${bill.name}`,
-      amount: bill.amount,
+      name: `Paid: ${selectedBill.name}`,
+      amount: amount,
       category: 'Bills',
       date: new Date().toISOString()
     });
 
     // Update bill - increment by exactly 30 days
-    const nextDueDate = addDays(new Date(bill.dueDate), 30);
+    const nextDueDate = addDays(new Date(selectedBill.dueDate), 30);
     await updateBill({
-      ...bill,
+      ...selectedBill,
       dueDate: nextDueDate.toISOString(),
       isPaid: false // Reset paid status for the next cycle
     });
 
-    showSnackbar(`Paid ${bill.name} - PKR ${bill.amount.toLocaleString()}`);
+    setIsPayModalVisible(false);
+    showSnackbar(`Paid ${selectedBill.name} - PKR ${amount.toLocaleString()}`);
   };
 
   const getBillStatus = (dueDateStr: string) => {
@@ -138,7 +155,16 @@ export default function BillsScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+      >
+        <TouchableOpacity 
+          activeOpacity={1} 
+          onPress={() => setDeletingBillId(null)}
+          style={{ flex: 1 }}
+        >
         {bills.length === 0 ? (
           <View style={styles.emptyState}>
             <CreditCard color="rgba(255,255,255,0.05)" size={80} style={{ marginBottom: 20 }} />
@@ -174,18 +200,45 @@ export default function BillsScreen() {
                     </View>
                   </View>
 
-                  <View style={styles.cardActions}>
-                    <TouchableOpacity 
-                      style={[styles.payBtn, !isUrgent && styles.payBtnSubtle]} 
-                      onPress={() => handlePayBill(bill)}
-                    >
-                      <RefreshCw color={isUrgent ? "#FFFFFF" : "#606060"} size={12} style={{ marginRight: 6 }} />
-                      <Text style={[styles.payBtnText, !isUrgent && styles.payBtnTextSubtle]}>Paid & Renew</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.deleteBtn} onPress={() => deleteBill(bill.id)}>
-                      <Trash2 color="#303030" size={16} />
-                    </TouchableOpacity>
-                  </View>
+                    <View style={styles.cardActions}>
+                      <TouchableOpacity 
+                        style={[styles.payBtn, !isUrgent && styles.payBtnSubtle]} 
+                        onPress={() => handlePayBill(bill)}
+                      >
+                        <RefreshCw color={isUrgent ? "#FFFFFF" : "#606060"} size={12} style={{ marginRight: 6 }} />
+                        <Text style={[styles.payBtnText, !isUrgent && styles.payBtnTextSubtle]}>Paid & Renew</Text>
+                      </TouchableOpacity>
+                      
+                      <View style={styles.actionRight}>
+                        {deletingBillId === bill.id ? (
+                          <View style={styles.confirmDeleteContainer}>
+                            <TouchableOpacity 
+                              style={[styles.miniActionBtn, styles.confirmAction]} 
+                              onPress={(e) => {
+                                deleteBill(bill.id);
+                                setDeletingBillId(null);
+                              }}
+                            >
+                              <Check color="#FFFFFF" size={12} />
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                              style={[styles.miniActionBtn, styles.cancelAction]} 
+                              onPress={() => setDeletingBillId(null)}
+                            >
+                              <X color="#FFFFFF" size={12} />
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <TouchableOpacity 
+                            style={styles.deleteBtn} 
+                            onPress={() => setDeletingBillId(bill.id)}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          >
+                            <Trash2 color="#404040" size={16} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
                 </LinearGradient>
               );
             })}
@@ -212,6 +265,7 @@ export default function BillsScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
+        </TouchableOpacity>
       </ScrollView>
 
       <Modal visible={isModalVisible} animationType="slide" transparent={true}>
@@ -275,6 +329,12 @@ export default function BillsScreen() {
           </View>
         </View>
       </Modal>
+      <BillPaymentModal
+        visible={isPayModalVisible}
+        bill={selectedBill}
+        onClose={() => setIsPayModalVisible(false)}
+        onConfirm={handleConfirmPayment}
+      />
     </SafeAreaView>
   );
 }
@@ -311,7 +371,19 @@ const styles = StyleSheet.create({
   payBtnSubtle: { backgroundColor: 'transparent', borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)' },
   payBtnText: { color: '#FFFFFF', fontSize: 11, fontFamily: 'Inter_700Bold' },
   payBtnTextSubtle: { color: '#606060' },
-  deleteBtn: { padding: 4 },
+  deleteBtn: { padding: 4, width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  
+  actionRight: { width: 62, alignItems: 'flex-end', justifyContent: 'center' },
+  confirmDeleteContainer: { flexDirection: 'row', gap: 6 },
+  miniActionBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmAction: { backgroundColor: '#10B981' },
+  cancelAction: { backgroundColor: '#EF4444' },
   
   suggestionsHeader: { marginTop: 32, marginBottom: 12 },
   suggestionsTitle: { color: '#A0A0A0', fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.5 },
