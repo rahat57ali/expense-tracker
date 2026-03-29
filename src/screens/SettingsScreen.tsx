@@ -231,7 +231,7 @@ export default function SettingsScreen() {
         </TouchableOpacity>
 
         {/* ========== DEV ONLY - Remove before release ========== */}
-        {SHOW_DEV_TOOLS && (
+        {/* {SHOW_DEV_TOOLS && (
           <View style={styles.devSection}>
             <Text style={styles.devHeader}>🛠 DEV TOOLS</Text>
             
@@ -281,7 +281,7 @@ export default function SettingsScreen() {
               <Text style={styles.devBtnText}>Log AsyncStorage Data</Text>
             </TouchableOpacity>
           </View>
-        )}
+        )} */}
         {/* ====================================================== */}
 
       </KeyboardAwareScrollView>
