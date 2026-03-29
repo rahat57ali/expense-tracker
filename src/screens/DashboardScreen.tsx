@@ -107,26 +107,38 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.kpiGrid}>
-          {/* Main KPI: Spent */}
-          <View style={styles.kpiCard}>
-            <View style={styles.kpiIconBox}><Wallet color="#00F0FF" size={20} opacity={0.5}/></View>
-            <Text style={styles.kpiLabel}>TOTAL SPENT</Text>
-            <View style={styles.kpiValueRow}>
-              <Text style={styles.kpiCurrency}>PKR</Text>
-              <Text style={styles.kpiValue}>{totalSpent.toLocaleString()}</Text>
+          {/* TOTAL BUDGET */}
+          <View style={styles.kpiCardSmall}>
+            <View style={styles.kpiIconBox}><Target color="#A0A0A0" size={16} opacity={0.5}/></View>
+            <Text style={styles.kpiLabel}>BUDGET</Text>
+            <View style={styles.kpiValueStack}>
+              <Text style={styles.kpiCurrencySmall}>PKR</Text>
+              <Text style={styles.kpiValueSmall} numberOfLines={1} adjustsFontSizeToFit>{budget.total.toLocaleString()}</Text>
             </View>
           </View>
 
-          {/* Main KPI: Remaining */}
-          <View style={styles.kpiCard}>
-            <View style={styles.kpiIconBox}><Target color="#8A2BE2" size={20} opacity={0.5}/></View>
+          {/* TOTAL SPENT */}
+          <View style={styles.kpiCardSmall}>
+            <View style={styles.kpiIconBox}><Wallet color="#00F0FF" size={16} opacity={0.5}/></View>
+            <Text style={styles.kpiLabel}>SPENT</Text>
+            <View style={styles.kpiValueStack}>
+              <Text style={styles.kpiCurrencySmall}>PKR</Text>
+              <Text style={styles.kpiValueSmall} numberOfLines={1} adjustsFontSizeToFit>{totalSpent.toLocaleString()}</Text>
+            </View>
+          </View>
+
+          {/* REMAINING */}
+          <View style={styles.kpiCardSmall}>
+            <View style={styles.kpiIconBox}><TrendingUp color="#8A2BE2" size={16} opacity={0.5}/></View>
             <Text style={styles.kpiLabel}>REMAINING</Text>
-            <View style={styles.kpiValueRow}>
-              <Text style={styles.kpiCurrency}>PKR</Text>
-              <Text style={styles.kpiValue}>{remainingBudget.toLocaleString()}</Text>
+            <View style={styles.kpiValueStack}>
+              <Text style={styles.kpiCurrencySmall}>PKR</Text>
+              <Text style={styles.kpiValueSmall} numberOfLines={1} adjustsFontSizeToFit>{remainingBudget.toLocaleString()}</Text>
             </View>
           </View>
+        </View>
 
+        <View style={styles.kpiGrid}>
           {/* Daily Allowance KPI */}
           <View style={[styles.kpiCard, { width: '100%' }]}>
             <View style={styles.kpiRowSplit}>
@@ -260,13 +272,17 @@ const styles = StyleSheet.create({
   title: { fontFamily: 'Outfit_800ExtraBold', fontSize: 36, color: '#FFFFFF' },
   subtitle: { fontFamily: 'Inter_500Medium', fontSize: 14, color: '#A0A0A0', marginTop: 4 },
   
-  kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 40 },
+  kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 12 },
   kpiCard: { minHeight: 110, flex: 1, minWidth: '45%', backgroundColor: 'rgba(20,20,20,0.95)', padding: 20, borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', position: 'relative', overflow: 'hidden' },
-  kpiIconBox: { position: 'absolute', top: 20, right: 20 },
-  kpiLabel: { color: '#A0A0A0', fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1, marginBottom: 8 },
-  kpiValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  kpiCurrency: { color: '#A0A0A0', fontSize: 12, fontFamily: 'Inter_500Medium' },
+  kpiCardSmall: { minHeight: 100, flex: 1, minWidth: '30%', backgroundColor: 'rgba(20,20,20,0.95)', padding: 14, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', position: 'relative', overflow: 'hidden' },
+  kpiIconBox: { position: 'absolute', top: 14, right: 14 },
+  kpiLabel: { color: '#A0A0A0', fontSize: 9, fontFamily: 'Inter_700Bold', letterSpacing: 1, marginBottom: 8 },
+  kpiValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4, marginTop: 4 },
+  kpiValueStack: { marginTop: 4 },
+  kpiCurrency: { color: '#606060', fontSize: 10, fontFamily: 'Inter_500Medium' },
+  kpiCurrencySmall: { color: '#606060', fontSize: 8, fontFamily: 'Inter_700Bold', marginBottom: 2 },
   kpiValue: { color: '#FFFFFF', fontSize: 28, fontFamily: 'Outfit_300Light' },
+  kpiValueSmall: { color: '#FFFFFF', fontSize: 20, fontFamily: 'Outfit_300Light', flex: 1 },
   kpiRowSplit: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   kpiValueLarge: { color: '#FFFFFF', fontSize: 36, fontFamily: 'Outfit_300Light' },
   
