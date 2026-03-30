@@ -31,7 +31,7 @@ const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
 };
 
 export default function SummaryScreen() {
-  const { expenses, isLoaded } = useLedgr();
+  const { expenses, budget, isLoaded } = useLedgr();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [expandedCategory, setExpandedCategory] = useState<ExpenseCategory | null>(null);
@@ -60,6 +60,158 @@ export default function SummaryScreen() {
   const totalMonthly = useMemo(() => 
     filteredExpenses.reduce((sum, e) => sum + e.amount, 0), 
   [filteredExpenses]);
+
+  const insights = useMemo(() => {
+    if (filteredExpenses.length === 0) return [];
+
+    const total = totalMonthly;
+    const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+    
+    // 1. Top Category
+    const topCat = categoryData[0];
+    const topCatInsight = {
+      id: 'top-cat',
+      title: 'Top Category',
+      value: topCat ? topCat[0] : 'None',
+      sub: topCat ? `${((topCat[1].total / total) * 100).toFixed(0)}% of spend` : 'No data',
+      score: 100,
+      eligible: !!topCat,
+      icon: topCat ? CATEGORY_ICONS[topCat[0] as ExpenseCategory] : MoreHorizontal,
+      color: topCat ? CATEGORY_COLORS[topCat[0] as ExpenseCategory] : '#6B7280'
+    };
+
+    // 2. Biggest Expense
+    const sortedByAmt = [...filteredExpenses].sort((a,b) => b.amount - a.amount);
+    const biggest = sortedByAmt[0];
+    const biggestInsight = {
+      id: 'biggest-expense',
+      title: 'Biggest Hit',
+      value: biggest ? `PKR ${biggest.amount.toLocaleString()}` : '0',
+      sub: biggest ? (biggest.name.length > 15 ? biggest.name.substring(0, 15) + '...' : biggest.name) : 'No expenses',
+      score: 95,
+      eligible: !!biggest,
+      icon: ShoppingBasket,
+      color: '#EF4444'
+    };
+
+    // 3. No-Spend Days
+    const spentDays = new Set(filteredExpenses.map(e => new Date(e.date).getDate()));
+    const noSpendCount = daysInMonth - spentDays.size;
+    const noSpendInsight = {
+      id: 'no-spend',
+      title: 'No-Spend Days',
+      value: `${noSpendCount} Days`,
+      sub: noSpendCount >= 5 ? '🧘 Great restraint!' : 'Keep trying!',
+      score: (noSpendCount / daysInMonth) * 100,
+      eligible: noSpendCount >= 5,
+      icon: Calendar,
+      color: '#10B981'
+    };
+
+    // 4. Spending Velocity
+    const firstHalfSpend = filteredExpenses
+      .filter(e => new Date(e.date).getDate() <= 15)
+      .reduce((sum, e) => sum + e.amount, 0);
+    const velocity = total > 0 ? (firstHalfSpend / total) * 100 : 0;
+    const velocityInsight = {
+      id: 'velocity',
+      title: 'Spend Velocity',
+      value: `${velocity.toFixed(0)}%`,
+      sub: velocity > 65 ? 'Fast start!' : velocity < 35 ? 'Slow burner' : 'Steady pace',
+      score: Math.abs(50 - velocity) * 2,
+      eligible: total > 0 && (velocity > 65 || velocity < 35),
+      icon: Car,
+      color: '#3B82F6'
+    };
+
+    // 5. Category Overshoot
+    let biggestOvershoot = { cat: '', pct: 0 };
+    Object.entries(budget.categories).forEach(([cat, limit]) => {
+      const spent = (categoryData.find(c => c[0] === cat)?.[1] as any)?.total || 0;
+      if (limit > 0 && spent > limit) {
+        const overshoot = ((spent - limit) / limit) * 100;
+        if (overshoot > biggestOvershoot.pct) {
+          biggestOvershoot = { cat, pct: overshoot };
+        }
+      }
+    });
+    const overshootInsight = {
+      id: 'overshoot',
+      title: 'Overshoot',
+      value: biggestOvershoot.cat || 'None',
+      sub: biggestOvershoot.cat ? `${biggestOvershoot.pct.toFixed(0)}% over budget` : 'Safe zone',
+      score: biggestOvershoot.pct,
+      eligible: biggestOvershoot.pct > 50,
+      icon: Heart,
+      color: '#EF4444'
+    };
+
+    // 6. Single Day Damage
+    const dayTotals: Record<number, number> = {};
+    filteredExpenses.forEach(e => {
+      const d = new Date(e.date).getDate();
+      dayTotals[d] = (dayTotals[d] || 0) + e.amount;
+    });
+    const maxDayEntry = Object.entries(dayTotals).sort((a,b) => b[1] - a[1])[0];
+    const maxDayPct = maxDayEntry && total > 0 ? (maxDayEntry[1] / total) * 100 : 0;
+    const damageInsight = {
+      id: 'damage',
+      title: 'Day Damage',
+      value: `${maxDayPct.toFixed(0)}%`,
+      sub: `Spent on Day ${maxDayEntry?.[0]}`,
+      score: maxDayPct * 4,
+      eligible: maxDayPct > 20,
+      icon: ShoppingBag,
+      color: '#EC4899'
+    };
+
+    // 7. Most Frequent
+    const frequencies: Record<string, number> = {};
+    filteredExpenses.forEach(e => {
+      const name = e.name.trim().toLowerCase();
+      frequencies[name] = (frequencies[name] || 0) + 1;
+    });
+    const mostFreq = Object.entries(frequencies).sort((a,b) => b[1] - a[1])[0];
+    const freqInsight = {
+      id: 'frequency',
+      title: 'Habit Alert',
+      value: mostFreq ? `${mostFreq[1]}x` : '0',
+      sub: mostFreq ? (mostFreq[0].length > 15 ? mostFreq[0].substring(0, 15) + '...' : mostFreq[0]) : 'None',
+      score: (mostFreq?.[1] || 0) * 4,
+      eligible: (mostFreq?.[1] || 0) >= 5,
+      icon: Coffee,
+      color: '#2DD4BF'
+    };
+
+    const allInsights = [topCatInsight, biggestInsight, noSpendInsight, velocityInsight, overshootInsight, damageInsight, freqInsight];
+    
+    // Selection Logic
+    // Step 1: Tier 1 (Fixed)
+    const selected = [topCatInsight, biggestInsight];
+    
+    // Step 2: Tier 2 (Eligible)
+    const pool = allInsights.filter(i => !selected.some(s => s.id === i.id) && i.eligible)
+      .sort((a,b) => b.score - a.score);
+    
+    selected.push(...pool);
+    
+    // Step 3: Tier 3 (Fillers) if < 4
+    if (selected.length < 4) {
+       const priorityFillers = ['no-spend', 'frequency'];
+       for (const id of priorityFillers) {
+          const found = allInsights.find(i => i.id === id && !selected.some(s => s.id === i.id));
+          if (found && selected.length < 4) selected.push(found);
+       }
+       // Ultimate fallback
+       if (selected.length < 4) {
+          const rest = allInsights.filter(i => !selected.some(s => s.id === i.id))
+            .sort((a,b) => b.score - a.score);
+          selected.push(...rest.slice(0, 4 - selected.length));
+       }
+    }
+
+    return selected.slice(0, 4);
+  }, [filteredExpenses, budget, categoryData, totalMonthly, selectedMonth, selectedYear]);
 
   const toggleCategory = (cat: ExpenseCategory) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -115,6 +267,21 @@ export default function SummaryScreen() {
             <View style={[styles.progressBarFill, { width: '100%' }]} />
           </View>
         </LinearGradient>
+      </View>
+
+      <View style={styles.insightsGrid}>
+        {insights.map((insight) => (
+          <View key={insight.id} style={styles.insightCard}>
+            <View style={styles.insightHeader}>
+              <View style={[styles.insightIconBox, { backgroundColor: `${insight.color}15` }]}>
+                <insight.icon color={insight.color} size={16} />
+              </View>
+              <Text style={styles.insightTitle}>{insight.title}</Text>
+            </View>
+            <Text style={styles.insightValue} numberOfLines={1}>{insight.value}</Text>
+            <Text style={styles.insightSub} numberOfLines={1}>{insight.sub}</Text>
+          </View>
+        ))}
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -209,5 +376,28 @@ const styles = StyleSheet.create({
   detailAmount: { color: '#FFFFFF', fontFamily: 'Outfit_400Regular', fontSize: 14 },
 
   emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 40 },
-  emptyText: { color: '#606060', fontFamily: 'Inter_500Medium', fontSize: 16 }
+  emptyText: { color: '#606060', fontFamily: 'Inter_500Medium', fontSize: 16 },
+
+  insightsGrid: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    paddingHorizontal: 16, 
+    marginHorizontal: 8,
+    marginBottom: 24,
+    gap: 8 
+  },
+  insightCard: { 
+    width: '48%', 
+    backgroundColor: '#141414', 
+    borderRadius: 20, 
+    padding: 16, 
+    borderWidth: 1, 
+    borderColor: 'rgba(255,255,255,0.05)',
+    justifyContent: 'center'
+  },
+  insightHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  insightIconBox: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  insightTitle: { color: '#606060', fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.5 },
+  insightValue: { color: '#FFFFFF', fontSize: 18, fontFamily: 'Outfit_600SemiBold' },
+  insightSub: { color: '#A0A0A0', fontSize: 10, fontFamily: 'Inter_500Medium', marginTop: 4 }
 });
