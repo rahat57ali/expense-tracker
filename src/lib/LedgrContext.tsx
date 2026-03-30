@@ -34,6 +34,7 @@ interface LedgrContextType {
   showDevTools: boolean;
   toggleDevTools: () => Promise<boolean>;
   importExpenses: (newExpenses: Expense[]) => Promise<void>;
+  simulateRollover: () => Promise<void>;
 }
 
 const DEFAULT_BUDGET: Budget = {
@@ -273,12 +274,26 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
     await AsyncStorage.setItem('ledgr_expenses', JSON.stringify(updated));
   };
 
+  const simulateRollover = async () => {
+    const currentMonth = format(new Date(), 'yyyy-MM');
+    const spent = expenses
+      .filter(e => e.date.startsWith(currentMonth))
+      .reduce((sum, e) => sum + e.amount, 0);
+    
+    setMonthEndData({
+      prevMonth: currentMonth,
+      totalBudget: budget.total,
+      totalSpent: spent,
+      remaining: budget.total - spent
+    });
+  };
+
   return (
     <LedgrContext.Provider value={{ 
       expenses, budget, isLoaded, addExpense, updateBudget, deleteExpense, updateExpense,
       bills, addBill, updateBill, deleteBill, isBillDueSoon, addCategory, deleteCategory, allCategories,
       monthEndData, resolveMonthEnd, saveRolloverRecovery, reloadBudgetState,
-      showDevTools, toggleDevTools, importExpenses
+      showDevTools, toggleDevTools, importExpenses, simulateRollover
     }}>
       {children}
     </LedgrContext.Provider>

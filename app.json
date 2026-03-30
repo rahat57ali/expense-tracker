@@ -25,14 +25,14 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "extra": {
-      "eas": {
-        "projectId": "26e2da7f-3804-49a2-88c6-6e11a65552ed"
-      }
-    },
     "plugins": [
       "@react-native-community/datetimepicker"
     ],
-    "owner": "befexav"
+    "extra": {
+      "eas": {
+        "projectId": "83c0c378-7d27-4689-b872-eb597d97ea29"
+      }
+    },
+    "owner": "rahatali"
   }
 }

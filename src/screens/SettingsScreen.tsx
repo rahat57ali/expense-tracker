@@ -25,7 +25,7 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
 
 
 export default function SettingsScreen() {
-  const { budget, updateBudget, isLoaded, expenses, allCategories, addCategory, deleteCategory, reloadBudgetState, showDevTools, importExpenses } = useLedgr();
+  const { budget, updateBudget, isLoaded, expenses, allCategories, addCategory, deleteCategory, reloadBudgetState, showDevTools, importExpenses, simulateRollover } = useLedgr();
   const { showSnackbar } = useSnackbar();
   const [localBudget, setLocalBudget] = useState<Budget>(budget);
   const [newCatName, setNewCatName] = useState('');
@@ -308,33 +308,14 @@ export default function SettingsScreen() {
             <TouchableOpacity 
               style={styles.devBtn} 
               onPress={async () => {
-                try {
-                  const savedBudget = await AsyncStorage.getItem('ledgr_budget');
-                  if (savedBudget) {
-                    const parsed = JSON.parse(savedBudget);
-                    parsed.budgetMonth = '2020-01'; // Force past month
-                    await AsyncStorage.setItem('ledgr_budget', JSON.stringify(parsed));
-                    await reloadBudgetState();
-                    showSnackbar('Simulated Month Rollover', 'success');
-                  }
-                } catch (e) {
-                  showSnackbar('Dev Error', 'error');
-                }
+                await simulateRollover();
+                showSnackbar('Simulated Month Rollover', 'success');
               }}
             >
               <Text style={styles.devBtnText}>Simulate Month Rollover</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.devBtn} 
-              onPress={async () => {
-                await AsyncStorage.removeItem('ledgr_savings');
-                await reloadBudgetState();
-                showSnackbar('Cleared Savings', 'success');
-              }}
-            >
-              <Text style={styles.devBtnText}>Clear All Savings</Text>
-            </TouchableOpacity>
+
 
             <TouchableOpacity 
               style={styles.devBtn} 
