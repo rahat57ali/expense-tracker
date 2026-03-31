@@ -57,13 +57,178 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
     setStep(3);
   };
 
-  if (!data) return null;
-
-  const { prevMonth, totalBudget, totalSpent, remaining } = data;
+  const prevMonth = data?.prevMonth || '';
+  const totalBudget = data?.totalBudget || 0;
+  const totalSpent = data?.totalSpent || 0;
+  const remaining = data?.remaining || 0;
+  
   const isOverspent = remaining <= 0;
   
-  const dateObj = new Date(prevMonth + '-02');
+  const dateObj = prevMonth ? new Date(prevMonth + '-02') : new Date();
   const monthName = dateObj.toLocaleString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
+  const daysInMonth = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate();
+
+  const prevMonthExpenses = useMemo(() => {
+    if (!prevMonth) return [];
+    return expenses.filter((e: any) => {
+      const d = new Date(e.date);
+      return d.toISOString().startsWith(prevMonth);
+    });
+  }, [expenses, prevMonth]);
+
+  const insights = useMemo(() => {
+    if (prevMonthExpenses.length === 0) return [];
+
+    const total = totalSpent;
+    
+    // Category Data
+    const categoryDataMap: Record<string, { total: number }> = {};
+    prevMonthExpenses.forEach((e: any) => {
+        if (!categoryDataMap[e.category]) categoryDataMap[e.category] = { total: 0 };
+        categoryDataMap[e.category].total += e.amount;
+    });
+    const categoryData = Object.entries(categoryDataMap).sort((a, b) => b[1].total - a[1].total);
+
+    // 1. Top Category
+    const topCat = categoryData[0];
+    const topCatInsight = {
+      id: 'top-cat',
+      title: 'Top Category',
+      value: topCat ? topCat[0] : 'None',
+      sub: topCat ? `${((topCat[1].total / total) * 100).toFixed(0)}% of spend` : 'No data',
+      score: 100,
+      eligible: !!topCat,
+      icon: TrendingUp,
+      color: '#00F0FF'
+    };
+
+    // 2. Biggest Expense
+    const sortedByAmt = [...prevMonthExpenses].sort((a: any, b: any) => b.amount - a.amount);
+    const biggest = sortedByAmt[0];
+    const biggestInsight = {
+      id: 'biggest-expense',
+      title: 'Biggest Hit',
+      value: biggest ? `PKR ${biggest.amount.toLocaleString()}` : '0',
+      sub: biggest ? (biggest.name.length > 15 ? biggest.name.substring(0, 15) + '...' : biggest.name) : 'No expenses',
+      score: 95,
+      eligible: !!biggest,
+      icon: AlertCircle,
+      color: '#EF4444'
+    };
+
+    // 3. No-Spend Days
+    const spentDays = new Set(prevMonthExpenses.map((e: any) => new Date(e.date).getDate()));
+    const noSpendCount = daysInMonth - spentDays.size;
+    const noSpendInsight = {
+      id: 'no-spend',
+      title: 'No-Spend Days',
+      value: `${noSpendCount} Days`,
+      sub: noSpendCount >= 5 ? '🧘 Great restraint!' : 'Keep trying!',
+      score: (noSpendCount / daysInMonth) * 100,
+      eligible: noSpendCount >= 5,
+      icon: CalendarIcon,
+      color: '#10B981'
+    };
+
+    // 4. Spending Velocity
+    const firstHalfSpend = prevMonthExpenses
+      .filter((e: any) => new Date(e.date).getDate() <= 15)
+      .reduce((sum: number, e: any) => sum + e.amount, 0);
+    const velocity = total > 0 ? (firstHalfSpend / total) * 100 : 0;
+    const velocityInsight = {
+      id: 'velocity',
+      title: 'Spend Velocity',
+      value: `${velocity.toFixed(0)}%`,
+      sub: velocity > 65 ? 'Fast start!' : velocity < 35 ? 'Slow burner' : 'Steady pace',
+      score: Math.abs(50 - velocity) * 2,
+      eligible: total > 0 && (velocity > 65 || velocity < 35),
+      icon: ArrowRightCircle,
+      color: '#3B82F6'
+    };
+
+    // 5. Category Overshoot
+    let biggestOvershoot = { cat: '', pct: 0 };
+    Object.entries(budget.categories).forEach(([cat, limit]) => {
+      const limitNum = limit as number;
+      const spent = (categoryDataMap[cat])?.total || 0;
+      if (limitNum > 0 && spent > limitNum) {
+        const overshoot = ((spent - limitNum) / limitNum) * 100;
+        if (overshoot > biggestOvershoot.pct) {
+          biggestOvershoot = { cat, pct: overshoot };
+        }
+      }
+    });
+    const overshootInsight = {
+      id: 'overshoot',
+      title: 'Overshoot',
+      value: biggestOvershoot.cat || 'None',
+      sub: biggestOvershoot.cat ? `${biggestOvershoot.pct.toFixed(0)}% over budget` : 'Safe zone',
+      score: biggestOvershoot.pct,
+      eligible: biggestOvershoot.pct > 50,
+      icon: AlertCircle,
+      color: '#EF4444'
+    };
+
+    // 6. Single Day Damage
+    const dayTotals: Record<number, number> = {};
+    prevMonthExpenses.forEach((e: any) => {
+      const d = new Date(e.date).getDate();
+      dayTotals[d] = (dayTotals[d] || 0) + e.amount;
+    });
+    const maxDayEntry = Object.entries(dayTotals).sort((a,b) => b[1] - a[1])[0];
+    const maxDayPct = maxDayEntry && total > 0 ? (maxDayEntry[1] / total) * 100 : 0;
+    const damageInsight = {
+      id: 'damage',
+      title: 'Day Damage',
+      value: `${maxDayPct.toFixed(0)}%`,
+      sub: `Spent on Day ${maxDayEntry?.[0]}`,
+      score: maxDayPct * 4,
+      eligible: maxDayPct > 20,
+      icon: AlertCircle,
+      color: '#EC4899'
+    };
+
+    // 7. Most Frequent
+    const frequencies: Record<string, number> = {};
+    prevMonthExpenses.forEach((e: any) => {
+      const name = e.name.trim().toLowerCase();
+      frequencies[name] = (frequencies[name] || 0) + 1;
+    });
+    const mostFreq = Object.entries(frequencies).sort((a,b) => b[1] - a[1])[0];
+    const freqInsight = {
+      id: 'frequency',
+      title: 'Habit Alert',
+      value: mostFreq ? `${mostFreq[1]}x` : '0',
+      sub: mostFreq ? (mostFreq[0].length > 15 ? mostFreq[0].substring(0, 15) + '...' : mostFreq[0]) : 'None',
+      score: (mostFreq?.[1] || 0) * 4,
+      eligible: (mostFreq?.[1] || 0) >= 5,
+      icon: CheckCircle2,
+      color: '#2DD4BF'
+    };
+
+    const allInsights = [topCatInsight, biggestInsight, noSpendInsight, velocityInsight, overshootInsight, damageInsight, freqInsight];
+    
+    const selected = [topCatInsight, biggestInsight];
+    const pool = allInsights.filter(i => !selected.some(s => s.id === i.id) && i.eligible)
+      .sort((a,b) => b.score - a.score);
+    
+    selected.push(...pool);
+    
+    if (selected.length < 4) {
+       const priorityFillers = ['no-spend', 'frequency'];
+       for (const id of priorityFillers) {
+          const found = allInsights.find(i => i.id === id && !selected.some(s => s.id === i.id));
+          if (found && selected.length < 4) selected.push(found);
+       }
+       if (selected.length < 4) {
+          const rest = allInsights.filter(i => !selected.some(s => s.id === i.id))
+            .sort((a,b) => b.score - a.score);
+          selected.push(...rest.slice(0, 4 - selected.length));
+       }
+    }
+
+    return selected.slice(0, 4);
+  }, [prevMonthExpenses, totalSpent, daysInMonth, budget]);
 
   const handleFinalSave = async () => {
     // Preserve existing categories, just update total
@@ -71,6 +236,8 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
     await resolveMonthEnd(rolloverCache, updatedBudget);
     navigation.navigate('Settings');
   };
+
+  if (!data) return null;
 
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
@@ -91,43 +258,6 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
               
               {/* Common Header: Month & Stats (Hidden in Step 3 for space) */}
               {step !== 3 && (() => {
-                // Calculation Logic
-                const prevMonthExpenses = expenses.filter((e: any) => {
-                  const d = new Date(e.date);
-                  return d.toISOString().startsWith(prevMonth);
-                });
-
-                // 1. Top Spending Category
-                const catTotals: Record<string, number> = {};
-                prevMonthExpenses.forEach((e: any) => {
-                  catTotals[e.category] = (catTotals[e.category] || 0) + e.amount;
-                });
-                let topCat = "N/A";
-                let topCatAmount = 0;
-                Object.entries(catTotals).forEach(([cat, amt]) => {
-                  if (amt > topCatAmount) {
-                    topCatAmount = amt;
-                    topCat = cat;
-                  }
-                });
-                const topCatPercent = totalSpent > 0 ? Math.round((topCatAmount / totalSpent) * 100) : 0;
-
-                // 2. Budget Health Score (Active days only)
-                const daysInMonth = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate();
-                const dailyBudget = totalBudget / daysInMonth;
-                const dailySpend: Record<string, number> = {};
-                prevMonthExpenses.forEach((e: any) => {
-                  const day = e.date.split('T')[0];
-                  dailySpend[day] = (dailySpend[day] || 0) + e.amount;
-                });
-                const activeDays = Object.keys(dailySpend).length;
-                const underBudgetDays = Object.values(dailySpend).filter((amt: any) => amt <= dailyBudget).length;
-
-                // 3. Biggest Single Expense
-                let biggestExpense = prevMonthExpenses.length > 0 
-                  ? prevMonthExpenses.reduce((prev: any, current: any) => (prev.amount > current.amount) ? prev : current)
-                  : null;
-
                 return (
                   <>
                     <View style={[styles.statusBanner, isOverspent && styles.statusBannerOverspent]}>
@@ -136,6 +266,11 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
                         <Text style={styles.statusThreshold}>Monthly Recap</Text>
                       </View>
                       <View style={styles.compactStats}>
+                        <View style={styles.compactStatItem}>
+                          <Text style={styles.compactStatLabel}>BUDGET</Text>
+                          <Text style={styles.compactStatValue}>PKR {totalBudget.toLocaleString()}</Text>
+                        </View>
+                        <View style={styles.statDivider} />
                         <View style={styles.compactStatItem}>
                           <Text style={styles.compactStatLabel}>SPENT</Text>
                           <Text style={styles.compactStatValue}>PKR {totalSpent.toLocaleString()}</Text>
@@ -151,55 +286,6 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
                         </View>
                       </View>
                     </View>
-
-                    <View style={styles.insightsSection}>
-                      <Text style={styles.insightHeader}>MONTHLY INSIGHTS</Text>
-                      
-                      {prevMonthExpenses.length > 0 ? (
-                        <>
-                          <View style={styles.insightRow}>
-                            <View style={styles.insightIconCircle}>
-                              <TrendingUp color="#00F0FF" size={14} />
-                            </View>
-                            <View style={styles.insightContent}>
-                              <Text style={styles.insightTitle}>Top Spending Category</Text>
-                              <Text style={styles.insightValue}>
-                                {topCat} was your biggest expense — PKR {topCatAmount.toLocaleString()} ({topCatPercent}% of total)
-                              </Text>
-                            </View>
-                          </View>
-
-                          <View style={styles.insightRow}>
-                            <View style={[styles.insightIconCircle, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
-                              <CheckCircle2 color="#10B981" size={14} />
-                            </View>
-                            <View style={styles.insightContent}>
-                              <Text style={styles.insightTitle}>Budget Health Score</Text>
-                              <Text style={styles.insightValue}>
-                                You stayed under budget for {underBudgetDays} out of {activeDays} active spending days.
-                              </Text>
-                            </View>
-                          </View>
-
-                          <View style={styles.insightRow}>
-                            <View style={[styles.insightIconCircle, { backgroundColor: 'rgba(255, 255, 255, 0.05)' }]}>
-                              <AlertCircle color="#A0A0A0" size={14} />
-                            </View>
-                            <View style={styles.insightContent}>
-                              <Text style={styles.insightTitle}>Biggest Single Expense</Text>
-                              <Text style={styles.insightValue}>
-                                Largest transaction: {biggestExpense?.name} · PKR {biggestExpense?.amount.toLocaleString()}
-                              </Text>
-                            </View>
-                          </View>
-                        </>
-                      ) : (
-                        <View style={styles.emptyInsights}>
-                          <MoreHorizontal color="#606060" size={32} />
-                          <Text style={styles.emptyInsightsText}>No active spending days recorded</Text>
-                        </View>
-                      )}
-                    </View>
                   </>
                 );
               })()}
@@ -207,6 +293,32 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
               {/* STEP 1 */}
               {step === 1 && !isOverspent && (
                 <View style={styles.stepContainer}>
+                  <View style={styles.insightsSection}>
+                    <Text style={styles.insightHeader}>MONTHLY INSIGHTS</Text>
+                    
+                    {insights.length > 0 ? (
+                      <View style={styles.insightsGrid}>
+                        {insights.map((insight) => (
+                          <View key={insight.id} style={styles.insightCard}>
+                            <View style={styles.insightCardHeader}>
+                              <View style={[styles.insightCardIconBox, { backgroundColor: `${insight.color}15` }]}>
+                                <insight.icon color={insight.color} size={16} />
+                              </View>
+                              <Text style={styles.insightCardTitle} numberOfLines={1}>{insight.title}</Text>
+                            </View>
+                            <Text style={styles.insightCardValue} numberOfLines={1}>{insight.value}</Text>
+                            <Text style={styles.insightCardSub} numberOfLines={1}>{insight.sub}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : (
+                      <View style={styles.emptyInsights}>
+                        <MoreHorizontal color="#606060" size={32} />
+                        <Text style={styles.emptyInsightsText}>No active spending days recorded</Text>
+                      </View>
+                    )}
+                  </View>
+
                   <Text style={styles.promptText}>
                     What would you like to do with your PKR {remaining.toLocaleString()} remaining?
                   </Text>
@@ -335,13 +447,29 @@ const styles = StyleSheet.create({
   compactStatValue: { color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 14, marginTop: 2 },
   statDivider: { width: 1, height: 24, backgroundColor: 'rgba(255,255,255,0.1)' },
 
-  insightsSection: { marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 24, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-  insightHeader: { color: '#A0A0A0', fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.5, marginBottom: 16 },
-  insightRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  insightIconCircle: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(0, 240, 255, 0.1)', alignItems: 'center', justifyContent: 'center' },
-  insightContent: { flex: 1 },
-  insightTitle: { color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 14 },
-  insightValue: { color: '#A0A0A0', fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 18, marginTop: 2 },
+  insightsSection: { marginBottom: 20 },
+  insightHeader: { color: '#A0A0A0', fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.5, marginBottom: 16, textAlign: 'center' },
+  insightsGrid: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    gap: 8,
+    width: '100%'
+  },
+  insightCard: { 
+    flex: 1,
+    minWidth: '48%',
+    backgroundColor: 'rgba(255,255,255,0.02)', 
+    borderRadius: 20, 
+    padding: 16, 
+    borderWidth: 1, 
+    borderColor: 'rgba(255,255,255,0.05)',
+    justifyContent: 'center'
+  },
+  insightCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  insightCardIconBox: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  insightCardTitle: { flex: 1, color: '#606060', fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.5 },
+  insightCardValue: { color: '#FFFFFF', fontSize: 18, fontFamily: 'Outfit_600SemiBold' },
+  insightCardSub: { color: '#A0A0A0', fontSize: 10, fontFamily: 'Inter_500Medium', marginTop: 4 },
   
   emptyInsights: { alignItems: 'center', paddingVertical: 12 },
   emptyInsightsText: { color: '#606060', fontFamily: 'Inter_600SemiBold', fontSize: 13, marginTop: 8 },
