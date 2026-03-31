@@ -254,7 +254,11 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
               </View>
             </View>
 
-            <KeyboardAwareScrollView showsVerticalScrollIndicator={false} style={{ flexShrink: 1 }}>
+            <KeyboardAwareScrollView 
+              showsVerticalScrollIndicator={false} 
+              style={{ flexShrink: 1 }}
+              contentContainerStyle={{ paddingBottom: 16 }}
+            >
               
               {/* Common Header: Month & Stats (Hidden in Step 3 for space) */}
               {step !== 3 && (() => {
@@ -265,25 +269,26 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
                         <Text style={[styles.statusLabel, isOverspent && styles.statusLabelOverspent]}>{monthName}</Text>
                         <Text style={styles.statusThreshold}>Monthly Recap</Text>
                       </View>
-                      <View style={styles.compactStats}>
-                        <View style={styles.compactStatItem}>
-                          <Text style={styles.compactStatLabel}>BUDGET</Text>
-                          <Text style={styles.compactStatValue}>PKR {totalBudget.toLocaleString()}</Text>
-                        </View>
-                        <View style={styles.statDivider} />
-                        <View style={styles.compactStatItem}>
-                          <Text style={styles.compactStatLabel}>SPENT</Text>
-                          <Text style={styles.compactStatValue}>PKR {totalSpent.toLocaleString()}</Text>
-                        </View>
-                        <View style={styles.statDivider} />
-                        <View style={styles.compactStatItem}>
-                          <Text style={[styles.compactStatLabel, isOverspent && { color: '#EF4444' }]}>
-                            {isOverspent ? 'DEFICIT' : 'LEFT'}
-                          </Text>
-                          <Text style={[styles.compactStatValue, { color: isOverspent ? '#EF4444' : '#00F0FF' }]}>
-                            PKR {Math.abs(remaining).toLocaleString()}
-                          </Text>
-                        </View>
+                    </View>
+
+                    <View style={styles.statsOverview}>
+                      <View style={styles.statBox}>
+                        <Text style={styles.statBoxLabel}>BUDGET</Text>
+                        <Text style={styles.statBoxValue}>PKR {totalBudget.toLocaleString()}</Text>
+                      </View>
+                      <View style={styles.statBoxDivider} />
+                      <View style={styles.statBox}>
+                        <Text style={styles.statBoxLabel}>SPENT</Text>
+                        <Text style={styles.statBoxValue}>PKR {totalSpent.toLocaleString()}</Text>
+                      </View>
+                      <View style={styles.statBoxDivider} />
+                      <View style={[styles.statBox]}>
+                        <Text style={[styles.statBoxLabel, isOverspent && { color: '#EF4444' }]}>
+                          {isOverspent ? 'DEFICIT' : 'LEFT'}
+                        </Text>
+                        <Text style={[styles.statBoxValue, { color: isOverspent ? '#EF4444' : '#00F0FF' }]}>
+                          PKR {Math.abs(remaining).toLocaleString()}
+                        </Text>
                       </View>
                     </View>
                   </>
@@ -293,31 +298,32 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
               {/* STEP 1 */}
               {step === 1 && !isOverspent && (
                 <View style={styles.stepContainer}>
-                  <View style={styles.insightsSection}>
-                    <Text style={styles.insightHeader}>MONTHLY INSIGHTS</Text>
-                    
-                    {insights.length > 0 ? (
-                      <View style={styles.insightsGrid}>
-                        {insights.map((insight) => (
-                          <View key={insight.id} style={styles.insightCard}>
-                            <View style={styles.insightCardHeader}>
-                              <View style={[styles.insightCardIconBox, { backgroundColor: `${insight.color}15` }]}>
-                                <insight.icon color={insight.color} size={16} />
+                    <View style={styles.insightsSection}>
+                      <Text style={styles.insightHeader}>MONTHLY INSIGHTS</Text>
+                      
+                      {insights.length > 0 ? (
+                        <>
+                          {insights.map((insight) => (
+                            <View key={insight.id} style={styles.insightRow}>
+                              <View style={[styles.insightIconCircle, { backgroundColor: `${insight.color}15` }]}>
+                                <insight.icon color={insight.color} size={14} />
                               </View>
-                              <Text style={styles.insightCardTitle} numberOfLines={1}>{insight.title}</Text>
+                              <View style={styles.insightContent}>
+                                <Text style={styles.insightTitle}>{insight.title}</Text>
+                                <Text style={styles.insightValue}>
+                                  {insight.value} — {insight.sub}
+                                </Text>
+                              </View>
                             </View>
-                            <Text style={styles.insightCardValue} numberOfLines={1}>{insight.value}</Text>
-                            <Text style={styles.insightCardSub} numberOfLines={1}>{insight.sub}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    ) : (
-                      <View style={styles.emptyInsights}>
-                        <MoreHorizontal color="#606060" size={32} />
-                        <Text style={styles.emptyInsightsText}>No active spending days recorded</Text>
-                      </View>
-                    )}
-                  </View>
+                          ))}
+                        </>
+                      ) : (
+                        <View style={styles.emptyInsights}>
+                          <MoreHorizontal color="#606060" size={32} />
+                          <Text style={styles.emptyInsightsText}>No active spending days recorded</Text>
+                        </View>
+                      )}
+                    </View>
 
                   <Text style={styles.promptText}>
                     What would you like to do with your PKR {remaining.toLocaleString()} remaining?
@@ -441,35 +447,29 @@ const styles = StyleSheet.create({
   statusLabelOverspent: { color: '#EF4444' },
   statusThreshold: { color: '#606060', fontFamily: 'Inter_500Medium', fontSize: 10, marginTop: 2 },
   
-  compactStats: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  compactStatItem: { alignItems: 'flex-end' },
-  compactStatLabel: { color: '#606060', fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 0.5 },
-  compactStatValue: { color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 14, marginTop: 2 },
-  statDivider: { width: 1, height: 24, backgroundColor: 'rgba(255,255,255,0.1)' },
-
-  insightsSection: { marginBottom: 20 },
-  insightHeader: { color: '#A0A0A0', fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.5, marginBottom: 16, textAlign: 'center' },
-  insightsGrid: { 
+  statsOverview: { 
     flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    gap: 8,
-    width: '100%'
-  },
-  insightCard: { 
-    flex: 1,
-    minWidth: '48%',
-    backgroundColor: 'rgba(255,255,255,0.02)', 
+    backgroundColor: 'rgba(255,255,255,0.03)', 
     borderRadius: 20, 
     padding: 16, 
-    borderWidth: 1, 
+    marginBottom: 20,
+    borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
-    justifyContent: 'center'
+    justifyContent: 'space-between',
+    alignItems: 'center'
   },
-  insightCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  insightCardIconBox: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  insightCardTitle: { flex: 1, color: '#606060', fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.5 },
-  insightCardValue: { color: '#FFFFFF', fontSize: 18, fontFamily: 'Outfit_600SemiBold' },
-  insightCardSub: { color: '#A0A0A0', fontSize: 10, fontFamily: 'Inter_500Medium', marginTop: 4 },
+  statBox: { flex: 1, alignItems: 'center' },
+  statBoxLabel: { color: '#606060', fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 0.5, marginBottom: 4 },
+  statBoxValue: { color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 14 },
+  statBoxDivider: { width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.1)' },
+
+  insightsSection: { marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 24, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  insightHeader: { color: '#A0A0A0', fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.5, marginBottom: 16 },
+  insightRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  insightIconCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  insightContent: { flex: 1 },
+  insightTitle: { color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 14 },
+  insightValue: { color: '#A0A0A0', fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 18, marginTop: 2 },
   
   emptyInsights: { alignItems: 'center', paddingVertical: 12 },
   emptyInsightsText: { color: '#606060', fontFamily: 'Inter_600SemiBold', fontSize: 13, marginTop: 8 },
