@@ -36,24 +36,22 @@ export function isToday(dateStr: string): boolean {
 }
 
 /**
- * Normalizes various date formats into an ISO string.
- * Supports patterns like YYYY-MM-DD, DD-MM-YYYY, MM/DD/YYYY.
+ * Normalizes a date string into an ISO string.
+ * STRICT: Only accepts YYYY-MM-DD format to ensure consistency.
  */
 function normalizeDate(dateStr: string): string | null {
   if (!dateStr) return null;
   const trimmed = dateStr.trim();
   
-  // Try ISO format first
-  const isoDate = new Date(trimmed);
-  if (isValid(isoDate) && !isNaN(isoDate.getTime())) {
-    return isoDate.toISOString();
+  // Strict regex check for YYYY-MM-DD
+  const ymdRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!ymdRegex.test(trimmed)) {
+    return null;
   }
 
-  // Common patterns to try
-  const patterns = ['dd-MM-yyyy', 'MM/dd/yyyy', 'yyyy/MM/dd', 'dd/MM/yyyy'];
-  for (const pattern of patterns) {
-    const parsed = parseDate(trimmed, pattern, new Date());
-    if (isValid(parsed)) return parsed.toISOString();
+  const date = new Date(trimmed);
+  if (isValid(date) && !isNaN(date.getTime())) {
+    return date.toISOString();
   }
 
   return null;
@@ -124,17 +122,26 @@ export async function importExpensesFromFile(existingExpenses: Expense[]): Promi
     const newExpenses: Expense[] = [];
 
     for (const row of rows) {
-      // Required fields: date, description (or name), amount
-      const rawDate = row.date || row.Date;
-      const rawDesc = row.description || row.Description || row.name || row.Name;
-      const rawAmount = row.amount || row.Amount;
-      const rawCategory = row.category || row.Category || 'Other';
+      // 1. Normalize headers (trim and lowercase)
+      const normalizedRow: any = {};
+      Object.keys(row).forEach(key => {
+        normalizedRow[key.trim().toLowerCase()] = row[key];
+      });
 
-      // Excel dates might be numeric serials
+      // 2. Extract fields using normalized keys
+      const rawDate = normalizedRow.date || normalizedRow.Date;
+      const rawDesc = normalizedRow.description || normalizedRow.name;
+      const rawAmount = normalizedRow.amount;
+      const rawCategory = normalizedRow.category || 'Other';
+
+      // 3. Handle Excel numeric dates vs strings
       let parsedDateString = '';
       if (typeof rawDate === 'number') {
-        const d = XLSX.utils.format_cell({ v: rawDate, t: 'd' });
-        parsedDateString = d; 
+        // Excel base date is Dec 30, 1899
+        const excelEpoch = new Date(1899, 11, 30);
+        const dayInMs = 24 * 60 * 60 * 1000;
+        const date = new Date(excelEpoch.getTime() + rawDate * dayInMs);
+        parsedDateString = formatDate(date, 'yyyy-MM-dd');
       } else {
         parsedDateString = String(rawDate || '');
       }
