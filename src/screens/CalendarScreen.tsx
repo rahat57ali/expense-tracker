@@ -84,7 +84,7 @@ export default function CalendarScreen() {
           theme={{
             backgroundColor: '#0A0A0A',
             calendarBackground: '#0A0A0A',
-            textSectionTitleColor: '#606060',
+            textSectionTitleColor: '#949494',
             selectedDayBackgroundColor: '#00F0FF',
             selectedDayTextColor: '#0A0A0A',
             todayTextColor: '#00F0FF',
@@ -181,13 +181,13 @@ const styles = StyleSheet.create({
   logo: { width: 36, height: 36, marginBottom: 8 },
   brandName: { fontFamily: 'Outfit_800ExtraBold', color: '#FFFFFF', fontSize: 12, letterSpacing: 4, marginBottom: 12 },
   headerTitle: { fontFamily: 'Outfit_800ExtraBold', fontSize: 28, color: '#FFFFFF' },
-  headerSubtitle: { fontFamily: 'Inter_500Medium', fontSize: 14, color: '#606060', marginTop: 4 },
+  headerSubtitle: { fontFamily: 'Inter_500Medium', fontSize: 14, color: '#949494', marginTop: 4 },
   
   calendarContainer: { marginHorizontal: 16, backgroundColor: '#0A0A0A', borderRadius: 24, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
   
   detailsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 20 },
   detailsDate: { color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 18 },
-  detailsCount: { color: '#606060', fontFamily: 'Inter_500Medium', fontSize: 12, marginTop: 2 },
+  detailsCount: { color: '#949494', fontFamily: 'Inter_500Medium', fontSize: 12, marginTop: 2 },
   totalBadge: { backgroundColor: 'rgba(0, 240, 255, 0.1)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 100, borderWidth: 1, borderColor: 'rgba(0, 240, 255, 0.2)' },
   totalBadgeText: { color: '#00F0FF', fontFamily: 'Outfit_600SemiBold', fontSize: 14 },
 
@@ -197,12 +197,12 @@ const styles = StyleSheet.create({
   stripIconBox: { width: 34, height: 34, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' },
   iconBoxDanger: { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
   expenseName: { color: '#FFFFFF', fontFamily: 'Inter_500Medium', fontSize: 14, marginBottom: 1 },
-  stripCat: { color: '#606060', fontFamily: 'Inter_700Bold', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
+  stripCat: { color: '#949494', fontFamily: 'Inter_700Bold', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
   stripRight: { alignItems: 'flex-end', minWidth: 90, flexShrink: 0 },
   stripAmount: { color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 16, textAlign: 'right' },
   pkSmall: { fontSize: 10, color: '#A0A0A0' },
-  stripDate: { color: '#606060', fontFamily: 'Inter_500Medium', fontSize: 10, marginTop: 2 },
+  stripDate: { color: '#949494', fontFamily: 'Inter_500Medium', fontSize: 10, marginTop: 2 },
   
   emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 40 },
-  emptyText: { color: '#404040', fontFamily: 'Inter_500Medium', fontSize: 16 }
+  emptyText: { color: '#949494', fontFamily: 'Inter_500Medium', fontSize: 16 }
 });

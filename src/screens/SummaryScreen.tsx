@@ -147,7 +147,7 @@ export default function SummaryScreen() {
                   </View>
                   <View style={styles.catRight}>
                     <Text style={styles.catTotal}>PKR {data.total.toLocaleString()}</Text>
-                    {isExpanded ? <ChevronUp size={20} color="#606060" /> : <ChevronDown size={20} color="#606060" />}
+                    {isExpanded ? <ChevronUp size={20} color="#949494" /> : <ChevronDown size={20} color="#949494" />}
                   </View>
                 </TouchableOpacity>
 
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
   
   totalCardContainer: { paddingHorizontal: 24, marginBottom: 24 },
   totalCard: { padding: 24, borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  totalLabel: { color: '#A0A0A0', fontSize: 12, fontFamily: 'Inter_700Bold', letterSpacing: 1, marginBottom: 8 },
+  totalLabel: { color: '#D1D1D1', fontSize: 12, fontFamily: 'Inter_700Bold', letterSpacing: 1, marginBottom: 8 },
   totalValue: { color: '#FFFFFF', fontSize: 32, fontFamily: 'Outfit_600SemiBold' },
   progressBarBg: { height: 6, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 3, marginTop: 16, overflow: 'hidden' },
   progressBarFill: { height: '100%', backgroundColor: '#00F0FF', borderRadius: 3 },
@@ -198,16 +198,16 @@ const styles = StyleSheet.create({
   catLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   catIconBox: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   catName: { color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 18 },
-  catPercentage: { color: '#606060', fontFamily: 'Inter_500Medium', fontSize: 12 },
+  catPercentage: { color: '#949494', fontFamily: 'Inter_500Medium', fontSize: 12 },
   catRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   catTotal: { color: '#FFFFFF', fontFamily: 'Outfit_400Regular', fontSize: 18 },
 
   detailsList: { backgroundColor: 'rgba(0,0,0,0.2)', paddingHorizontal: 16, paddingBottom: 8 },
   detailItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.03)' },
-  detailName: { color: '#E0E0E0', fontFamily: 'Inter_500Medium', fontSize: 14 },
-  detailDate: { color: '#606060', fontFamily: 'Inter_500Medium', fontSize: 11, marginTop: 2 },
+  detailName: { color: '#D1D1D1', fontFamily: 'Inter_500Medium', fontSize: 14 },
+  detailDate: { color: '#949494', fontFamily: 'Inter_500Medium', fontSize: 11, marginTop: 2 },
   detailAmount: { color: '#FFFFFF', fontFamily: 'Outfit_400Regular', fontSize: 14 },
 
   emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 40 },
-  emptyText: { color: '#606060', fontFamily: 'Inter_500Medium', fontSize: 16 }
+  emptyText: { color: '#949494', fontFamily: 'Inter_500Medium', fontSize: 16 }
 });

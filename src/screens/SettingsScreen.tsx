@@ -355,11 +355,11 @@ const styles = StyleSheet.create({
   logo: { width: 36, height: 36, marginBottom: 8 },
   brandName: { fontFamily: 'Outfit_800ExtraBold', color: '#FFFFFF', fontSize: 12, letterSpacing: 4, marginBottom: 12 },
   title: { fontFamily: 'Outfit_800ExtraBold', fontSize: 36, color: '#FFFFFF' },
-  subtitle: { fontFamily: 'Inter_500Medium', fontSize: 14, color: '#A0A0A0', marginTop: 4 },
+  subtitle: { fontFamily: 'Inter_500Medium', fontSize: 14, color: '#D1D1D1', marginTop: 4 },
 
   sectionHeader: { marginBottom: 16, marginTop: 24 },
   sectionTitle: { fontFamily: 'Outfit_600SemiBold', fontSize: 20, color: '#FFFFFF' },
-  sectionSubtitle: { fontFamily: 'Inter_500Medium', fontSize: 12, color: '#606060', marginTop: 2 },
+  sectionSubtitle: { fontFamily: 'Inter_500Medium', fontSize: 12, color: '#949494', marginTop: 2 },
 
   formCard: { backgroundColor: 'rgba(20,20,20,0.95)', padding: 20, borderRadius: 28, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginBottom: 20 },
   inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0A0A0A', borderRadius: 12, height: 50, paddingHorizontal: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
@@ -369,11 +369,11 @@ const styles = StyleSheet.create({
   dateSelector: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginBottom: 16 },
   dateText: { color: '#FFFFFF', fontFamily: 'Inter_500Medium', fontSize: 14 },
 
-  labelSmall: { color: '#606060', fontSize: 9, fontFamily: 'Inter_700Bold', letterSpacing: 1, marginBottom: 10 },
+  labelSmall: { color: '#949494', fontSize: 9, fontFamily: 'Inter_700Bold', letterSpacing: 1, marginBottom: 10 },
   catRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   catPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, gap: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   catPillActive: { backgroundColor: '#00F0FF', borderColor: '#00F0FF' },
-  catPillText: { color: '#A0A0A0', fontSize: 11, fontFamily: 'Inter_500Medium' },
+  catPillText: { color: '#D1D1D1', fontSize: 11, fontFamily: 'Inter_500Medium' },
   catPillTextActive: { color: '#0A0A0A', fontFamily: 'Inter_700Bold' },
 
   recordButton: { backgroundColor: '#00F0FF', height: 50, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 24 },
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
 
   budgetMainCard: { backgroundColor: 'rgba(20,20,20,0.95)', padding: 24, borderRadius: 32, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginBottom: 24 },
   allocationHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  allocationLabel: { color: '#606060', fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.5 },
+  allocationLabel: { color: '#949494', fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.5 },
   totalInputWrapper: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 16, marginTop: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', minHeight: 74, justifyContent: 'center' },
   totalInputRow: { flexDirection: 'row', alignItems: 'center' },
   totalCurrency: { color: '#00F0FF', fontSize: 18, fontFamily: 'Outfit_600SemiBold', marginRight: 12 },
@@ -404,11 +404,11 @@ const styles = StyleSheet.create({
   allocationBarFill: { height: '100%', backgroundColor: '#8A2BE2' },
   allocationBarFillDanger: { backgroundColor: '#EF4444' },
   allocationStats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
-  statText: { color: '#606060', fontSize: 11, fontFamily: 'Inter_500Medium' },
-  statValue: { color: '#A0A0A0', fontSize: 11, fontFamily: 'Inter_700Bold' },
+  statText: { color: '#949494', fontSize: 11, fontFamily: 'Inter_500Medium' },
+  statValue: { color: '#D1D1D1', fontSize: 11, fontFamily: 'Inter_700Bold' },
   textDanger: { color: '#EF4444' },
 
-  catSectionLabel: { color: '#606060', fontSize: 10, fontFamily: 'Inter_800ExtraBold', letterSpacing: 2 },
+  catSectionLabel: { color: '#949494', fontSize: 10, fontFamily: 'Inter_800ExtraBold', letterSpacing: 2 },
   catGridHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   addCatBtnSmall: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0, 240, 255, 0.1)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, gap: 4 },
   addCatBtnTextSmall: { color: '#00F0FF', fontSize: 10, fontFamily: 'Outfit_800ExtraBold' },
@@ -418,16 +418,16 @@ const styles = StyleSheet.create({
   quickAddDone: { backgroundColor: '#00F0FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   quickAddDoneText: { color: '#000', fontSize: 10, fontFamily: 'Outfit_800ExtraBold' },
   quickAddCancel: { padding: 4 },
-  quickAddCancelText: { color: '#606060', fontSize: 14 },
+  quickAddCancelText: { color: '#949494', fontSize: 14 },
 
   catBudgetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 40 },
   modernCatCard: { width: '48.5%', backgroundColor: '#141414', padding: 12, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   catCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
   catIconBox: { width: 24, height: 24, borderRadius: 8, backgroundColor: 'rgba(0, 240, 255, 0.05)', alignItems: 'center', justifyContent: 'center' },
-  catName: { color: '#A0A0A0', fontFamily: 'Inter_700Bold', fontSize: 10, textTransform: 'uppercase', flex: 1 },
+  catName: { color: '#D1D1D1', fontFamily: 'Inter_700Bold', fontSize: 10, textTransform: 'uppercase', flex: 1 },
   catPercent: { color: '#00F0FF', fontFamily: 'Inter_800ExtraBold', fontSize: 9 },
   catInputContainer: { flexDirection: 'row', alignItems: 'baseline', backgroundColor: 'rgba(0,0,0,0.3)', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12 },
-  catInputCurrency: { color: '#606060', fontSize: 10, fontFamily: 'Inter_700Bold', marginRight: 6 },
+  catInputCurrency: { color: '#949494', fontSize: 10, fontFamily: 'Inter_700Bold', marginRight: 6 },
   catInput: { color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 14, flex: 1 },
   deleteCatBtn: { padding: 4, marginRight: 4 },
 
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
   dataActionSub: { 
     fontFamily: 'Inter_500Medium', 
     fontSize: 11, 
-    color: '#606060', 
+    color: '#949494', 
     marginTop: 2 
   },
   dataDivider: { 

@@ -187,7 +187,7 @@ export default function EditExpenseModal({ visible, onClose, expense }: EditExpe
                         style={[styles.catPill, isSelected && styles.catPillActive]}
                         onPress={() => setCategory(cat)}
                       >
-                        <Icon color={isSelected ? "#0A0A0A" : "#606060"} size={14} />
+                        <Icon color={isSelected ? "#0A0A0A" : "#949494"} size={14} />
                         <Text style={[styles.catPillText, isSelected && styles.catPillTextActive]}>{cat}</Text>
                       </TouchableOpacity>
                     );
@@ -215,7 +215,7 @@ export default function EditExpenseModal({ visible, onClose, expense }: EditExpe
                       </TouchableOpacity>
                       
                       <TouchableOpacity style={[styles.saveBtn, { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }]} onPress={() => setShowDeleteConfirm(false)}>
-                        <Text style={[styles.saveText, { color: '#A0A0A0' }]}>Cancel</Text>
+                        <Text style={[styles.saveText, { color: '#D1D1D1' }]}>Cancel</Text>
                       </TouchableOpacity>
                     </>
                   )}
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' },
   
   form: { gap: 10 },
-  label: { color: '#A0A0A0', fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.5, marginBottom: 2 },
+  label: { color: '#D1D1D1', fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.5, marginBottom: 2 },
   inputRow: { backgroundColor: '#020202', borderRadius: 16, height: 50, paddingHorizontal: 16, justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   input: { color: '#FFFFFF', fontFamily: 'Inter_500Medium', fontSize: 16 },
   inputAmount: { color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 20 },
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   catPill: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: '#020202', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   catPillActive: { backgroundColor: '#00F0FF', borderColor: '#00F0FF' },
-  catPillText: { color: '#606060', fontFamily: 'Inter_500Medium', fontSize: 13 },
+  catPillText: { color: '#949494', fontFamily: 'Inter_500Medium', fontSize: 13 },
   catPillTextActive: { color: '#0A0A0A', fontFamily: 'Inter_700Bold' },
   
   actions: { flexDirection: 'row', gap: 16, marginTop: 10, paddingBottom: 30 },
