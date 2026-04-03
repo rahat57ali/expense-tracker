@@ -57,25 +57,28 @@ export default function TrackScreen() {
     return prompts[Math.floor(Math.random() * prompts.length)];
   }, []);
 
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
+  const activeMonth = budget.budgetMonth || new Date().toISOString().slice(0, 7);
+  
+  // Calculate specific previous month string for accurate filtering
+  const prevMonthStr = useMemo(() => {
+    const [year, month] = activeMonth.split('-').map(Number);
+    const date = new Date(year, month - 2, 1);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  }, [activeMonth]);
 
-  const thisMonthSpent = expenses
-    .filter(e => {
-      const d = new Date(e.date);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    })
-    .reduce((sum, e) => sum + e.amount, 0);
+  const currentMonthExpenses = useMemo(() => {
+    return expenses.filter(e => e.date.startsWith(activeMonth));
+  }, [expenses, activeMonth]);
 
-  const lastMonthSpent = expenses
-    .filter(e => {
-      const d = new Date(e.date);
-      const m = currentMonth === 0 ? 11 : currentMonth - 1;
-      const y = currentMonth === 0 ? currentYear - 1 : currentYear;
-      return d.getMonth() === m && d.getFullYear() === y;
-    })
-    .reduce((sum, e) => sum + e.amount, 0);
+  const thisMonthSpent = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+  const lastMonthSpent = useMemo(() => {
+    return expenses
+      .filter(e => e.date.startsWith(prevMonthStr))
+      .reduce((sum, e) => sum + e.amount, 0);
+  }, [expenses, prevMonthStr]);
 
   const budgetUsage = budget.total > 0 ? (thisMonthSpent / budget.total) : 0;
   const isOverBudget = thisMonthSpent > budget.total;
@@ -130,7 +133,7 @@ export default function TrackScreen() {
 
   const getCategoryStatus = (cat: ExpenseCategory) => {
     const limit = budget.categories[cat] || 0;
-    const spent = expenses.filter(e => e.category === cat).reduce((sum, e) => sum + e.amount, 0);
+    const spent = currentMonthExpenses.filter(e => e.category === cat).reduce((sum, e) => sum + e.amount, 0);
     const remaining = limit - spent;
     return { spent, limit, remaining, isOver: spent > limit };
   };

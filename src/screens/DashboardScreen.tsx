@@ -25,7 +25,13 @@ export default function DashboardScreen() {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isDailyDetailVisible, setIsDailyDetailVisible] = useState(false);
 
-  const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
+  // Filter expenses for the active budget month
+  const currentMonthExpenses = React.useMemo(() => {
+    const activeMonth = budget.budgetMonth || new Date().toISOString().slice(0, 7);
+    return expenses.filter(e => e.date.startsWith(activeMonth));
+  }, [expenses, budget.budgetMonth]);
+
+  const totalSpent = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
   const remainingBudget = budget.total - totalSpent;
   
   const now = new Date();
@@ -82,7 +88,7 @@ export default function DashboardScreen() {
   const dailyStatus = getDailyStatus();
   
   const categoryTotals: Record<string, number> = {};
-  expenses.forEach(e => {
+  currentMonthExpenses.forEach(e => {
     categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.amount;
   });
   
@@ -207,7 +213,7 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.expensesList}>
-          {expenses.slice(0, 10).map((expense) => {
+          {currentMonthExpenses.slice(0, 10).map((expense) => {
             const Icon = CATEGORY_ICONS[expense.category as ExpenseCategory] || MoreHorizontal;
             return (
               <TouchableOpacity 
