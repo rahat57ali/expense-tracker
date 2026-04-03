@@ -1,6 +1,7 @@
 import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
 import { Animated, Text, StyleSheet, View, Dimensions } from 'react-native';
 import { CheckCircle, AlertCircle, Info } from 'lucide-react-native';
+import { useThemeColors } from '../lib/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -18,6 +19,7 @@ export const SnackbarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [type, setType] = useState<SnackbarType>('success');
   const [opacity] = useState(new Animated.Value(0));
   const [translateY] = useState(new Animated.Value(20));
+  const colors = useThemeColors();
 
   const showSnackbar = useCallback((msg: string, t: SnackbarType = 'success') => {
     setMessage(msg);
@@ -37,9 +39,14 @@ export const SnackbarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }),
     ]).start();
 
-    setTimeout(() => {
-      hideSnackbar();
+    // Store timeout to clear if needed
+    const timer = setTimeout(() => {
+      setVisible(false);
+      opacity.setValue(0);
+      translateY.setValue(20);
     }, 3000);
+
+    return () => clearTimeout(timer);
   }, [opacity, translateY]);
 
   const hideSnackbar = useCallback(() => {
@@ -65,14 +72,19 @@ export const SnackbarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           style={[
             styles.container, 
             { opacity, transform: [{ translateY }] },
-            type === 'success' ? styles.success : type === 'error' ? styles.error : styles.info
+            type === 'success' ? { backgroundColor: colors.accent } : 
+            type === 'error' ? { backgroundColor: colors.danger } : 
+            { backgroundColor: colors.blue }
           ]}
         >
           <View style={styles.content}>
-            {type === 'success' && <CheckCircle size={18} color="#0A0A0A" />}
+            {type === 'success' && <CheckCircle size={18} color={colors.background} />}
             {type === 'error' && <AlertCircle size={18} color="#FFFFFF" />}
             {type === 'info' && <Info size={18} color="#FFFFFF" />}
-            <Text style={[styles.text, type === 'success' ? styles.textDark : styles.textLight]}>
+            <Text style={[
+              styles.text, 
+              type === 'success' ? { color: colors.background } : { color: '#FFFFFF' }
+            ]}>
               {message}
             </Text>
           </View>
@@ -111,24 +123,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  success: {
-    backgroundColor: '#00F0FF',
-  },
-  error: {
-    backgroundColor: '#EF4444',
-  },
-  info: {
-    backgroundColor: '#3B82F6',
-  },
   text: {
     fontFamily: 'Inter_600SemiBold',
     fontSize: 14,
     flex: 1,
-  },
-  textDark: {
-    color: '#0A0A0A',
-  },
-  textLight: {
-    color: '#FFFFFF',
   },
 });

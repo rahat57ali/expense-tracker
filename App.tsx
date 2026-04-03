@@ -1,17 +1,17 @@
 import React from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { 
-  useFonts, 
-  Outfit_300Light, 
-  Outfit_400Regular, 
-  Outfit_600SemiBold, 
-  Outfit_800ExtraBold 
+import {
+  useFonts,
+  Outfit_300Light,
+  Outfit_400Regular,
+  Outfit_600SemiBold,
+  Outfit_800ExtraBold
 } from '@expo-google-fonts/outfit';
-import { 
-  Inter_400Regular, 
-  Inter_500Medium, 
-  Inter_700Bold 
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_700Bold
 } from '@expo-google-fonts/inter';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator } from 'react-native';
@@ -19,6 +19,7 @@ import { Target, LayoutDashboard, Settings, BarChart2, Calendar as CalendarIcon,
 
 import { LedgrProvider, useLedgr } from './src/lib/LedgrContext';
 import { SnackbarProvider, useSnackbar } from './src/components/Snackbar';
+import { ThemeProvider, useTheme } from './src/lib/ThemeContext';
 import TrackScreen from './src/screens/TrackScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import SummaryScreen from './src/screens/SummaryScreen';
@@ -29,23 +30,24 @@ import MonthEndModal from './src/components/MonthEndModal';
 
 const Tab = createBottomTabNavigator();
 
-const LedgrTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    background: '#0A0A0A',
-    card: 'rgba(20,20,20,0.95)',
-    text: '#FFFFFF',
-    border: 'rgba(255,255,255,0.08)',
-    primary: '#00F0FF',
-  },
-};
-
 function Navigation() {
   const { isBillDueSoon, monthEndData, toggleDevTools } = useLedgr();
   const { showSnackbar } = useSnackbar();
+  const { colors } = useTheme();
   const [tapCount, setTapCount] = React.useState(0);
   const [lastTap, setLastTap] = React.useState(0);
+
+  const LedgrTheme = {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      background: colors.background,
+      card: colors.card,
+      text: colors.textPrimary,
+      border: colors.cardBorder,
+      primary: colors.accent,
+    },
+  };
 
   const handleSettingsTap = () => {
     const now = Date.now();
@@ -71,17 +73,17 @@ function Navigation() {
         screenOptions={{
           headerShown: false,
           tabBarStyle: {
-            backgroundColor: 'rgba(15,15,15,0.95)',
+            backgroundColor: colors.tabBarBg,
             borderTopWidth: 1,
-            borderTopColor: 'rgba(255,255,255,0.05)',
+            borderTopColor: colors.tabBarBorder,
             position: 'absolute',
             elevation: 0,
             height: 85,
             paddingBottom: 30,
             paddingTop: 10,
           },
-          tabBarActiveTintColor: '#FFFFFF',
-          tabBarInactiveTintColor: '#A0A0A0',
+          tabBarActiveTintColor: colors.tabBarActive,
+          tabBarInactiveTintColor: colors.tabBarInactive,
           tabBarLabelStyle: {
             fontFamily: 'Inter_500Medium',
             fontSize: 10,
@@ -89,58 +91,58 @@ function Navigation() {
           }
         }}
       >
-        <Tab.Screen 
-          name="Track" 
-          component={TrackScreen} 
+        <Tab.Screen
+          name="Track"
+          component={TrackScreen}
           options={{
-            tabBarIcon: ({ color, focused }) => <Target color={focused ? '#00F0FF' : color} size={22} />
+            tabBarIcon: ({ color, focused }) => <Target color={focused ? colors.accent : color} size={22} />
           }}
         />
-        <Tab.Screen 
-          name="Insights" 
-          component={SummaryScreen} 
+        <Tab.Screen
+          name="Insights"
+          component={SummaryScreen}
           options={{
-            tabBarIcon: ({ color, focused }) => <BarChart2 color={focused ? '#F59E0B' : color} size={22} />
+            tabBarIcon: ({ color, focused }) => <BarChart2 color={focused ? colors.warning : color} size={22} />
           }}
         />
-        <Tab.Screen 
-          name="Overview" 
-          component={DashboardScreen} 
+        <Tab.Screen
+          name="Overview"
+          component={DashboardScreen}
           options={{
-            tabBarIcon: ({ color, focused }) => <LayoutDashboard color={focused ? '#8A2BE2' : color} size={22} />
+            tabBarIcon: ({ color, focused }) => <LayoutDashboard color={focused ? colors.purple : color} size={22} />
           }}
         />
-        <Tab.Screen 
-          name="Bills" 
-          component={BillsScreen} 
+        <Tab.Screen
+          name="Bills"
+          component={BillsScreen}
           options={{
-            tabBarIcon: ({ color, focused }) => <CreditCard color={focused ? '#FF007F' : color} size={22} />,
+            tabBarIcon: ({ color, focused }) => <CreditCard color={focused ? colors.danger : color} size={22} />,
             tabBarBadge: isBillDueSoon ? "" : undefined,
-            tabBarBadgeStyle: { backgroundColor: '#EF4444', minWidth: 8, height: 8, borderRadius: 4, marginTop: 4 }
+            tabBarBadgeStyle: { backgroundColor: colors.danger, minWidth: 8, height: 8, borderRadius: 4, marginTop: 4 }
           }}
         />
-        <Tab.Screen 
-          name="Days" 
-          component={CalendarScreen} 
+        <Tab.Screen
+          name="Days"
+          component={CalendarScreen}
           options={{
-            tabBarIcon: ({ color, focused }) => <CalendarIcon color={focused ? '#00F0FF' : color} size={22} />
+            tabBarIcon: ({ color, focused }) => <CalendarIcon color={focused ? colors.accent : color} size={22} />
           }}
         />
-        <Tab.Screen 
-          name="Settings" 
-          component={SettingsScreen} 
+        <Tab.Screen
+          name="Settings"
+          component={SettingsScreen}
           listeners={{
             tabPress: () => handleSettingsTap(),
           }}
           options={{
-            tabBarIcon: ({ color, focused }) => <Settings color={focused ? '#10B981' : color} size={22} />
+            tabBarIcon: ({ color, focused }) => <Settings color={focused ? colors.success : color} size={22} />
           }}
         />
       </Tab.Navigator>
 
-      <MonthEndModal 
-        visible={!!monthEndData} 
-        data={monthEndData} 
+      <MonthEndModal
+        visible={!!monthEndData}
+        data={monthEndData}
       />
     </NavigationContainer>
   );
@@ -162,11 +164,13 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <LedgrProvider>
-        <SnackbarProvider>
-          <Navigation />
-        </SnackbarProvider>
-      </LedgrProvider>
+      <ThemeProvider>
+        <LedgrProvider>
+          <SnackbarProvider>
+            <Navigation />
+          </SnackbarProvider>
+        </LedgrProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

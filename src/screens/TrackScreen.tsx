@@ -4,13 +4,13 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLedgr } from '../lib/LedgrContext';
+import { useThemeColors } from '../lib/ThemeContext';
 import { ExpenseCategory, Expense, autoCategorize } from '../lib/store';
 import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, Plus, ShoppingBasket, Calendar, Pencil, TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSnackbar } from '../components/Snackbar';
 import EditExpenseModal from '../components/EditExpenseModal';
 import { getDaysRemainingInMonth, isToday } from '../lib/dateUtils';
-
 
 const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
   Food: Coffee,
@@ -24,6 +24,7 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
 
 export default function TrackScreen() {
   const { expenses, budget, addExpense, isLoaded, allCategories } = useLedgr();
+  const colors = useThemeColors();
   const { showSnackbar } = useSnackbar();
   const [desc, setDesc] = useState('');
   const [amountStr, setAmountStr] = useState('');
@@ -32,7 +33,7 @@ export default function TrackScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-  
+
   const catScrollRef = useRef<ScrollView>(null);
   const [scrollX, setScrollX] = useState(0);
   const [contentWidth, setContentWidth] = useState(0);
@@ -58,8 +59,7 @@ export default function TrackScreen() {
   }, []);
 
   const activeMonth = budget.budgetMonth || new Date().toISOString().slice(0, 7);
-  
-  // Calculate specific previous month string for accurate filtering
+
   const prevMonthStr = useMemo(() => {
     const [year, month] = activeMonth.split('-').map(Number);
     const date = new Date(year, month - 2, 1);
@@ -84,17 +84,16 @@ export default function TrackScreen() {
   const isOverBudget = thisMonthSpent > budget.total;
 
   let insight = "First month tracking!";
-  let insightColor = '#00F0FF';
+  let insightColor = colors.accent;
   let InsightIcon = TrendingUp;
 
   if (lastMonthSpent > 0) {
     const diff = ((thisMonthSpent - lastMonthSpent) / lastMonthSpent) * 100;
     insight = `${Math.abs(Math.round(diff))}% ${diff > 0 ? 'more' : 'less'} than last month`;
-    insightColor = diff > 0 ? '#EF4444' : '#10B981';
+    insightColor = diff > 0 ? colors.danger : colors.success;
     InsightIcon = diff > 0 ? TrendingUp : TrendingDown;
   }
 
-  // Quick Stats Calculations
   const todaySpent = expenses
     .filter(e => isToday(e.date))
     .reduce((sum, e) => sum + e.amount, 0);
@@ -107,10 +106,10 @@ export default function TrackScreen() {
     if (!desc || !amountStr) return;
     const amt = parseFloat(amountStr);
     if (isNaN(amt) || amt <= 0) return;
-    
-    addExpense({ 
-      name: desc, 
-      amount: amt, 
+
+    addExpense({
+      name: desc,
+      amount: amt,
       category: selectedCategory || autoCategorize(desc),
       date: expenseDate.toISOString()
     });
@@ -139,41 +138,42 @@ export default function TrackScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={[styles.glow, { bottom: -100, left: -50, backgroundColor: 'rgba(0, 240, 255, 0.15)' }]} />
-      <View style={[styles.glow, { bottom: -100, right: -50, backgroundColor: 'rgba(138, 43, 226, 0.15)' }]} />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      {/* Glow effects only visible in dark mode — they're rgba so they fade naturally */}
+      <View style={[styles.glow, { bottom: -100, left: -50, backgroundColor: 'rgba(0, 240, 255, 0.08)' }]} />
+      <View style={[styles.glow, { bottom: -100, right: -50, backgroundColor: 'rgba(138, 43, 226, 0.08)' }]} />
 
-      <KeyboardAwareScrollView 
-        contentContainerStyle={styles.scrollContent} 
-        showsVerticalScrollIndicator={false} 
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         extraScrollHeight={100}
         enableOnAndroid={true}
       >
-        
+
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <Image 
-              source={require('../../assets/logo.png')} 
-              style={styles.logoSmall} 
-              resizeMode="contain" 
+            <Image
+              source={require('../../assets/logo.png')}
+              style={styles.logoSmall}
+              resizeMode="contain"
             />
-            <Text style={styles.brandNameSmall}>LEDGR</Text>
+            <Text style={[styles.brandNameSmall, { color: colors.textTertiary }]}>LEDGR</Text>
           </View>
-          <Text style={styles.greetingText} numberOfLines={2}>
+          <Text style={[styles.greetingText, { color: colors.textPrimary }]} numberOfLines={2}>
             {MOTIVATIONAL_PROMPT}
           </Text>
-          
-          <LinearGradient 
-            colors={['rgba(30,30,30,0.8)', 'rgba(10,10,10,0.95)']} 
-            style={styles.summaryCard}
+
+          <LinearGradient
+            colors={[colors.gradientStart, colors.gradientEnd]}
+            style={[styles.summaryCard, { borderColor: colors.cardBorder }]}
           >
             <View style={styles.summaryRow}>
               <View>
-                <Text style={styles.summaryLabel}>SPENT THIS MONTH</Text>
+                <Text style={[styles.summaryLabel, { color: colors.textTertiary }]}>SPENT THIS MONTH</Text>
                 <View style={styles.summaryAmountRow}>
-                  <Text style={styles.summaryCurrency}>PKR</Text>
-                  <Text style={styles.summaryAmount}>{thisMonthSpent.toLocaleString()}</Text>
+                  <Text style={[styles.summaryCurrency, { color: colors.textTertiary }]}>PKR</Text>
+                  <Text style={[styles.summaryAmount, { color: colors.textPrimary }]}>{thisMonthSpent.toLocaleString()}</Text>
                 </View>
               </View>
               <View style={[styles.insightPill, { backgroundColor: `${insightColor}15` }]}>
@@ -184,29 +184,29 @@ export default function TrackScreen() {
 
             <View style={styles.usageContainer}>
               <View style={styles.usageHeader}>
-                <Text style={styles.usageLabel}>Budget Usage</Text>
-                <Text style={[styles.usagePercent, isOverBudget && { color: '#EF4444' }]}>
+                <Text style={[styles.usageLabel, { color: colors.textSecondary }]}>Budget Usage</Text>
+                <Text style={[styles.usagePercent, { color: colors.accent }, isOverBudget && { color: colors.danger }]}>
                   {Math.round(budgetUsage * 100)}%
                 </Text>
               </View>
-              <View style={styles.usageBarBg}>
+              <View style={[styles.usageBarBg, { backgroundColor: colors.divider }]}>
                 <View style={[
-                  styles.usageBarFill, 
-                  { width: `${Math.min(100, budgetUsage * 100)}%` },
-                  isOverBudget && { backgroundColor: '#EF4444' }
+                  styles.usageBarFill,
+                  { width: `${Math.min(100, budgetUsage * 100)}%`, backgroundColor: colors.accent },
+                  isOverBudget && { backgroundColor: colors.danger }
                 ]} />
               </View>
             </View>
           </LinearGradient>
         </View>
 
-        <View style={styles.inputCard}>
-          <View style={styles.inputRow}>
-            <Pencil color="#A0A0A0" size={18} style={{ marginRight: 12 }} />
+        <View style={[styles.inputCard, { backgroundColor: colors.surface, borderColor: colors.cardBorder }]}>
+          <View style={[styles.inputRow, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+            <Pencil color={colors.iconMuted} size={18} style={{ marginRight: 12 }} />
             <TextInput
-              style={styles.inputDesc}
+              style={[styles.inputDesc, { color: colors.textPrimary }]}
               placeholder="Description (e.g. Lunch)"
-              placeholderTextColor="rgba(160,160,160,0.4)"
+              placeholderTextColor={colors.textMuted}
               value={desc}
               onChangeText={setDesc}
               returnKeyType="next"
@@ -214,14 +214,14 @@ export default function TrackScreen() {
               blurOnSubmit={false}
             />
           </View>
-          
-          <View style={styles.inputRow}>
-            <Text style={styles.currencyPrefix}>PKR</Text>
+
+          <View style={[styles.inputRow, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+            <Text style={[styles.currencyPrefix, { color: colors.accent }]}>PKR</Text>
             <TextInput
               ref={amountRef}
-              style={styles.inputAmount}
+              style={[styles.inputAmount, { color: colors.textPrimary }]}
               placeholder="0.00"
-              placeholderTextColor="rgba(160,160,160,0.4)"
+              placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
               value={amountStr}
               onChangeText={setAmountStr}
@@ -230,15 +230,15 @@ export default function TrackScreen() {
             />
           </View>
 
-          <TouchableOpacity style={styles.dateSelector} onPress={() => setShowDatePicker(true)}>
+          <TouchableOpacity style={[styles.dateSelector, { backgroundColor: colors.pillBg, borderColor: colors.inputBorder }]} onPress={() => setShowDatePicker(true)}>
             <View style={styles.dateContent}>
-              <Calendar size={18} color="#00F0FF" />
-              <Text style={styles.dateText}>
+              <Calendar size={18} color={colors.accent} />
+              <Text style={[styles.dateText, { color: colors.textPrimary }]}>
                 {expenseDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
               </Text>
             </View>
-            <View style={styles.dateLabelBox}>
-               <Text style={styles.dateLabelText}>{expenseDate.toDateString() === new Date().toDateString() ? 'TODAY' : 'CUSTOM DATE'}</Text>
+            <View style={[styles.dateLabelBox, { backgroundColor: colors.accentBg }]}>
+              <Text style={[styles.dateLabelText, { color: colors.accent }]}>{expenseDate.toDateString() === new Date().toDateString() ? 'TODAY' : 'CUSTOM DATE'}</Text>
             </View>
           </TouchableOpacity>
 
@@ -253,23 +253,23 @@ export default function TrackScreen() {
           )}
 
           <View style={styles.sectionLabelRow}>
-            <Text style={styles.sectionLabel}>Select Category</Text>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Select Category</Text>
           </View>
 
           <View style={styles.catScrollRow}>
             <View style={styles.navIconContainer}>
               {!isAtStart && (
                 <TouchableOpacity onPress={() => catScrollRef.current?.scrollTo({ x: 0, animated: true })}>
-                  <ChevronLeft color="#00F0FF" size={20} />
+                  <ChevronLeft color={colors.accent} size={20} />
                 </TouchableOpacity>
               )}
             </View>
 
-            <ScrollView 
+            <ScrollView
               ref={catScrollRef}
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
-              style={styles.catScroll} 
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.catScroll}
               contentContainerStyle={styles.catScrollContent}
               onScroll={(e) => setScrollX(e.nativeEvent.contentOffset.x)}
               scrollEventThrottle={16}
@@ -282,15 +282,19 @@ export default function TrackScreen() {
                   const isSelected = selectedCategory === cat;
                   const { remaining, isOver } = getCategoryStatus(cat);
                   return (
-                    <TouchableOpacity 
-                      key={cat} 
-                      style={[styles.miniCatPill, isSelected && styles.miniCatPillActive]} 
+                    <TouchableOpacity
+                      key={cat}
+                      style={[
+                        styles.miniCatPill,
+                        { backgroundColor: colors.pillBg, borderColor: colors.inputBorder },
+                        isSelected && { backgroundColor: colors.saveBtnBg, borderColor: colors.saveBtnBg }
+                      ]}
                       onPress={() => setSelectedCategory(cat)}
                     >
-                      <Icon color={isSelected ? "#0A0A0A" : "#A0A0A0"} size={14} />
+                      <Icon color={isSelected ? colors.saveBtnText : colors.iconMuted} size={14} />
                       <View>
-                        <Text style={[styles.miniCatText, isSelected && styles.miniCatTextActive]}>{cat}</Text>
-                        <Text style={[styles.miniCatSubtext, isOver && { color: '#EF4444' }, isSelected && { color: 'rgba(10,10,10,0.6)' }]}>
+                        <Text style={[styles.miniCatText, { color: colors.textSecondary }, isSelected && { color: colors.saveBtnText, fontFamily: 'Inter_700Bold' }]}>{cat}</Text>
+                        <Text style={[styles.miniCatSubtext, { color: colors.textTertiary }, isOver && { color: colors.danger }, isSelected && { color: `${colors.saveBtnText}99` }]}>
                           PKR {remaining.toLocaleString()}
                         </Text>
                       </View>
@@ -303,45 +307,46 @@ export default function TrackScreen() {
             <View style={styles.navIconContainer}>
               {!isAtEnd && (
                 <TouchableOpacity onPress={() => catScrollRef.current?.scrollToEnd({ animated: true })}>
-                  <ChevronRight color="#00F0FF" size={20} />
+                  <ChevronRight color={colors.accent} size={20} />
                 </TouchableOpacity>
               )}
             </View>
           </View>
 
-          <TouchableOpacity 
-            style={[styles.bigAddButton, (!desc || !amountStr) && styles.addButtonDisabled]} 
+          <TouchableOpacity
+            style={[styles.bigAddButton, { backgroundColor: colors.saveBtnBg }, (!desc || !amountStr) && styles.addButtonDisabled]}
             onPress={handleAdd}
             disabled={!desc || !amountStr}
           >
-            <Text style={styles.addBtnLabel}>Add Expense</Text>
-            <Plus color="#0A0A0A" size={20} strokeWidth={3} />
+            <Text style={[styles.addBtnLabel, { color: colors.saveBtnText }]}>Add Expense</Text>
+            <Plus color={colors.saveBtnText} size={20} strokeWidth={3} />
           </TouchableOpacity>
+
           {expenses.length > 0 && (() => {
             const exp = expenses[0];
-            const desc = exp.name.replace(/^Paid:\s*/i, '');
+            const expDesc = exp.name.replace(/^Paid:\s*/i, '');
             return (
               <TouchableOpacity onPress={() => handleEditPress(exp)}>
-                <View style={styles.latestChipRow}>
-                  <Text style={styles.latestChipLabel}>LAST</Text>
-                  <View style={styles.latestChipCat}>
-                    <Text style={styles.latestChipCatText}>{exp.category.toUpperCase()}</Text>
+                <View style={[styles.latestChipRow, { backgroundColor: colors.accentBg, borderColor: `${colors.accent}30` }]}>
+                  <Text style={[styles.latestChipLabel, { color: colors.textTertiary }]}>LAST</Text>
+                  <View style={[styles.latestChipCat, { backgroundColor: colors.accentBg }]}>
+                    <Text style={[styles.latestChipCatText, { color: colors.accent }]}>{exp.category.toUpperCase()}</Text>
                   </View>
-                  <Text style={styles.latestChipDesc} numberOfLines={1}>{desc}</Text>
-                  <Text style={styles.latestChipAmount}>PKR {exp.amount.toLocaleString()}</Text>
+                  <Text style={[styles.latestChipDesc, { color: colors.textSecondary }]} numberOfLines={1}>{expDesc}</Text>
+                  <Text style={[styles.latestChipAmount, { color: colors.accent }]}>PKR {exp.amount.toLocaleString()}</Text>
                 </View>
               </TouchableOpacity>
             );
           })()}
 
           {expenses.length > 0 && (
-            <View style={styles.quickStatsStrip}>
+            <View style={[styles.quickStatsStrip, { backgroundColor: colors.pillBg, borderColor: colors.divider }]}>
               <Text style={styles.quickStatText}>
-                <Text style={styles.quickStatLabel}>Today: </Text>
-                <Text style={styles.quickStatValue}>PKR {todaySpent.toLocaleString()}</Text>
-                <Text style={styles.quickStatDivider}>  •  </Text>
-                <Text style={styles.quickStatValue}>{daysLeft} </Text>
-                <Text style={styles.quickStatLabel}>days left</Text>
+                <Text style={[styles.quickStatLabel, { color: colors.textTertiary }]}>Today: </Text>
+                <Text style={[styles.quickStatValue, { color: colors.accent }]}>PKR {todaySpent.toLocaleString()}</Text>
+                <Text style={[styles.quickStatDivider, { color: colors.textMuted }]}>  •  </Text>
+                <Text style={[styles.quickStatValue, { color: colors.accent }]}>{daysLeft} </Text>
+                <Text style={[styles.quickStatLabel, { color: colors.textTertiary }]}>days left</Text>
               </Text>
             </View>
           )}
@@ -350,7 +355,7 @@ export default function TrackScreen() {
 
       </KeyboardAwareScrollView>
 
-      <EditExpenseModal 
+      <EditExpenseModal
         visible={isEditModalVisible}
         onClose={() => setIsEditModalVisible(false)}
         expense={editingExpense}
@@ -360,82 +365,74 @@ export default function TrackScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0A0A' },
+  container: { flex: 1 },
   glow: { position: 'absolute', width: 300, height: 300, borderRadius: 150 },
   scrollContent: { padding: 16, paddingBottom: 20 },
   header: { marginBottom: 12, marginTop: 10 },
   headerTop: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   logoSmall: { width: 20, height: 20 },
-  brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', color: '#949494', fontSize: 10, letterSpacing: 4 },
-  greetingText: { fontFamily: 'Outfit_600SemiBold', fontSize: 18, color: '#FFFFFF', marginBottom: 8 },
-  
-  summaryCard: { borderRadius: 20, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginTop: 2 },
+  brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', fontSize: 10, letterSpacing: 4 },
+  greetingText: { fontFamily: 'Outfit_600SemiBold', fontSize: 18, marginBottom: 8 },
+
+  summaryCard: { borderRadius: 20, padding: 14, borderWidth: 1, marginTop: 2 },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
-  summaryLabel: { color: '#949494', fontSize: 9, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
+  summaryLabel: { fontSize: 9, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
   summaryAmountRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 4 },
-  summaryCurrency: { color: '#949494', fontSize: 12, fontFamily: 'Outfit_400Regular' },
-  summaryAmount: { color: '#FFFFFF', fontSize: 22, fontFamily: 'Outfit_600SemiBold' },
+  summaryCurrency: { fontSize: 12, fontFamily: 'Outfit_400Regular' },
+  summaryAmount: { fontSize: 22, fontFamily: 'Outfit_600SemiBold' },
   insightPill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 },
   insightText: { fontSize: 10, fontFamily: 'Inter_700Bold' },
   usageContainer: { marginTop: 4 },
   usageHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  usageLabel: { color: '#D1D1D1', fontSize: 10, fontFamily: 'Inter_500Medium' },
-  usagePercent: { color: '#00F0FF', fontSize: 11, fontFamily: 'Outfit_700Bold' },
-  usageBarBg: { height: 4, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' },
-  usageBarFill: { height: '100%', backgroundColor: '#00F0FF', borderRadius: 2 },
+  usageLabel: { fontSize: 10, fontFamily: 'Inter_500Medium' },
+  usagePercent: { fontSize: 11, fontFamily: 'Outfit_700Bold' },
+  usageBarBg: { height: 4, borderRadius: 2, overflow: 'hidden' },
+  usageBarFill: { height: '100%', borderRadius: 2 },
 
-
-  
-  inputCard: { backgroundColor: '#141414', borderRadius: 28, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginBottom: 10 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0A0A0A', borderRadius: 16, height: 50, paddingHorizontal: 16, marginBottom: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-  inputDesc: { flex: 1, color: '#FFFFFF', fontFamily: 'Inter_500Medium', fontSize: 16, padding: 0 },
-  currencyPrefix: { fontFamily: 'Inter_700Bold', color: '#00F0FF', fontSize: 12, marginRight: 12 },
-  inputAmount: { flex: 1, color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 20, padding: 0 },
-  sectionLabel: { color: '#D1D1D1', fontSize: 11, fontFamily: 'Inter_700Bold', letterSpacing: 1, marginBottom: 6, marginTop: 4 },
+  inputCard: { borderRadius: 28, padding: 16, borderWidth: 1, marginBottom: 10 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 16, height: 50, paddingHorizontal: 16, marginBottom: 8, borderWidth: 1 },
+  inputDesc: { flex: 1, fontFamily: 'Inter_500Medium', fontSize: 16, padding: 0 },
+  currencyPrefix: { fontFamily: 'Inter_700Bold', fontSize: 12, marginRight: 12 },
+  inputAmount: { flex: 1, fontFamily: 'Outfit_600SemiBold', fontSize: 20, padding: 0 },
+  sectionLabel: { fontSize: 11, fontFamily: 'Inter_700Bold', letterSpacing: 1, marginBottom: 6, marginTop: 4 },
   sectionLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, marginTop: 4 },
   catScrollRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: -16, paddingHorizontal: 4 },
   navIconContainer: { width: 32, alignItems: 'center', justifyContent: 'center' },
   catScroll: { flex: 1 },
   catScrollContent: { paddingHorizontal: 8 },
   catRow: { flexDirection: 'row', gap: 8 },
-  miniCatPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8, gap: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-  miniCatPillActive: { backgroundColor: '#FFFFFF', borderColor: '#FFFFFF' },
-  miniCatText: { color: '#D1D1D1', fontSize: 13, fontFamily: 'Inter_500Medium' },
-  miniCatTextActive: { color: '#0A0A0A', fontFamily: 'Inter_700Bold' },
-  miniCatSubtext: { color: '#949494', fontSize: 9, fontFamily: 'Inter_700Bold' },
-  
-  dateSelector: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16, height: 50, paddingHorizontal: 16, marginBottom: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-  dateContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  dateText: { color: '#FFFFFF', fontFamily: 'Inter_500Medium', fontSize: 14 },
-  dateLabelBox: { backgroundColor: 'rgba(0, 240, 255, 0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  dateLabelText: { color: '#00F0FF', fontSize: 8, fontFamily: 'Inter_800ExtraBold', letterSpacing: 0.5 },
+  miniCatPill: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8, gap: 8, borderWidth: 1 },
+  miniCatText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
+  miniCatSubtext: { fontSize: 9, fontFamily: 'Inter_700Bold' },
 
-  bigAddButton: { backgroundColor: '#FFFFFF', borderRadius: 16, height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10 },
-  addBtnLabel: { color: '#0A0A0A', fontFamily: 'Outfit_800ExtraBold', fontSize: 16 },
+  dateSelector: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 16, height: 50, paddingHorizontal: 16, marginBottom: 6, borderWidth: 1 },
+  dateContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  dateText: { fontFamily: 'Inter_500Medium', fontSize: 14 },
+  dateLabelBox: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  dateLabelText: { fontSize: 8, fontFamily: 'Inter_800ExtraBold', letterSpacing: 0.5 },
+
+  bigAddButton: { borderRadius: 16, height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10 },
+  addBtnLabel: { fontFamily: 'Outfit_800ExtraBold', fontSize: 16 },
   addButtonDisabled: { opacity: 0.3 },
 
-  latestChipRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, backgroundColor: 'rgba(0, 240, 255, 0.05)', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0, 240, 255, 0.15)' },
-  latestChipLabel: { color: '#949494', fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1, marginRight: 8 },
-  latestChipCat: { backgroundColor: 'rgba(0, 240, 255, 0.1)', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6, marginRight: 8 },
-  latestChipCatText: { color: '#00F0FF', fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 0.5 },
-  latestChipDesc: { flex: 1, color: '#D1D1D1', fontFamily: 'Inter_500Medium', fontSize: 13, marginRight: 8 },
-  latestChipAmount: { color: '#00F0FF', fontFamily: 'Outfit_600SemiBold', fontSize: 14 },
-  
-  quickStatsStrip: { 
-    flexDirection: 'row', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
+  latestChipRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1 },
+  latestChipLabel: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1, marginRight: 8 },
+  latestChipCat: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6, marginRight: 8 },
+  latestChipCatText: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 0.5 },
+  latestChipDesc: { flex: 1, fontFamily: 'Inter_500Medium', fontSize: 13, marginRight: 8 },
+  latestChipAmount: { fontFamily: 'Outfit_600SemiBold', fontSize: 14 },
+
+  quickStatsStrip: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.03)'
   },
   quickStatText: { fontSize: 11, fontFamily: 'Inter_500Medium' },
-  quickStatLabel: { color: '#949494' },
-  quickStatValue: { color: '#00F0FF', fontFamily: 'Inter_700Bold' },
-  quickStatDivider: { color: '#303030', marginHorizontal: 8 },
-  
-  textDanger: { color: '#EF4444' }
+  quickStatLabel: {},
+  quickStatValue: { fontFamily: 'Inter_700Bold' },
+  quickStatDivider: { marginHorizontal: 8 },
 });
