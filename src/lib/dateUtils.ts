@@ -57,10 +57,12 @@ function normalizeDate(dateStr: string): string | null {
   return null;
 }
 
+import { Platform } from 'react-native';
+
 /**
- * Exports expenses to an XLSX file and triggers the native share dialog.
+ * Exports expenses to an XLSX file and either saves it locally or triggers the share dialog.
  */
-export async function exportExpensesToXLSX(expenses: Expense[]): Promise<boolean> {
+export async function exportExpensesToXLSX(expenses: Expense[], action: 'share' | 'download' = 'share'): Promise<boolean> {
   if (expenses.length === 0) return false;
 
   const data = expenses.map(e => ({
@@ -77,15 +79,24 @@ export async function exportExpensesToXLSX(expenses: Expense[]): Promise<boolean
     
     const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
     const fileName = `ledgr_export_${formatDate(new Date(), 'yyyy-MM-dd')}.xlsx`;
-    const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+    const mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-    await FileSystem.writeAsStringAsync(fileUri, wbout, { encoding: FileSystem.EncodingType.Base64 });
-    await Sharing.shareAsync(fileUri, {
-      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      dialogTitle: 'Export Expenses',
-      UTI: 'org.openxmlformats.spreadsheetml.sheet'
-    });
-    return true;
+    if (action === 'download' && Platform.OS === 'android') {
+      const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+      if (!permissions.granted) return false;
+      const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(permissions.directoryUri, fileName, mimeType);
+      await FileSystem.writeAsStringAsync(fileUri, wbout, { encoding: FileSystem.EncodingType.Base64 });
+      return true;
+    } else {
+      const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+      await FileSystem.writeAsStringAsync(fileUri, wbout, { encoding: FileSystem.EncodingType.Base64 });
+      await Sharing.shareAsync(fileUri, {
+        mimeType,
+        dialogTitle: action === 'download' ? 'Save File' : 'Share File',
+        UTI: 'org.openxmlformats.spreadsheetml.sheet'
+      });
+      return true;
+    }
   } catch (error) {
     console.error('Export failed:', error);
     return false;
@@ -94,9 +105,9 @@ export async function exportExpensesToXLSX(expenses: Expense[]): Promise<boolean
 
 /**
  * Opens a file picker and imports expenses from a CSV or XLSX file.
- * Returns the number of successfully imported and skipped rows.
+ * Returns detailed counts of imported, format-skipped, and duplicate-skipped rows.
  */
-export async function importExpensesFromFile(existingExpenses: Expense[]): Promise<{ imported: number, skipped: number, expenses: Expense[] } | null> {
+export async function importExpensesFromFile(existingExpenses: Expense[]): Promise<{ imported: number, formatSkipped: number, duplicateSkipped: number, expenses: Expense[] } | null> {
   try {
     const result = await DocumentPicker.getDocumentAsync({
       type: ['text/csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
@@ -118,7 +129,8 @@ export async function importExpensesFromFile(existingExpenses: Expense[]): Promi
     const rows = XLSX.utils.sheet_to_json(firstSheet) as any[];
 
     let imported = 0;
-    let skipped = 0;
+    let formatSkipped = 0;
+    let duplicateSkipped = 0;
     const newExpenses: Expense[] = [];
 
     for (const row of rows) {
@@ -137,7 +149,6 @@ export async function importExpensesFromFile(existingExpenses: Expense[]): Promi
       // 3. Handle Excel numeric dates vs strings
       let parsedDateString = '';
       if (typeof rawDate === 'number') {
-        // Excel base date is Dec 30, 1899
         const excelEpoch = new Date(1899, 11, 30);
         const dayInMs = 24 * 60 * 60 * 1000;
         const date = new Date(excelEpoch.getTime() + rawDate * dayInMs);
@@ -150,7 +161,7 @@ export async function importExpensesFromFile(existingExpenses: Expense[]): Promi
       const amount = parseFloat(rawAmount);
 
       if (!normalizedDate || !rawDesc || isNaN(amount)) {
-        skipped++;
+        formatSkipped++;
         continue;
       }
 
@@ -162,7 +173,7 @@ export async function importExpensesFromFile(existingExpenses: Expense[]): Promi
       );
 
       if (isDuplicate) {
-        skipped++;
+        duplicateSkipped++;
         continue;
       }
 
@@ -176,7 +187,7 @@ export async function importExpensesFromFile(existingExpenses: Expense[]): Promi
       imported++;
     }
 
-    return { imported, skipped, expenses: newExpenses };
+    return { imported, formatSkipped, duplicateSkipped, expenses: newExpenses };
   } catch (error) {
     console.error('Import failed:', error);
     return null;

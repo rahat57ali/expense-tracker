@@ -11,7 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSnackbar } from '../components/Snackbar';
 import DeleteCategoryModal from '../components/DeleteCategoryModal';
 import { exportExpensesToXLSX, importExpensesFromFile } from '../lib/dateUtils';
-import { Download, Upload } from 'lucide-react-native';
+import { Download, Upload, Share } from 'lucide-react-native';
 
 const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
   Food: Coffee,
@@ -55,26 +55,37 @@ export default function SettingsScreen() {
     setLocalBudget(prev => ({ ...prev, categories: { ...prev.categories, [cat]: num } }));
   };
 
-  const [isExporting, setIsExporting] = useState(false);
+  const [isExporting, setIsExporting] = useState<false | 'download' | 'share'>(false);
   const [isImporting, setIsImporting] = useState(false);
 
-  const handleExport = async () => {
+  const handleExport = async (action: 'download' | 'share') => {
     if (expenses.length === 0) { showSnackbar('No expenses to export', 'info'); return; }
-    setIsExporting(true);
-    const success = await exportExpensesToXLSX(expenses);
+    setIsExporting(action);
+    const success = await exportExpensesToXLSX(expenses, action);
     setIsExporting(false);
-    if (success) showSnackbar('Data exported successfully', 'success');
+    if (success) showSnackbar(`Data ${action === 'download' ? 'downloaded' : 'shared'} successfully`, 'success');
   };
 
   const handleImport = async () => {
     setIsImporting(true);
     const result = await importExpensesFromFile(expenses);
     setIsImporting(false);
-    if (result && result.expenses && result.expenses.length > 0) {
-      await importExpenses(result.expenses);
-      showSnackbar(`${result.imported} expenses imported, ${result.skipped} rows skipped`, 'success');
-    } else if (result) {
-      showSnackbar(`No new expenses to import (${result.skipped} duplicates/invalid skipped)`, 'info');
+    
+    if (result) {
+      if (result.imported > 0) {
+        await importExpenses(result.expenses);
+        let msg = `${result.imported} expenses imported.`;
+        if (result.formatSkipped) msg += ` ${result.formatSkipped} formatting errors skipped.`;
+        if (result.duplicateSkipped) msg += ` ${result.duplicateSkipped} duplicates skipped.`;
+        showSnackbar(msg, 'success');
+      } else if (result.formatSkipped > 0 || result.duplicateSkipped > 0) {
+        let reasons = [];
+        if (result.formatSkipped > 0) reasons.push(`${result.formatSkipped} rows had invalid formatting`);
+        if (result.duplicateSkipped > 0) reasons.push(`${result.duplicateSkipped} rows were exact duplicates`);
+        showSnackbar(`Import failed: ${reasons.join(' and ')}. No new entries added.`, 'error');
+      } else {
+        showSnackbar('Selected file was entirely empty or unreadable.', 'info');
+      }
     }
   };
 
@@ -264,19 +275,31 @@ export default function SettingsScreen() {
           <Text style={[styles.sectionSubtitle, { color: colors.textTertiary }]}>Backup and restore your local records</Text>
         </View>
 
-        <View style={[styles.dataCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-          <TouchableOpacity style={styles.dataAction} onPress={handleExport} disabled={isExporting}>
+        <View style={[styles.dataCard, { backgroundColor: colors.card, borderColor: colors.cardBorder, marginBottom: 12 }]}>
+          <View style={[styles.dataAction, { paddingBottom: 12 }]}>
             <View style={[styles.dataIconBox, { backgroundColor: colors.accentBg }]}>
               <Download color={colors.accent} size={20} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.dataActionTitle, { color: colors.textPrimary }]}>Export data to Excel</Text>
-              <Text style={[styles.dataActionSub, { color: colors.textTertiary }]}>Share your history as a .xlsx file</Text>
+              <Text style={[styles.dataActionTitle, { color: colors.textPrimary }]}>Export Data</Text>
+              <Text style={[styles.dataActionSub, { color: colors.textTertiary, lineHeight: 16 }]}>Backup your transaction history as a standard .xlsx spreadsheet.</Text>
             </View>
-          </TouchableOpacity>
+          </View>
+          
+          <View style={styles.exportBtnRow}>
+             <TouchableOpacity style={[styles.smallActionBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]} onPress={() => handleExport('download')} disabled={isExporting !== false}>
+               <Download size={14} color={colors.textPrimary} />
+               <Text style={[styles.smallActionText, { color: colors.textPrimary }]}>Download</Text>
+             </TouchableOpacity>
+             
+             <TouchableOpacity style={[styles.smallActionBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]} onPress={() => handleExport('share')} disabled={isExporting !== false}>
+               <Share size={14} color={colors.textPrimary} />
+               <Text style={[styles.smallActionText, { color: colors.textPrimary }]}>Share</Text>
+             </TouchableOpacity>
+          </View>
+        </View>
 
-          <View style={[styles.dataDivider, { backgroundColor: colors.divider }]} />
-
+        <View style={[styles.dataCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
           <TouchableOpacity style={styles.dataAction} onPress={handleImport} disabled={isImporting}>
             <View style={[styles.dataIconBox, { backgroundColor: colors.purpleBg }]}>
               <Upload color={colors.purple} size={20} />
@@ -381,6 +404,9 @@ const styles = StyleSheet.create({
 
   dataCard: { borderRadius: 28, borderWidth: 1, overflow: 'hidden' },
   dataAction: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 16 },
+  exportBtnRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 16, paddingBottom: 16, paddingTop: 4, marginLeft: 60 },
+  smallActionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 12, borderWidth: 1, gap: 6 },
+  smallActionText: { fontFamily: 'Outfit_600SemiBold', fontSize: 13 },
   dataIconBox: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   dataActionTitle: { fontFamily: 'Outfit_600SemiBold', fontSize: 16 },
   dataActionSub: { fontFamily: 'Inter_500Medium', fontSize: 11, marginTop: 2 },
