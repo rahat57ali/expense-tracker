@@ -63,37 +63,54 @@ export default function DailyDetailModal({ visible, onClose, data }: DailyDetail
                 <StatusIcon color={status.color} size={24} />
                 <View style={styles.statusTextContainer}>
                   <Text style={[styles.statusLabel, { color: status.color }]}>{status.label}</Text>
-                  <Text style={[styles.statusThreshold, { color: colors.textTertiary }]}>Threshold: {status.threshold}</Text>
+                  <Text style={[styles.statusThreshold, { color: colors.textTertiary }]}>{status.threshold}</Text>
                 </View>
               </View>
 
               <Text style={[styles.descriptionText, { color: colors.textPrimary }]}>{status.description}</Text>
 
-              <View style={styles.statsGrid}>
-                <View style={[styles.statItem, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}>
-                  <Text style={[styles.statLabel, { color: colors.textTertiary }]}>MONTHLY TARGET (DAILY)</Text>
-                  <Text style={[styles.statValue, { color: colors.textPrimary }]}>PKR {Math.floor(dailyTarget).toLocaleString()}</Text>
-                  <Text style={[styles.statSub, { color: colors.textMuted }]}>Total Budget / Days in Month</Text>
+              <View style={[styles.legendContainer, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}>
+                <Text style={[styles.legendHeader, { color: colors.textTertiary }]}>ALL STATUS LEVELS</Text>
+                
+                <View style={[styles.legendRow, { borderBottomColor: colors.cardBorderSubtle }]}>
+                  <View style={styles.legendLeft}>
+                    <CheckCircle2 color={colors.success} size={16} />
+                    <Text style={[styles.legendLabel, { color: colors.success }]}>COMFORTABLE</Text>
+                  </View>
+                  <Text style={[styles.legendDesc, { color: colors.textSecondary }]}>Spending significantly less than planned daily average</Text>
                 </View>
 
-                <View style={[styles.statItem, styles.statItemHighlight, { backgroundColor: colors.accentBg, borderColor: colors.accentMuted + '40' }]}>
-                  <Text style={[styles.statLabel, { color: colors.accent }]}>CURRENT ALLOWANCE</Text>
-                  <Text style={[styles.statValue, { color: colors.textPrimary }]}>PKR {Math.floor(dailyRemaining).toLocaleString()}</Text>
-                  <Text style={[styles.statSub, { color: colors.accentMuted }]}>Remaining / {daysLeft} Days Left</Text>
+                <View style={[styles.legendRow, { borderBottomColor: colors.cardBorderSubtle }]}>
+                  <View style={styles.legendLeft}>
+                    <TrendingUp color={colors.warning} size={16} />
+                    <Text style={[styles.legendLabel, { color: colors.warning }]}>ON TRACK</Text>
+                  </View>
+                  <Text style={[styles.legendDesc, { color: colors.textSecondary }]}>Spending aligned perfectly with your monthly goal</Text>
                 </View>
 
-                <View style={[styles.statItem, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}>
-                  <Text style={[styles.statLabel, { color: colors.textTertiary }]}>SPENDING RATIO</Text>
-                  <Text style={[styles.statValue, { color: status.color }]}>{ratio.toFixed(2)}x</Text>
-                  <Text style={[styles.statSub, { color: colors.textMuted }]}>How much more you can spend than target</Text>
+                <View style={[styles.legendRow, { borderBottomColor: colors.cardBorderSubtle }]}>
+                  <View style={styles.legendLeft}>
+                    <Minus color={colors.warning} size={16} />
+                    <Text style={[styles.legendLabel, { color: colors.warning }]}>TIGHT</Text>
+                  </View>
+                  <Text style={[styles.legendDesc, { color: colors.textSecondary }]}>Below target. Time to prioritize essential spending</Text>
                 </View>
-              </View>
 
-              <View style={[styles.infoBox, { backgroundColor: colors.innerCardBg }]}>
-                <AlertCircle color={colors.textTertiary} size={16} />
-                <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-                  A ratio above 1.0 means you have more daily budget remaining than your initial monthly plan. Below 1.0 means you should tighten your belt for the remaining {daysLeft} days.
-                </Text>
+                <View style={[styles.legendRow, { borderBottomColor: colors.cardBorderSubtle }]}>
+                  <View style={styles.legendLeft}>
+                    <AlertCircle color={colors.danger} size={16} />
+                    <Text style={[styles.legendLabel, { color: colors.danger }]}>CRITICAL</Text>
+                  </View>
+                  <Text style={[styles.legendDesc, { color: colors.textSecondary }]}>High alert! Immediate reduction in spending required</Text>
+                </View>
+
+                <View style={[styles.legendRow, { borderBottomWidth: 0 }]}>
+                  <View style={styles.legendLeft}>
+                    <TrendingDown color={colors.danger} size={16} />
+                    <Text style={[styles.legendLabel, { color: colors.danger }]}>OVERSPENT</Text>
+                  </View>
+                  <Text style={[styles.legendDesc, { color: colors.textSecondary }]}>Sustained limit exceeded. Adding to monthly deficit</Text>
+                </View>
               </View>
             </ScrollView>
 
@@ -121,18 +138,15 @@ const styles = StyleSheet.create({
   statusLabel: { fontFamily: 'Outfit_800ExtraBold', fontSize: 18, letterSpacing: 1 },
   statusThreshold: { fontFamily: 'Inter_500Medium', fontSize: 11, marginTop: 2 },
   
-  descriptionText: { fontFamily: 'Inter_500Medium', fontSize: 14, lineHeight: 22, marginBottom: 24 },
+  descriptionText: { fontFamily: 'Inter_500Medium', fontSize: 15, lineHeight: 22, marginBottom: 24 },
   
-  statsGrid: { gap: 12, marginBottom: 24 },
-  statItem: { padding: 16, borderRadius: 16, borderWidth: 1 },
-  statItemHighlight: { },
-  statLabel: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1, marginBottom: 4 },
-  statValue: { fontFamily: 'Outfit_600SemiBold', fontSize: 22 },
-  statSub: { fontFamily: 'Inter_500Medium', fontSize: 10, marginTop: 4 },
+  legendContainer: { borderRadius: 16, borderWidth: 1, padding: 16, marginBottom: 8 },
+  legendHeader: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1, marginBottom: 12 },
+  legendRow: { flexDirection: 'column', paddingVertical: 12, borderBottomWidth: 1 },
+  legendLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  legendLabel: { fontFamily: 'Outfit_700Bold', fontSize: 14, letterSpacing: 0.5 },
+  legendDesc: { fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 18 },
   
-  infoBox: { flexDirection: 'row', padding: 16, borderRadius: 16, gap: 12, alignItems: 'flex-start' },
-  infoText: { flex: 1, fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 18 },
-  
-  doneBtn: { height: 50, borderRadius: 100, alignItems: 'center', justifyContent: 'center', marginTop: 24 },
+  doneBtn: { height: 50, borderRadius: 100, alignItems: 'center', justifyContent: 'center', marginTop: 16 },
   doneText: { fontFamily: 'Outfit_800ExtraBold', fontSize: 15 }
 });
