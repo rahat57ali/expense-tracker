@@ -82,8 +82,8 @@ export default function SummaryScreen() {
 
   const monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
   const currentMonthStr = new Date().toISOString().substring(0, 7);
-  // Insights shouldn't show if the user browses an un-tracked past month (no budget history)
-  const isInsightsAvailable = monthStr === currentMonthStr || !!budgetHistory[monthStr];
+  // Insights should be accessible if there are any recorded expenses or if it's the current active month
+  const isInsightsAvailable = filteredExpenses.length > 0 || monthStr === currentMonthStr;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>

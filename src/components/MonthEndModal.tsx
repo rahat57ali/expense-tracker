@@ -20,6 +20,7 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
   const navigation = useNavigation<any>();
   const colors = useThemeColors();
 
+  const hasBudget = data?.isReviewMode ? !!data?.budgetSnapshot : true;
   const currentBudget = data?.budgetSnapshot || budget;
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -69,12 +70,8 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
   const daysInMonth = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate();
 
   const availableMonths = useMemo(() => {
-    // A month is 'systematically completed' if it has a historical snapshot and it's not the current active month
-    const currentMonthStr = new Date().toISOString().substring(0, 7);
-    return Object.keys(budgetHistory || {})
-      .filter(m => m < currentMonthStr)
-      .sort();
-  }, [budgetHistory]);
+    return [...new Set(expenses.map(e => e.date.substring(0, 7)))].sort();
+  }, [expenses]);
 
   const handleMonthSwitch = (delta: number) => {
     if (!data?.isReviewMode || availableMonths.length === 0) return;
@@ -123,14 +120,16 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
     const overshootInsight = (() => {
       let maxOvershootCat = null;
       let maxOvershootAmt = 0;
-      Object.keys(categoryDataMap).forEach(cat => {
-        const budgeted = currentBudget.categories[cat] || 0;
-        const spent = categoryDataMap[cat].total;
-        if (spent > budgeted && (spent - budgeted) > maxOvershootAmt) {
-          maxOvershootAmt = spent - budgeted;
-          maxOvershootCat = cat;
-        }
-      });
+      if (hasBudget) {
+        Object.keys(categoryDataMap).forEach(cat => {
+          const budgeted = currentBudget.categories[cat] || 0;
+          const spent = categoryDataMap[cat].total;
+          if (spent > budgeted && (spent - budgeted) > maxOvershootAmt) {
+            maxOvershootAmt = spent - budgeted;
+            maxOvershootCat = cat;
+          }
+        });
+      }
       return { 
         id: 'overshoot', 
         title: 'Category Overrun', 
@@ -195,7 +194,7 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
     const eligibleInsights = allInsights.filter(i => i.eligible).sort((a, b) => b.score - a.score);
     
     return eligibleInsights.slice(0, 4);
-  }, [prevMonthExpenses, totalSpent, daysInMonth, currentBudget, colors]);
+  }, [prevMonthExpenses, totalSpent, daysInMonth, currentBudget, hasBudget, colors]);
 
   const handleFinalSave = async () => {
     const updatedBudget = { ...budget, total: localTotal };
@@ -291,7 +290,7 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
                       <View style={[styles.statsOverview, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}>
                         <View style={styles.statBox}>
                           <Text style={[styles.statBoxLabel, { color: colors.textTertiary }]}>BUDGET</Text>
-                          <Text style={[styles.statBoxValue, { color: colors.textPrimary }]}>PKR {totalBudget.toLocaleString()}</Text>
+                          <Text style={[styles.statBoxValue, { color: colors.textPrimary }]}>{hasBudget ? `PKR ${totalBudget.toLocaleString()}` : '--'}</Text>
                         </View>
                         <View style={[styles.statBoxDivider, { backgroundColor: colors.divider }]} />
                         <View style={styles.statBox}>
@@ -300,11 +299,11 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
                         </View>
                         <View style={[styles.statBoxDivider, { backgroundColor: colors.divider }]} />
                         <View style={styles.statBox}>
-                          <Text style={[styles.statBoxLabel, { color: isOverspent ? colors.danger : colors.textTertiary }]}>
-                            {isOverspent ? 'DEFICIT' : 'LEFT'}
+                          <Text style={[styles.statBoxLabel, { color: hasBudget ? (isOverspent ? colors.danger : colors.textTertiary) : colors.textTertiary }]}>
+                            {hasBudget ? (isOverspent ? 'DEFICIT' : 'LEFT') : 'BALANCE'}
                           </Text>
-                          <Text style={[styles.statBoxValue, { color: isOverspent ? colors.danger : colors.accent }]}>
-                            PKR {Math.abs(remaining).toLocaleString()}
+                          <Text style={[styles.statBoxValue, { color: hasBudget ? (isOverspent ? colors.danger : colors.accent) : colors.textPrimary }]}>
+                            {hasBudget ? `PKR ${Math.abs(remaining).toLocaleString()}` : '--'}
                           </Text>
                         </View>
                       </View>

@@ -329,8 +329,7 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const showMonthSummary = (monthStr: string) => {
-    // Rely on historical snapshot if exists, otherwise fallback to current global budget
-    const targetBudget = budgetHistory[monthStr] || budget;
+    const historicalSnapshot = budgetHistory[monthStr];
     
     const spent = expenses
       .filter(e => e.date.startsWith(monthStr))
@@ -338,11 +337,11 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
     
     setMonthEndData({
       prevMonth: monthStr,
-      totalBudget: targetBudget.total,
+      totalBudget: historicalSnapshot ? historicalSnapshot.total : 0,
       totalSpent: spent,
-      remaining: targetBudget.total - spent,
+      remaining: historicalSnapshot ? historicalSnapshot.total - spent : -spent,
       isReviewMode: true,
-      budgetSnapshot: targetBudget
+      budgetSnapshot: historicalSnapshot
     });
   };
 
