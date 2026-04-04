@@ -10,12 +10,14 @@ export interface MonthEndData {
   remaining: number;
   recoveryState?: RolloverRecoveryState;
   isReviewMode?: boolean;
+  budgetSnapshot?: Budget;
 }
 
 
 interface LedgrContextType {
   expenses: Expense[];
   budget: Budget;
+  budgetHistory: Record<string, Budget>;
   isLoaded: boolean;
   addExpense: (expense: Omit<Expense, 'id' | 'date' | 'category'> & { category?: ExpenseCategory, date?: string }) => Promise<void>;
   updateBudget: (newBudget: Budget) => Promise<void>;
@@ -124,12 +126,15 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
             recoveryState = JSON.parse(rawRecovery);
           }
           
+          const historicalBudget = historyObj[prevMonth] || finalBudget;
+          
           setMonthEndData({
             prevMonth,
-            totalBudget: finalBudget.total,
+            totalBudget: historicalBudget.total,
             totalSpent: spent,
-            remaining,
-            recoveryState
+            remaining: historicalBudget.total - spent,
+            recoveryState,
+            budgetSnapshot: historicalBudget
           });
         } else if (!parsed.budgetMonth) {
           finalBudget.budgetMonth = currentMonth;
@@ -318,7 +323,8 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
       prevMonth: currentMonth,
       totalBudget: budget.total,
       totalSpent: spent,
-      remaining: budget.total - spent
+      remaining: budget.total - spent,
+      budgetSnapshot: budget
     });
   };
 
@@ -336,6 +342,7 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
       totalSpent: spent,
       remaining: targetBudget.total - spent,
       isReviewMode: true,
+      budgetSnapshot: targetBudget
     });
   };
 
@@ -345,7 +352,7 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <LedgrContext.Provider value={{ 
-      expenses, budget, isLoaded, addExpense, updateBudget, deleteExpense, updateExpense,
+      expenses, budget, budgetHistory, isLoaded, addExpense, updateBudget, deleteExpense, updateExpense,
       bills, addBill, updateBill, deleteBill, isBillDueSoon, addCategory, deleteCategory, allCategories,
       monthEndData, resolveMonthEnd, saveRolloverRecovery, reloadBudgetState,
       showDevTools, toggleDevTools, importExpenses, simulateRollover, showMonthSummary, dismissMonthSummary

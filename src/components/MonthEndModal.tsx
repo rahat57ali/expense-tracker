@@ -16,14 +16,16 @@ import { Budget } from '../lib/store';
 import { useThemeColors } from '../lib/ThemeContext';
 
 export default function MonthEndModal({ visible, data }: { visible: boolean; data: any }) {
-  const { resolveMonthEnd, saveRolloverRecovery, budget, expenses, dismissMonthSummary, showMonthSummary } = useLedgr();
+  const { resolveMonthEnd, saveRolloverRecovery, budget, budgetHistory, expenses, dismissMonthSummary, showMonthSummary } = useLedgr();
   const navigation = useNavigation<any>();
   const colors = useThemeColors();
+
+  const currentBudget = data?.budgetSnapshot || budget;
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [rolloverCache, setRolloverCache] = useState<number>(0);
   
-  const [localTotal, setLocalTotal] = useState<number>(budget.total);
+  const [localTotal, setLocalTotal] = useState<number>(currentBudget.total);
 
   useEffect(() => {
     if (visible && data) {
@@ -37,9 +39,9 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
         setStep(1);
         setRolloverCache(0);
       }
-      setLocalTotal(budget.total);
+      setLocalTotal(currentBudget.total);
     }
-  }, [visible, data, budget]);
+  }, [visible, data, currentBudget]);
 
   const handleStep1Surplus = async (amount: number) => {
     setRolloverCache(amount);
@@ -67,8 +69,12 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
   const daysInMonth = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate();
 
   const availableMonths = useMemo(() => {
-    return [...new Set(expenses.map(e => e.date.substring(0, 7)))].sort();
-  }, [expenses]);
+    // A month is 'systematically completed' if it has a historical snapshot and it's not the current active month
+    const currentMonthStr = new Date().toISOString().substring(0, 7);
+    return Object.keys(budgetHistory || {})
+      .filter(m => m < currentMonthStr)
+      .sort();
+  }, [budgetHistory]);
 
   const handleMonthSwitch = (delta: number) => {
     if (!data?.isReviewMode || availableMonths.length === 0) return;
@@ -118,7 +124,7 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
       let maxOvershootCat = null;
       let maxOvershootAmt = 0;
       Object.keys(categoryDataMap).forEach(cat => {
-        const budgeted = budget.categories[cat] || 0;
+        const budgeted = currentBudget.categories[cat] || 0;
         const spent = categoryDataMap[cat].total;
         if (spent > budgeted && (spent - budgeted) > maxOvershootAmt) {
           maxOvershootAmt = spent - budgeted;
@@ -189,7 +195,7 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
     const eligibleInsights = allInsights.filter(i => i.eligible).sort((a, b) => b.score - a.score);
     
     return eligibleInsights.slice(0, 4);
-  }, [prevMonthExpenses, totalSpent, daysInMonth, budget, colors]);
+  }, [prevMonthExpenses, totalSpent, daysInMonth, currentBudget, colors]);
 
   const handleFinalSave = async () => {
     const updatedBudget = { ...budget, total: localTotal };

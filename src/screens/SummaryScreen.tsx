@@ -32,7 +32,7 @@ const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
 };
 
 export default function SummaryScreen() {
-  const { expenses, isLoaded, showMonthSummary } = useLedgr();
+  const { expenses, isLoaded, showMonthSummary, budgetHistory } = useLedgr();
   const colors = useThemeColors();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -80,18 +80,22 @@ export default function SummaryScreen() {
 
   if (!isLoaded) return <View style={[styles.container, { backgroundColor: colors.background }]} />;
 
+  const monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+  const currentMonthStr = new Date().toISOString().substring(0, 7);
+  // Insights shouldn't show if the user browses an un-tracked past month (no budget history)
+  const isInsightsAvailable = monthStr === currentMonthStr || !!budgetHistory[monthStr];
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={[styles.header, { backgroundColor: colors.background }]}>
-        <TouchableOpacity 
-          style={[styles.headerActionBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}
-          onPress={() => {
-            const monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
-            showMonthSummary(monthStr);
-          }}
-        >
-          <PieChart size={20} color={colors.accent} />
-        </TouchableOpacity>
+        {isInsightsAvailable && (
+          <TouchableOpacity 
+            style={[styles.headerActionBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}
+            onPress={() => showMonthSummary(monthStr)}
+          >
+            <PieChart size={20} color={colors.accent} />
+          </TouchableOpacity>
+        )}
 
         <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
         <Text style={[styles.brandName, { color: colors.textTertiary }]}>LEDGR</Text>
