@@ -288,33 +288,6 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Appearance Settings */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Appearance</Text>
-          <Text style={[styles.sectionSubtitle, { color: colors.textTertiary }]}>Customize look and feel</Text>
-        </View>
-
-        <View style={[styles.dataCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-          <View style={styles.dataAction}>
-            <View style={[styles.dataIconBox, { backgroundColor: isDark ? colors.purpleBg : colors.accentBg }]}>
-              {isDark ? <Moon color={isDark ? colors.purple : colors.accent} size={20} /> : <Sun color={colors.accent} size={20} />}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.dataActionTitle, { color: colors.textPrimary }]}>Dark Mode</Text>
-              <Text style={[styles.dataActionSub, { color: colors.textTertiary }]}>
-                {isDark ? 'Turn off for light mode' : 'Turn on for dark mode'}
-              </Text>
-            </View>
-            <Switch
-              value={isDark}
-              onValueChange={toggleTheme}
-              trackColor={{ false: colors.switchTrackFalse, true: colors.switchTrackTrue }}
-              thumbColor="#FFFFFF"
-              ios_backgroundColor={colors.switchTrackFalse}
-            />
-          </View>
-        </View>
-
         {/* DEV TOOLS */}
         {showDevTools && (
           <View style={styles.devSection}>
