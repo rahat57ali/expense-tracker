@@ -8,7 +8,7 @@ import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, Shop
 import { ExpenseCategory, Expense } from '../lib/store';
 import { LinearGradient } from 'expo-linear-gradient';
 import EditExpenseModal from '../components/EditExpenseModal';
-import { useThemeColors } from '../lib/ThemeContext';
+import { useTheme } from '../lib/ThemeContext';
 
 const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
   Food: Coffee,
@@ -22,7 +22,7 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
 
 export default function CalendarScreen() {
   const { expenses, budget, isLoaded } = useLedgr();
-  const colors = useThemeColors();
+  const { colors, isDark } = useTheme();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
@@ -83,20 +83,21 @@ export default function CalendarScreen() {
 
       <View style={[styles.calendarContainer, { borderBottomColor: colors.divider }]}>
         <Calendar
+          key={isDark ? 'dark-mode' : 'light-mode'}
           theme={{
-            backgroundColor: colors.background,
-            calendarBackground: colors.background,
+            backgroundColor: colors.calendarBg,
+            calendarBackground: colors.calendarBg,
             textSectionTitleColor: colors.textTertiary,
-            selectedDayBackgroundColor: colors.accent,
-            selectedDayTextColor: colors.background,
-            todayTextColor: colors.accent,
-            dayTextColor: colors.textPrimary,
-            textDisabledColor: colors.textMuted,
-            dotColor: colors.accent,
-            selectedDotColor: colors.background,
-            arrowColor: colors.accent,
+            selectedDayBackgroundColor: colors.calendarSelectedBg,
+            selectedDayTextColor: colors.calendarSelectedText,
+            todayTextColor: colors.calendarTodayText,
+            dayTextColor: colors.calendarDayText,
+            textDisabledColor: colors.calendarDisabledText,
+            dotColor: colors.calendarSelectedText,
+            selectedDotColor: colors.calendarSelectedText,
+            arrowColor: colors.calendarTodayText,
             monthTextColor: colors.textPrimary,
-            indicatorColor: colors.accent,
+            indicatorColor: colors.calendarTodayText,
             textDayFontFamily: 'Inter_500Medium',
             textMonthFontFamily: 'Outfit_600SemiBold',
             textDayHeaderFontFamily: 'Inter_700Bold',
