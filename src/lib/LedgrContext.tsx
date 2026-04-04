@@ -9,7 +9,9 @@ export interface MonthEndData {
   totalSpent: number;
   remaining: number;
   recoveryState?: RolloverRecoveryState;
+  isReviewMode?: boolean;
 }
+
 
 interface LedgrContextType {
   expenses: Expense[];
@@ -35,6 +37,8 @@ interface LedgrContextType {
   toggleDevTools: () => Promise<boolean>;
   importExpenses: (newExpenses: Expense[]) => Promise<void>;
   simulateRollover: () => Promise<void>;
+  showMonthSummary: (monthStr: string) => void;
+  dismissMonthSummary: () => void;
 }
 
 const DEFAULT_BUDGET: Budget = {
@@ -55,6 +59,7 @@ const LedgrContext = createContext<LedgrContextType | undefined>(undefined);
 export const LedgrProvider = ({ children }: { children: ReactNode }) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [budget, setBudget] = useState<Budget>(DEFAULT_BUDGET);
+  const [budgetHistory, setBudgetHistory] = useState<Record<string, Budget>>({});
   const [bills, setBills] = useState<Bill[]>([]);
   const [activeCategories, setActiveCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [monthEndData, setMonthEndData] = useState<MonthEndData | null>(null);
@@ -71,6 +76,9 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
       const savedCategories = await AsyncStorage.getItem('ledgr_categories');
       const savedCustomCats = await AsyncStorage.getItem('ledgr_custom_cats');
       const savedDevTools = await AsyncStorage.getItem('ledgr_dev_tools');
+      const savedHistory = await AsyncStorage.getItem('ledgr_budget_history');
+      
+      const historyObj = savedHistory ? JSON.parse(savedHistory) : {};
       
       if (savedDevTools) setShowDevTools(JSON.parse(savedDevTools));
       if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
@@ -128,11 +136,23 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
           await AsyncStorage.setItem('ledgr_budget', JSON.stringify(finalBudget));
         }
 
+        if (finalBudget.budgetMonth && !historyObj[finalBudget.budgetMonth]) {
+          historyObj[finalBudget.budgetMonth] = finalBudget;
+          setBudgetHistory(historyObj);
+          await AsyncStorage.setItem('ledgr_budget_history', JSON.stringify(historyObj));
+        } else {
+          setBudgetHistory(historyObj);
+        }
+
         setBudget(finalBudget);
       } else {
         const initialBudget = { ...DEFAULT_BUDGET, budgetMonth: currentMonth };
         setBudget(initialBudget);
         await AsyncStorage.setItem('ledgr_budget', JSON.stringify(initialBudget));
+        
+        historyObj[currentMonth] = initialBudget;
+        setBudgetHistory(historyObj);
+        await AsyncStorage.setItem('ledgr_budget_history', JSON.stringify(historyObj));
       }
     } catch (e) {
       console.error("Failed to load ledgr data", e);
@@ -161,8 +181,15 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateBudget = async (newBudget: Budget) => {
-    setBudget(newBudget);
-    await AsyncStorage.setItem('ledgr_budget', JSON.stringify(newBudget));
+    const currentMonth = format(new Date(), 'yyyy-MM');
+    const updated = { ...newBudget, budgetMonth: currentMonth };
+    setBudget(updated);
+    await AsyncStorage.setItem('ledgr_budget', JSON.stringify(updated));
+
+    // Keep history in sync
+    const newHistory = { ...budgetHistory, [currentMonth]: updated };
+    setBudgetHistory(newHistory);
+    await AsyncStorage.setItem('ledgr_budget_history', JSON.stringify(newHistory));
   };
 
   const deleteExpense = async (id: string) => {
@@ -246,7 +273,14 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
     const newTotal = finalBudgetConfig.total + rolloverAmount;
     const currentMonth = format(new Date(), 'yyyy-MM');
     const newBudgetObj = { ...finalBudgetConfig, total: newTotal, budgetMonth: currentMonth };
+    // Snapshot what the budget was before we transition to the new total
+    const oldMonth = monthEndData.prevMonth || format(new Date(), 'yyyy-MM');
+    const newHistory = { ...budgetHistory, [oldMonth]: budget }; 
+    newHistory[currentMonth] = newBudgetObj;
     
+    setBudgetHistory(newHistory);
+    await AsyncStorage.setItem('ledgr_budget_history', JSON.stringify(newHistory));
+
     setBudget(newBudgetObj);
     await AsyncStorage.setItem('ledgr_budget', JSON.stringify(newBudgetObj));
     await AsyncStorage.removeItem('ledgr_rollover_recovery');
@@ -288,12 +322,33 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const showMonthSummary = (monthStr: string) => {
+    // Rely on historical snapshot if exists, otherwise fallback to current global budget
+    const targetBudget = budgetHistory[monthStr] || budget;
+    
+    const spent = expenses
+      .filter(e => e.date.startsWith(monthStr))
+      .reduce((sum, e) => sum + e.amount, 0);
+    
+    setMonthEndData({
+      prevMonth: monthStr,
+      totalBudget: targetBudget.total,
+      totalSpent: spent,
+      remaining: targetBudget.total - spent,
+      isReviewMode: true,
+    });
+  };
+
+  const dismissMonthSummary = () => {
+    setMonthEndData(null);
+  };
+
   return (
     <LedgrContext.Provider value={{ 
       expenses, budget, isLoaded, addExpense, updateBudget, deleteExpense, updateExpense,
       bills, addBill, updateBill, deleteBill, isBillDueSoon, addCategory, deleteCategory, allCategories,
       monthEndData, resolveMonthEnd, saveRolloverRecovery, reloadBudgetState,
-      showDevTools, toggleDevTools, importExpenses, simulateRollover
+      showDevTools, toggleDevTools, importExpenses, simulateRollover, showMonthSummary, dismissMonthSummary
     }}>
       {children}
     </LedgrContext.Provider>

@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLedgr } from '../lib/LedgrContext';
 import { useThemeColors } from '../lib/ThemeContext';
 import { ExpenseCategory } from '../lib/store';
-import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, ChevronDown, ChevronUp, Calendar, ShoppingBasket } from 'lucide-react-native';
+import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, ChevronDown, ChevronUp, Calendar, ShoppingBasket, PieChart } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -32,7 +32,7 @@ const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
 };
 
 export default function SummaryScreen() {
-  const { expenses, isLoaded } = useLedgr();
+  const { expenses, isLoaded, showMonthSummary } = useLedgr();
   const colors = useThemeColors();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -83,6 +83,16 @@ export default function SummaryScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={[styles.header, { backgroundColor: colors.background }]}>
+        <TouchableOpacity 
+          style={[styles.headerActionBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}
+          onPress={() => {
+            const monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+            showMonthSummary(monthStr);
+          }}
+        >
+          <PieChart size={20} color={colors.accent} />
+        </TouchableOpacity>
+
         <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
         <Text style={[styles.brandName, { color: colors.textTertiary }]}>LEDGR</Text>
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Monthly Insights</Text>
@@ -168,7 +178,8 @@ export default function SummaryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 24, paddingBottom: 16, alignItems: 'center' },
+  header: { padding: 24, paddingBottom: 16, alignItems: 'center', position: 'relative' },
+  headerActionBtn: { position: 'absolute', top: 24, right: 24, width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center', zIndex: 10 },
   logo: { width: 36, height: 36, marginBottom: 8 },
   brandName: { fontFamily: 'Outfit_800ExtraBold', fontSize: 12, letterSpacing: 4, marginBottom: 12 },
   headerTitle: { fontFamily: 'Outfit_800ExtraBold', fontSize: 28, marginBottom: 16 },
