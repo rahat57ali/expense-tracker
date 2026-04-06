@@ -8,6 +8,7 @@ import { ExpenseCategory, Expense } from '../lib/store';
 import { Wallet, Target, TrendingUp, Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, AlertCircle, ShoppingBasket, CheckCircle2, Minus, Info, TrendingDown } from 'lucide-react-native';
 import EditExpenseModal from '../components/EditExpenseModal';
 import DailyDetailModal from '../components/DailyDetailModal';
+import TransactionsModal from '../components/TransactionsModal';
 import { getDaysRemainingInMonth } from '../lib/dateUtils';
 
 const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
@@ -26,6 +27,7 @@ export default function DashboardScreen() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isDailyDetailVisible, setIsDailyDetailVisible] = useState(false);
+  const [isTransactionsModalVisible, setIsTransactionsModalVisible] = useState(false);
 
   const currentMonthExpenses = React.useMemo(() => {
     const activeMonth = budget.budgetMonth || new Date().toISOString().slice(0, 7);
@@ -203,8 +205,14 @@ export default function DashboardScreen() {
           })}
         </View>
 
-        <View style={styles.sectionHeader}>
+        <View style={[styles.sectionHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Recent Transactions</Text>
+          <TouchableOpacity 
+            style={[styles.viewAllBtn, { backgroundColor: colors.pillBg, borderColor: colors.cardBorderSubtle }]} 
+            onPress={() => setIsTransactionsModalVisible(true)}
+          >
+            <Text style={[styles.viewAllText, { color: colors.accent }]}>View All</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.expensesList}>
@@ -261,6 +269,15 @@ export default function DashboardScreen() {
           status: dailyStatus
         }}
       />
+
+      <TransactionsModal
+        visible={isTransactionsModalVisible}
+        onClose={() => setIsTransactionsModalVisible(false)}
+        onEditExpense={(expense) => {
+          setEditingExpense(expense);
+          setIsEditModalVisible(true);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -293,6 +310,16 @@ const styles = StyleSheet.create({
   sectionHeader: { marginBottom: 16, marginTop: 8 },
   sectionTitle: { fontFamily: 'Outfit_600SemiBold', fontSize: 20 },
   sectionSubtitle: { fontFamily: 'Inter_500Medium', fontSize: 12, marginTop: 2 },
+  viewAllBtn: { 
+    paddingHorizontal: 12, 
+    paddingVertical: 4, 
+    borderRadius: 8, 
+    borderWidth: 1 
+  },
+  viewAllText: { 
+    fontFamily: 'Outfit_600SemiBold', 
+    fontSize: 12 
+  },
 
   catBudgetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 40 },
   catBudgetCard: { width: '48%', padding: 16, borderRadius: 20, borderWidth: 1 },
