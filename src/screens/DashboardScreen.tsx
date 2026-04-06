@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { G, Path, Circle, Text as SvgText } from 'react-native-svg';
 import { useLedgr } from '../lib/LedgrContext';
 import { useThemeColors } from '../lib/ThemeContext';
 import { ExpenseCategory, Expense } from '../lib/store';
@@ -10,6 +11,16 @@ import EditExpenseModal from '../components/EditExpenseModal';
 import DailyDetailModal from '../components/DailyDetailModal';
 import TransactionsModal from '../components/TransactionsModal';
 import { getDaysRemainingInMonth } from '../lib/dateUtils';
+
+const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
+  Food: '#FFD700',
+  Transport: '#3B82F6',
+  Bills: '#EF4444',
+  Shopping: '#8A2BE2',
+  Grocery: '#10B981',
+  Health: '#EC4899',
+  Other: '#949494',
+};
 
 const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
   Food: Coffee,
@@ -165,6 +176,83 @@ export default function DashboardScreen() {
           </View>
         </View>
 
+        {/* Category Visualization Section */}
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Spending Breakdown</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.textTertiary }]}>Insights by category</Text>
+        </View>
+
+        <View style={[styles.vizCard, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}>
+          <View style={styles.vizRow}>
+            <View style={styles.donutContainer}>
+              <Svg width={140} height={140} viewBox="0 0 100 100">
+                <G rotation="-90" origin="50, 50">
+                  {totalSpent === 0 ? (
+                    <Circle cx="50" cy="50" r="40" stroke={colors.divider} strokeWidth="12" fill="none" />
+                  ) : (
+                    (() => {
+                      let cumulativePercent = 0;
+                      return allCategories.map((cat, index) => {
+                        const spent = categoryTotals[cat] || 0;
+                        if (spent <= 0) return null;
+                        const percent = spent / totalSpent;
+                        const strokeDasharray = `${percent * 251.2} 251.2`;
+                        const strokeDashoffset = -cumulativePercent * 251.2;
+                        cumulativePercent += percent;
+                        return (
+                          <Circle
+                            key={cat}
+                            cx="50"
+                            cy="50"
+                            r="40"
+                            stroke={CATEGORY_COLORS[cat as ExpenseCategory] || colors.accent}
+                            strokeWidth="12"
+                            strokeDasharray={strokeDasharray}
+                            strokeDashoffset={strokeDashoffset}
+                            fill="none"
+                            strokeLinecap="butt"
+                          />
+                        );
+                      });
+                    })()
+                  )}
+                </G>
+              </Svg>
+              <View style={styles.donutCenter}>
+                <Text style={[styles.donutTotalLabel, { color: colors.textTertiary }]}>TOTAL</Text>
+                <Text style={[styles.donutTotalValue, { color: colors.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>
+                  {totalSpent >= 100000 ? `${(totalSpent / 1000).toFixed(0)}k` : totalSpent.toLocaleString()}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.vizList}>
+              {allCategories
+                .filter(cat => (categoryTotals[cat] || 0) > 0)
+                .sort((a, b) => (categoryTotals[b] || 0) - (categoryTotals[a] || 0))
+                .slice(0, 4)
+                .map(cat => {
+                  const spent = categoryTotals[cat] || 0;
+                  const percent = Math.round((spent / totalSpent) * 100);
+                  const color = CATEGORY_COLORS[cat as ExpenseCategory] || colors.accent;
+                  return (
+                    <View key={cat} style={styles.vizListItem}>
+                      <View style={[styles.vizDot, { backgroundColor: color }]} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.vizCatName, { color: colors.textPrimary }]}>{cat}</Text>
+                        <Text style={[styles.vizCatAmt, { color: colors.textTertiary }]}>PKR {spent.toLocaleString()}</Text>
+                      </View>
+                      <Text style={[styles.vizCatPercent, { color: colors.textSecondary }]}>{percent}%</Text>
+                    </View>
+                  );
+                })}
+              {allCategories.filter(cat => (categoryTotals[cat] || 0) > 0).length === 0 && (
+                <Text style={[styles.noDataText, { color: colors.textTertiary }]}>No spending recorded yet this month.</Text>
+              )}
+            </View>
+          </View>
+        </View>
+
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Category Remaining</Text>
           <Text style={[styles.sectionSubtitle, { color: colors.textTertiary }]}>Budgets per category</Text>
@@ -184,21 +272,21 @@ export default function DashboardScreen() {
               <View key={cat} style={[styles.catBudgetCard, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}>
                 <View style={styles.catCardTop}>
                   <View style={[styles.catIconBox, { backgroundColor: colors.pillBg }, isOver && styles.catIconBoxDanger]}>
-                    <Icon color={isOver ? colors.danger : colors.iconDefault} size={16} />
+                    <Icon color={isOver ? colors.danger : colors.iconDefault} size={14} />
                   </View>
-                  <Text style={[styles.catCardName, { color: colors.textSecondary }]}>{cat}</Text>
+                  <Text style={[styles.catCardName, { color: colors.textSecondary }]} numberOfLines={1}>{cat}</Text>
+                  <Text style={[styles.compactPercent, { color: isOver ? colors.danger : colors.accent }]}>{percentUsed}%</Text>
                 </View>
 
-                <Text style={[styles.catRemaining, { color: colors.textPrimary }, isOver && { color: colors.danger }]}>
-                  PKR {Math.abs(remaining).toLocaleString()}
-                </Text>
-                <View style={styles.catMetaRow}>
-                  <Text style={[styles.catRemainingLabel, { color: colors.textTertiary }]}>{isOver ? 'OVER LIMIT' : 'REMAINING'}</Text>
-                  <Text style={[styles.catPercentLabel, { color: isOver ? colors.danger : colors.accent }]}>{percentUsed}%</Text>
+                <View style={styles.compactMetaRow}>
+                  <Text style={[styles.catRemainingCompact, { color: isOver ? colors.danger : colors.textPrimary }]}>
+                    PKR {Math.abs(remaining).toLocaleString()}
+                  </Text>
+                  <Text style={[styles.compactStatusLabel, { color: colors.textTertiary }]}>{isOver ? 'OVER' : 'LEFT'}</Text>
                 </View>
 
-                <View style={[styles.progressBarBg, { backgroundColor: colors.divider }]}>
-                  <View style={[styles.progressBarFill, { width: `${progress * 100}%`, backgroundColor: colors.accent }, isOver && { backgroundColor: colors.danger }]} />
+                <View style={[styles.progressBarBgCompact, { backgroundColor: colors.divider }]}>
+                  <View style={[styles.progressBarFillCompact, { width: `${progress * 100}%`, backgroundColor: colors.accent }, isOver && { backgroundColor: colors.danger }]} />
                 </View>
               </View>
             );
@@ -321,19 +409,32 @@ const styles = StyleSheet.create({
     fontSize: 12 
   },
 
-  catBudgetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 40 },
-  catBudgetCard: { width: '48%', padding: 16, borderRadius: 20, borderWidth: 1 },
-  catCardTop: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  catIconBox: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  catIconBoxDanger: { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
-  catCardName: { fontFamily: 'Inter_700Bold', fontSize: 10, textTransform: 'uppercase' },
-  catRemaining: { fontFamily: 'Outfit_600SemiBold', fontSize: 18 },
-  catRemainingLabel: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 0.5 },
-  catMetaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 },
-  catPercentLabel: { fontFamily: 'Inter_800ExtraBold', fontSize: 9, letterSpacing: 0.5 },
+  vizCard: { width: '100%', borderRadius: 24, borderWidth: 1, padding: 20, marginBottom: 24 },
+  vizRow: { flexDirection: 'row', alignItems: 'center' },
+  donutContainer: { width: 140, height: 140, alignItems: 'center', justifyContent: 'center' },
+  donutCenter: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  donutTotalLabel: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1 },
+  donutTotalValue: { fontFamily: 'Outfit_600SemiBold', fontSize: 18, marginTop: -2 },
+  vizList: { flex: 1, marginLeft: 24, gap: 12 },
+  vizListItem: { flexDirection: 'row', alignItems: 'center' },
+  vizDot: { width: 8, height: 8, borderRadius: 4, marginRight: 10 },
+  vizCatName: { fontFamily: 'Inter_700Bold', fontSize: 11, marginBottom: 2 },
+  vizCatAmt: { fontFamily: 'Inter_400Regular', fontSize: 10 },
+  vizCatPercent: { fontFamily: 'Outfit_600SemiBold', fontSize: 13, marginLeft: 8 },
+  noDataText: { fontFamily: 'Inter_500Medium', fontSize: 12, fontStyle: 'italic', textAlign: 'center' },
 
-  progressBarBg: { height: 4, borderRadius: 2, marginTop: 12, overflow: 'hidden' },
-  progressBarFill: { height: '100%', borderRadius: 2 },
+  catBudgetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 32 },
+  catBudgetCard: { width: '48.5%', padding: 12, borderRadius: 16, borderWidth: 1 },
+  catCardTop: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  catIconBox: { width: 24, height: 24, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
+  catIconBoxDanger: { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
+  catCardName: { fontFamily: 'Inter_700Bold', fontSize: 10, textTransform: 'uppercase', flex: 1 },
+  compactPercent: { fontFamily: 'Inter_800ExtraBold', fontSize: 10 },
+  compactMetaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 },
+  catRemainingCompact: { fontFamily: 'Outfit_600SemiBold', fontSize: 15 },
+  compactStatusLabel: { fontFamily: 'Inter_700Bold', fontSize: 8, opacity: 0.8 },
+  progressBarBgCompact: { height: 3, borderRadius: 1.5, overflow: 'hidden' },
+  progressBarFillCompact: { height: '100%', borderRadius: 1.5 },
 
   expensesList: { gap: 12 },
   listCard: { borderRadius: 20, padding: 16, borderWidth: 1 },
