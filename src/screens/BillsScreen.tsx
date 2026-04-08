@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Alert
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Alert, Keyboard
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -37,6 +37,8 @@ export default function BillsScreen() {
   const [isPayModalVisible, setIsPayModalVisible] = useState(false);
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
   const [deletingBillId, setDeletingBillId] = useState<string | null>(null);
+
+  const amountInputRef = useRef<TextInput>(null);
 
   const handleAddBill = async () => {
     if (!name || !amount) {
@@ -203,12 +205,31 @@ export default function BillsScreen() {
 
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>BILL NAME</Text>
-                <TextInput style={[styles.input, { backgroundColor: colors.inputBg, color: colors.textPrimary, borderColor: colors.inputBorder }]} value={name} onChangeText={setName} placeholder="e.g. Netflix" placeholderTextColor={colors.textMuted} />
+                <TextInput 
+                  style={[styles.input, { backgroundColor: colors.inputBg, color: colors.textPrimary, borderColor: colors.inputBorder }]} 
+                  value={name} 
+                  onChangeText={setName} 
+                  placeholder="e.g. Netflix" 
+                  placeholderTextColor={colors.textMuted} 
+                  returnKeyType="next"
+                  onSubmitEditing={() => amountInputRef.current?.focus()}
+                  blurOnSubmit={false}
+                />
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>AMOUNT (PKR)</Text>
-                <TextInput style={[styles.input, { backgroundColor: colors.inputBg, color: colors.textPrimary, borderColor: colors.inputBorder }]} value={amount} onChangeText={setAmount} keyboardType="numeric" placeholder="0.00" placeholderTextColor={colors.textMuted} />
+                <TextInput 
+                  ref={amountInputRef}
+                  style={[styles.input, { backgroundColor: colors.inputBg, color: colors.textPrimary, borderColor: colors.inputBorder }]} 
+                  value={amount} 
+                  onChangeText={setAmount} 
+                  keyboardType="numeric" 
+                  placeholder="0.00" 
+                  placeholderTextColor={colors.textMuted} 
+                  returnKeyType="done"
+                  onSubmitEditing={() => Keyboard.dismiss()}
+                />
               </View>
 
               <View style={styles.inputGroup}>

@@ -6,8 +6,9 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   Modal, 
-  Platform, 
-  ScrollView
+  Platform,
+  ScrollView,
+  Keyboard
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -125,9 +126,10 @@ export default function EditExpenseModal({ visible, onClose, expense }: EditExpe
 
             <KeyboardAwareScrollView 
               showsVerticalScrollIndicator={false}
-              extraScrollHeight={20}
+              extraScrollHeight={100}
               keyboardShouldPersistTaps="handled"
               scrollEnabled={true}
+              enableOnAndroid={true}
             >
               <View style={styles.form}>
                 <Text style={[styles.label, { color: colors.textTertiary }]}>DESCRIPTION</Text>
@@ -154,6 +156,7 @@ export default function EditExpenseModal({ visible, onClose, expense }: EditExpe
                     placeholderTextColor={colors.textMuted}
                     keyboardType="numeric"
                     returnKeyType="done"
+                    onSubmitEditing={() => Keyboard.dismiss()}
                   />
                 </View>
 

@@ -151,6 +151,8 @@ export default function TransactionsModal({ visible, onClose, onEditExpense }: T
                   placeholderTextColor={colors.textMuted}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
+                  returnKeyType="search"
+                  onSubmitEditing={() => Keyboard.dismiss()}
                 />
                 {searchQuery.length > 0 && (
                   <TouchableOpacity onPress={() => { setSearchQuery(''); Keyboard.dismiss(); }}>

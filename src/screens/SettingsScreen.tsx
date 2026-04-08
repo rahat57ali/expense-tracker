@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Switch } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Switch, Keyboard } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -33,6 +33,9 @@ export default function SettingsScreen() {
 
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+
+  const budgetRef = useRef<TextInput>(null);
+  const categoryRefs = useRef<Record<string, TextInput | null>>({});
 
   useEffect(() => {
     if (isLoaded) setLocalBudget(budget);
@@ -176,10 +179,17 @@ export default function SettingsScreen() {
             <View style={styles.totalInputRow}>
               <Text style={[styles.totalCurrency, { color: colors.accent }]}>PKR</Text>
               <TextInput
+                ref={budgetRef}
                 style={[styles.totalInput, { color: colors.textPrimary }]}
                 keyboardType="numeric"
                 value={localBudget.total.toString()}
                 onChangeText={(val) => setLocalBudget(p => ({ ...p, total: parseInt(val) || 0 }))}
+                returnKeyType="next"
+                onSubmitEditing={() => {
+                  if (allCategories.length > 0) {
+                    categoryRefs.current[allCategories[0]]?.focus();
+                  }
+                }}
               />
               <Pencil size={20} color={colors.accent} style={{ marginLeft: 12 }} />
             </View>
@@ -215,6 +225,10 @@ export default function SettingsScreen() {
               value={newCatName}
               onChangeText={setNewCatName}
               autoFocus
+              returnKeyType="done"
+              onSubmitEditing={() => {
+                Keyboard.dismiss();
+              }}
             />
             <TouchableOpacity style={[styles.quickAddDone, { backgroundColor: colors.accent }]} onPress={handleAddCategory}>
               <Text style={[styles.quickAddDoneText, { color: colors.background }]}>ADD</Text>
@@ -226,7 +240,7 @@ export default function SettingsScreen() {
         )}
 
         <View style={styles.catBudgetGrid}>
-          {allCategories.map(cat => {
+          {allCategories.map((cat, index) => {
             const Icon = CATEGORY_ICONS[cat as ExpenseCategory] || MoreHorizontal;
             const amount = localBudget.categories[cat] || 0;
             const percentage = localBudget.total > 0 ? ((amount / localBudget.total) * 100).toFixed(1) : '0.0';
@@ -250,10 +264,19 @@ export default function SettingsScreen() {
                 <View style={[styles.catInputContainer, { backgroundColor: colors.innerCardBg }]}>
                   <Text style={[styles.catInputCurrency, { color: colors.textTertiary }]}>PKR</Text>
                   <TextInput
+                    ref={el => { categoryRefs.current[cat] = el; }}
                     style={[styles.catInput, { color: colors.textPrimary }]}
                     keyboardType="numeric"
                     value={amount.toString()}
                     onChangeText={(val) => handleCatChange(cat, val)}
+                    returnKeyType={index === allCategories.length - 1 ? 'done' : 'next'}
+                    onSubmitEditing={() => {
+                      if (index < allCategories.length - 1) {
+                        categoryRefs.current[allCategories[index + 1]]?.focus();
+                      } else {
+                        Keyboard.dismiss();
+                      }
+                    }}
                   />
                 </View>
               </View>

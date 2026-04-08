@@ -7,7 +7,8 @@ import {
   TouchableOpacity, 
   TextInput,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Keyboard
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, CheckCircle2 } from 'lucide-react-native';
@@ -71,6 +72,8 @@ export default function BillPaymentModal({ visible, onClose, onConfirm, bill }: 
                     placeholder="0.00"
                     placeholderTextColor={colors.textMuted}
                     autoFocus
+                    returnKeyType="done"
+                    onSubmitEditing={() => Keyboard.dismiss()}
                   />
                 </View>
               </View>
