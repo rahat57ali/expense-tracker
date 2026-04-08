@@ -4,7 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLedgr } from '../lib/LedgrContext';
 import { useThemeColors } from '../lib/ThemeContext';
 import { ExpenseCategory } from '../lib/store';
-import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, ChevronDown, ChevronUp, Calendar, ShoppingBasket, PieChart } from 'lucide-react-native';
+import { 
+  Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, 
+  ChevronDown, ChevronUp, Calendar, ShoppingBasket, PieChart, 
+  ChevronLeft, ChevronRight 
+} from 'lucide-react-native';
+import { format } from 'date-fns';
 import { LinearGradient } from 'expo-linear-gradient';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -88,29 +93,35 @@ export default function SummaryScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={[styles.header, { backgroundColor: colors.background }]}>
-        {isInsightsAvailable && (
-          <TouchableOpacity 
-            style={[styles.headerActionBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}
-            onPress={() => showMonthSummary(monthStr)}
-          >
-            <PieChart size={20} color={colors.accent} />
-          </TouchableOpacity>
-        )}
-
-        <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
-        <Text style={[styles.brandName, { color: colors.textTertiary }]}>LEDGR</Text>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Monthly Insights</Text>
-        <View style={[styles.monthPicker, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}>
-          <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.pickerBtn}>
-            <Text style={[styles.pickerBtnText, { color: colors.accent }]}>{"<"}</Text>
-          </TouchableOpacity>
-          <View style={styles.monthDisplay}>
-            <Calendar size={16} color={colors.accent} />
-            <Text style={[styles.monthText, { color: colors.textPrimary }]}>{monthNames[selectedMonth]} {selectedYear}</Text>
+        <View style={styles.headerTop}>
+          <View style={styles.headerTopLeft}>
+            <Image source={require('../../assets/logo.png')} style={styles.logoSmall} resizeMode="contain" />
+            <Text style={[styles.brandNameSmall, { color: colors.textTertiary }]}>LEDGR</Text>
           </View>
-          <TouchableOpacity onPress={() => changeMonth(1)} style={styles.pickerBtn}>
-            <Text style={[styles.pickerBtnText, { color: colors.accent }]}>{">"}</Text>
-          </TouchableOpacity>
+          {isInsightsAvailable && (
+            <TouchableOpacity 
+              style={[styles.headerActionBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}
+              onPress={() => showMonthSummary(monthStr)}
+            >
+              <PieChart size={18} color={colors.accent} />
+            </TouchableOpacity>
+          )}
+        </View>
+        
+        <View style={styles.titleRow}>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Summary</Text>
+          
+          <View style={[styles.monthPicker, { borderColor: colors.cardBorderSubtle, backgroundColor: colors.surface }]}>
+            <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.pickerBtnSmall}>
+              <ChevronLeft size={16} color={colors.accent} />
+            </TouchableOpacity>
+            <View style={styles.monthLabelSmall}>
+              <Text style={[styles.monthTextSmall, { color: colors.textPrimary }]}>{format(new Date(selectedYear, selectedMonth), 'MMM yy')}</Text>
+            </View>
+            <TouchableOpacity onPress={() => changeMonth(1)} style={styles.pickerBtnSmall}>
+              <ChevronRight size={16} color={colors.accent} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -182,15 +193,22 @@ export default function SummaryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 24, paddingBottom: 16, alignItems: 'center', position: 'relative' },
-  headerActionBtn: { position: 'absolute', top: 24, right: 24, width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center', zIndex: 10 },
-  logo: { width: 36, height: 36, marginBottom: 8 },
-  brandName: { fontFamily: 'Outfit_800ExtraBold', fontSize: 12, letterSpacing: 4, marginBottom: 12 },
-  headerTitle: { fontFamily: 'Outfit_800ExtraBold', fontSize: 28, marginBottom: 16 },
-  monthPicker: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 16, padding: 4, borderWidth: 1 },
-  pickerBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  pickerBtnText: { fontSize: 20, fontFamily: 'Outfit_600SemiBold' },
-  monthDisplay: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  header: { padding: 20, paddingTop: 8 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  headerTopLeft: { flexDirection: 'row', alignItems: 'center' },
+  logoSmall: { width: 18, height: 18, marginRight: 10 },
+  brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', fontSize: 10, letterSpacing: 2 },
+  headerActionBtn: { width: 36, height: 36, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  title: { fontFamily: 'Outfit_800ExtraBold', fontSize: 32 },
+  
+  monthPicker: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1, padding: 2 },
+  pickerBtnSmall: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
+  monthLabelSmall: { paddingHorizontal: 4 },
+  monthTextSmall: { fontFamily: 'Outfit_600SemiBold', fontSize: 13, textTransform: 'uppercase' },
+
+  monthLabel: { paddingHorizontal: 10 },
   monthText: { fontFamily: 'Inter_500Medium', fontSize: 16 },
 
   totalCardContainer: { paddingHorizontal: 24, marginBottom: 24 },

@@ -115,14 +115,11 @@ export default function DashboardScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
         <View style={styles.header}>
-          <Image
-            source={require('../../assets/logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={[styles.brandName, { color: colors.textTertiary }]}>LEDGR</Text>
+          <View style={styles.headerTop}>
+            <Image source={require('../../assets/logo.png')} style={styles.logoSmall} resizeMode="contain" />
+            <Text style={[styles.brandNameSmall, { color: colors.textTertiary }]}>LEDGR</Text>
+          </View>
           <Text style={[styles.title, { color: colors.textPrimary }]}>Overview</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Your real-time financial health</Text>
         </View>
 
         <View style={styles.kpiGrid}>
@@ -372,12 +369,13 @@ export default function DashboardScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { padding: 24, paddingBottom: 120 },
-  header: { alignItems: 'center', marginBottom: 32, marginTop: 10 },
-  logo: { width: 36, height: 36, marginBottom: 8 },
-  brandName: { fontFamily: 'Outfit_800ExtraBold', fontSize: 12, letterSpacing: 4, marginBottom: 12 },
-  title: { fontFamily: 'Outfit_800ExtraBold', fontSize: 36 },
-  subtitle: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 4 },
+  scrollContent: { padding: 20, paddingBottom: 110 },
+  header: { marginBottom: 20, marginTop: 8 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  logoSmall: { width: 18, height: 18, marginRight: 10 },
+  brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', fontSize: 10, letterSpacing: 2 },
+  title: { fontFamily: 'Outfit_800ExtraBold', fontSize: 32 },
+  subtitle: { fontFamily: 'Inter_500Medium', fontSize: 13, marginTop: 2 },
 
   kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 12 },
   kpiCard: { minHeight: 110, flex: 1, minWidth: '45%', padding: 20, borderRadius: 24, borderWidth: 1, position: 'relative', overflow: 'hidden' },

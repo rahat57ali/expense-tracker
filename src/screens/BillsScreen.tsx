@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Alert, Keyboard
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Alert, Keyboard, Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -92,18 +92,21 @@ export default function BillsScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={styles.header}>
-        <View>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>Bills</Text>
-          <Text style={[styles.subtitle, { color: colors.textTertiary }]}>Subscriptions & Recurring</Text>
+        <View style={styles.headerTop}>
+          <Image source={require('../../assets/logo.png')} style={styles.logoSmall} resizeMode="contain" />
+          <Text style={[styles.brandNameSmall, { color: colors.textTertiary }]}>LEDGR</Text>
         </View>
-        <View style={styles.headerRight}>
-          <View style={styles.summaryBox}>
-            <Text style={[styles.summaryLabel, { color: colors.textTertiary }]}>COMMITTED</Text>
-            <Text style={[styles.summaryValue, { color: colors.accent }]}>PKR {totalCommitted.toLocaleString()}</Text>
+        <View style={styles.titleRow}>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Bills</Text>
+          <View style={styles.headerRight}>
+            <View style={styles.summaryBox}>
+              <Text style={[styles.summaryLabel, { color: colors.textTertiary }]}>COMMITTED</Text>
+              <Text style={[styles.summaryValue, { color: colors.accent }]}>PKR {totalCommitted.toLocaleString()}</Text>
+            </View>
+            <TouchableOpacity style={[styles.addButton, { backgroundColor: colors.purple }]} onPress={() => setIsModalVisible(true)}>
+              <Plus color="#FFFFFF" size={18} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={[styles.addButton, { backgroundColor: colors.purple }]} onPress={() => setIsModalVisible(true)}>
-            <Plus color="#FFFFFF" size={24} />
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -264,16 +267,20 @@ export default function BillsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, paddingBottom: 15 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 110 },
+  header: { padding: 20, paddingTop: 8 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  logoSmall: { width: 18, height: 18, marginRight: 10 },
+  brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', fontSize: 10, letterSpacing: 2 },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 32, fontFamily: 'Outfit_800ExtraBold' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  summaryBox: { alignItems: 'flex-end' },
+  summaryLabel: { fontSize: 8, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
+  summaryValue: { fontSize: 13, fontFamily: 'Outfit_600SemiBold', marginTop: -2 },
+  addButton: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', elevation: 2 },
   subtitle: { fontSize: 13, fontFamily: 'Inter_500Medium', marginTop: 4 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  summaryBox: { alignItems: 'flex-end', paddingRight: 4 },
-  summaryLabel: { fontSize: 8, fontFamily: 'Inter_700Bold', letterSpacing: 1.5 },
-  summaryValue: { fontSize: 13, fontFamily: 'Outfit_600SemiBold' },
-  addButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
 
-  scrollContent: { padding: 24, paddingBottom: 120 },
   emptyState: { alignItems: 'center', marginTop: 60, paddingHorizontal: 40 },
   emptyTitle: { fontSize: 18, fontFamily: 'Outfit_600SemiBold', marginBottom: 8 },
   emptySub: { fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 20 },

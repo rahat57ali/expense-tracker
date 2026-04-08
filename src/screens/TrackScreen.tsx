@@ -160,7 +160,8 @@ export default function TrackScreen() {
             />
             <Text style={[styles.brandNameSmall, { color: colors.textTertiary }]}>LEDGR</Text>
           </View>
-          <Text style={[styles.greetingText, { color: colors.textPrimary }]} numberOfLines={2}>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Track</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={2}>
             {MOTIVATIONAL_PROMPT}
           </Text>
 
@@ -368,11 +369,12 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   glow: { position: 'absolute', width: 300, height: 300, borderRadius: 150 },
   scrollContent: { padding: 16, paddingBottom: 20 },
-  header: { marginBottom: 12, marginTop: 10 },
-  headerTop: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  logoSmall: { width: 20, height: 20 },
-  brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', fontSize: 10, letterSpacing: 4 },
-  greetingText: { fontFamily: 'Outfit_600SemiBold', fontSize: 18, marginBottom: 8 },
+  header: { marginBottom: 16, marginTop: 8 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  logoSmall: { width: 18, height: 18, marginRight: 10 },
+  brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', fontSize: 10, letterSpacing: 2 },
+  title: { fontFamily: 'Outfit_800ExtraBold', fontSize: 32 },
+  subtitle: { fontFamily: 'Inter_500Medium', fontSize: 13, marginTop: 2 },
 
   summaryCard: { borderRadius: 20, padding: 14, borderWidth: 1, marginTop: 2 },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },

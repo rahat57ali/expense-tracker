@@ -71,14 +71,11 @@ export default function CalendarScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={styles.header}>
-        <Image 
-          source={require('../../assets/logo.png')} 
-          style={styles.logo} 
-          resizeMode="contain" 
-        />
-        <Text style={[styles.brandName, { color: colors.textTertiary }]}>LEDGR</Text>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Expense Calendar</Text>
-        <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Track your daily spending</Text>
+        <View style={styles.headerTop}>
+          <Image source={require('../../assets/logo.png')} style={styles.logoSmall} resizeMode="contain" />
+          <Text style={[styles.brandNameSmall, { color: colors.textTertiary }]}>LEDGR</Text>
+        </View>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Calendar</Text>
       </View>
 
       <View style={[styles.calendarContainer, { borderBottomColor: colors.divider }]}>
@@ -180,11 +177,12 @@ export default function CalendarScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 24, paddingBottom: 16, alignItems: 'center' },
-  logo: { width: 36, height: 36, marginBottom: 8 },
-  brandName: { fontFamily: 'Outfit_800ExtraBold', fontSize: 12, letterSpacing: 4, marginBottom: 12 },
-  headerTitle: { fontFamily: 'Outfit_800ExtraBold', fontSize: 28 },
-  headerSubtitle: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 4 },
+  header: { padding: 20, paddingTop: 8 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  logoSmall: { width: 18, height: 18, marginRight: 10 },
+  brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', fontSize: 10, letterSpacing: 2 },
+  title: { fontFamily: 'Outfit_800ExtraBold', fontSize: 32 },
+  subtitle: { fontFamily: 'Inter_500Medium', fontSize: 13, marginTop: 2 },
   
   calendarContainer: { marginHorizontal: 16, borderRadius: 24, paddingBottom: 16, borderBottomWidth: 1 },
   
