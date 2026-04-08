@@ -70,54 +70,53 @@ export default function CalendarScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Image source={require('../../assets/logo.png')} style={styles.logoSmall} resizeMode="contain" />
-          <Text style={[styles.brandNameSmall, { color: colors.textTertiary }]}>LEDGR</Text>
-        </View>
-        <Text style={[styles.title, { color: colors.textPrimary }]}>Calendar</Text>
-      </View>
-
-      <View style={[styles.calendarContainer, { borderBottomColor: colors.divider }]}>
-        <Calendar
-          key={isDark ? 'dark-mode' : 'light-mode'}
-          theme={{
-            backgroundColor: colors.calendarBg,
-            calendarBackground: colors.calendarBg,
-            textSectionTitleColor: colors.textTertiary,
-            selectedDayBackgroundColor: colors.calendarSelectedBg,
-            selectedDayTextColor: colors.calendarSelectedText,
-            todayTextColor: colors.calendarTodayText,
-            dayTextColor: colors.calendarDayText,
-            textDisabledColor: colors.calendarDisabledText,
-            dotColor: colors.calendarSelectedText,
-            selectedDotColor: colors.calendarSelectedText,
-            arrowColor: colors.calendarTodayText,
-            monthTextColor: colors.textPrimary,
-            indicatorColor: colors.calendarTodayText,
-            textDayFontFamily: 'Inter_500Medium',
-            textMonthFontFamily: 'Outfit_600SemiBold',
-            textDayHeaderFontFamily: 'Inter_700Bold',
-            textDayFontSize: 14,
-            textMonthFontSize: 18,
-            textDayHeaderFontSize: 12
-          }}
-          markedDates={markedDates}
-          onDayPress={(day: any) => setSelectedDate(day.dateString)}
-        />
-      </View>
-
-      <View style={styles.detailsHeader}>
-        <View>
-          <Text style={[styles.detailsDate, { color: colors.textPrimary }]}>{format(new Date(selectedDate), 'MMMM do, yyyy')}</Text>
-          <Text style={[styles.detailsCount, { color: colors.textSecondary }]}>{dailyExpenses.length} transactions</Text>
-        </View>
-        <View style={[styles.totalBadge, { backgroundColor: colors.accentBg, borderColor: colors.accent + '33' }]}>
-          <Text style={[styles.totalBadgeText, { color: colors.accent }]}>PKR {totalDaily.toLocaleString()}</Text>
-        </View>
-      </View>
-
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <Image source={require('../../assets/logo.png')} style={styles.logoSmall} resizeMode="contain" />
+            <Text style={[styles.brandNameSmall, { color: colors.textTertiary }]}>LEDGR</Text>
+          </View>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Calendar</Text>
+        </View>
+
+        <View style={[styles.calendarContainer, { borderBottomColor: colors.divider }]}>
+          <Calendar
+            key={isDark ? 'dark-mode' : 'light-mode'}
+            theme={{
+              backgroundColor: colors.calendarBg,
+              calendarBackground: colors.calendarBg,
+              textSectionTitleColor: colors.textTertiary,
+              selectedDayBackgroundColor: colors.calendarSelectedBg,
+              selectedDayTextColor: colors.calendarSelectedText,
+              todayTextColor: colors.calendarTodayText,
+              dayTextColor: colors.calendarDayText,
+              textDisabledColor: colors.calendarDisabledText,
+              dotColor: colors.calendarSelectedText,
+              selectedDotColor: colors.calendarSelectedText,
+              arrowColor: colors.calendarTodayText,
+              monthTextColor: colors.textPrimary,
+              indicatorColor: colors.calendarTodayText,
+              textDayFontFamily: 'Inter_500Medium',
+              textMonthFontFamily: 'Outfit_600SemiBold',
+              textDayHeaderFontFamily: 'Inter_700Bold',
+              textDayFontSize: 14,
+              textMonthFontSize: 18,
+              textDayHeaderFontSize: 12
+            }}
+            markedDates={markedDates}
+            onDayPress={(day: any) => setSelectedDate(day.dateString)}
+          />
+        </View>
+
+        <View style={styles.detailsHeader}>
+          <View>
+            <Text style={[styles.detailsDate, { color: colors.textPrimary }]}>{format(new Date(selectedDate), 'MMMM do, yyyy')}</Text>
+            <Text style={[styles.detailsCount, { color: colors.textSecondary }]}>{dailyExpenses.length} transactions</Text>
+          </View>
+          <View style={[styles.totalBadge, { backgroundColor: colors.accentBg, borderColor: colors.accent + '33' }]}>
+            <Text style={[styles.totalBadgeText, { color: colors.accent }]}>PKR {totalDaily.toLocaleString()}</Text>
+          </View>
+        </View>
         {dailyExpenses.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No expenses for this day</Text>
@@ -177,7 +176,7 @@ export default function CalendarScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 20, paddingTop: 8 },
+  header: { marginBottom: 20 },
   headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   logoSmall: { width: 18, height: 18, marginRight: 10 },
   brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', fontSize: 10, letterSpacing: 2 },
@@ -192,7 +191,7 @@ const styles = StyleSheet.create({
   totalBadge: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 100, borderWidth: 1 },
   totalBadgeText: { fontFamily: 'Outfit_600SemiBold', fontSize: 14 },
 
-  scrollContent: { paddingHorizontal: 24, paddingBottom: 120 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 110, paddingTop: 8 },
   strip: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderRadius: 18, borderWidth: 1, marginBottom: 10 },
   stripLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   stripIconBox: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },

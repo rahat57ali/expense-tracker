@@ -132,7 +132,6 @@ export default function SettingsScreen() {
           </View>
           <Text style={[styles.title, { color: colors.textPrimary }]}>Settings</Text>
         </View>
-
         {/* Appearance Settings */}
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Appearance</Text>
@@ -140,13 +139,13 @@ export default function SettingsScreen() {
 
         <View style={[styles.dataCard, { backgroundColor: colors.card, borderColor: colors.cardBorder, marginBottom: 16 }]}>
           <View style={styles.dataAction}>
-            <View style={[styles.dataIconBox, { backgroundColor: isDark ? colors.purpleBg : colors.accentBg }]}>
-              {isDark ? <Moon color={isDark ? colors.purple : colors.accent} size={20} /> : <Sun color={colors.accent} size={20} />}
+            <View style={[styles.dataIconBox, { backgroundColor: isDark ? `${colors.purple}15` : `${colors.accent}15` }]}>
+              {isDark ? <Moon color={colors.purple} size={20} /> : <Sun color={colors.accent} size={20} />}
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.dataActionTitle, { color: colors.textPrimary }]}>Dark Mode</Text>
               <Text style={[styles.dataActionSub, { color: colors.textTertiary }]}>
-                {isDark ? 'Turn off for light mode' : 'Turn on for dark mode'}
+                {isDark ? 'Luminous interface active' : 'Sleek dark interface inactive'}
               </Text>
             </View>
             <Switch
@@ -363,9 +362,9 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 100 },
-  header: { marginBottom: 20, marginTop: 8 },
-  headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 100, paddingTop: 8 },
+  header: { marginBottom: 20 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, width: '100%' },
   logoSmall: { width: 18, height: 18, marginRight: 10 },
   brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', fontSize: 10, letterSpacing: 2 },
   title: { fontFamily: 'Outfit_800ExtraBold', fontSize: 32 },

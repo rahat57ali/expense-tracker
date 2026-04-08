@@ -92,50 +92,49 @@ export default function SummaryScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <View style={[styles.header, { backgroundColor: colors.background }]}>
-        <View style={styles.headerTop}>
-          <View style={styles.headerTopLeft}>
-            <Image source={require('../../assets/logo.png')} style={styles.logoSmall} resizeMode="contain" />
-            <Text style={[styles.brandNameSmall, { color: colors.textTertiary }]}>LEDGR</Text>
-          </View>
-          {isInsightsAvailable && (
-            <TouchableOpacity 
-              style={[styles.headerActionBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}
-              onPress={() => showMonthSummary(monthStr)}
-            >
-              <PieChart size={18} color={colors.accent} />
-            </TouchableOpacity>
-          )}
-        </View>
-        
-        <View style={styles.titleRow}>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>Summary</Text>
-          
-          <View style={[styles.monthPicker, { borderColor: colors.cardBorderSubtle, backgroundColor: colors.surface }]}>
-            <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.pickerBtnSmall}>
-              <ChevronLeft size={16} color={colors.accent} />
-            </TouchableOpacity>
-            <View style={styles.monthLabelSmall}>
-              <Text style={[styles.monthTextSmall, { color: colors.textPrimary }]}>{format(new Date(selectedYear, selectedMonth), 'MMM yy')}</Text>
-            </View>
-            <TouchableOpacity onPress={() => changeMonth(1)} style={styles.pickerBtnSmall}>
-              <ChevronRight size={16} color={colors.accent} />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.totalCardContainer}>
-        <LinearGradient colors={[colors.gradientStart, colors.gradientEnd]} style={[styles.totalCard, { borderColor: colors.cardBorder }]}>
-          <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>TOTAL SPENT</Text>
-          <Text style={[styles.totalValue, { color: colors.textPrimary }]}>PKR {totalMonthly.toLocaleString()}</Text>
-          <View style={[styles.progressBarBg, { backgroundColor: colors.divider }]}>
-            <View style={[styles.progressBarFill, { width: '100%', backgroundColor: colors.accent }]} />
-          </View>
-        </LinearGradient>
-      </View>
-
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={[styles.header, { backgroundColor: colors.background }]}>
+          <View style={styles.headerTop}>
+            <View style={styles.headerTopLeft}>
+              <Image source={require('../../assets/logo.png')} style={styles.logoSmall} resizeMode="contain" />
+              <Text style={[styles.brandNameSmall, { color: colors.textTertiary }]}>LEDGR</Text>
+            </View>
+            {isInsightsAvailable && (
+              <TouchableOpacity 
+                style={[styles.headerActionBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}
+                onPress={() => showMonthSummary(monthStr)}
+              >
+                <PieChart size={18} color={colors.accent} />
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          <View style={styles.titleRow}>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>Summary</Text>
+            
+            <View style={[styles.monthPicker, { borderColor: colors.cardBorderSubtle, backgroundColor: colors.surface }]}>
+              <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.pickerBtnSmall}>
+                <ChevronLeft size={16} color={colors.accent} />
+              </TouchableOpacity>
+              <View style={styles.monthLabelSmall}>
+                <Text style={[styles.monthTextSmall, { color: colors.textPrimary }]}>{format(new Date(selectedYear, selectedMonth), 'MMM yy')}</Text>
+              </View>
+              <TouchableOpacity onPress={() => changeMonth(1)} style={styles.pickerBtnSmall}>
+                <ChevronRight size={16} color={colors.accent} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.totalCardContainer}>
+          <LinearGradient colors={[colors.gradientStart, colors.gradientEnd]} style={[styles.totalCard, { borderColor: colors.cardBorder }]}>
+            <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>TOTAL SPENT</Text>
+            <Text style={[styles.totalValue, { color: colors.textPrimary }]}>PKR {totalMonthly.toLocaleString()}</Text>
+            <View style={[styles.progressBarBg, { backgroundColor: colors.divider }]}>
+              <View style={[styles.progressBarFill, { width: '100%', backgroundColor: colors.accent }]} />
+            </View>
+          </LinearGradient>
+        </View>
         {categoryData.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No expenses for this month</Text>
@@ -193,8 +192,8 @@ export default function SummaryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 20, paddingTop: 8 },
-  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  header: { marginBottom: 20 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   headerTopLeft: { flexDirection: 'row', alignItems: 'center' },
   logoSmall: { width: 18, height: 18, marginRight: 10 },
   brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', fontSize: 10, letterSpacing: 2 },
@@ -218,7 +217,7 @@ const styles = StyleSheet.create({
   progressBarBg: { height: 6, borderRadius: 3, marginTop: 16, overflow: 'hidden' },
   progressBarFill: { height: '100%', borderRadius: 3 },
 
-  scrollContent: { paddingHorizontal: 24, paddingBottom: 100 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 110, paddingTop: 8 },
   categoryContainer: { borderRadius: 20, marginBottom: 12, overflow: 'hidden', borderWidth: 1 },
   categoryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
   catLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },

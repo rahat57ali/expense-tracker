@@ -113,7 +113,6 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <Image source={require('../../assets/logo.png')} style={styles.logoSmall} resizeMode="contain" />
@@ -369,9 +368,9 @@ export default function DashboardScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 110 },
-  header: { marginBottom: 20, marginTop: 8 },
-  headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 110, paddingTop: 8 },
+  header: { marginBottom: 20 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, width: '100%' },
   logoSmall: { width: 18, height: 18, marginRight: 10 },
   brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', fontSize: 10, letterSpacing: 2 },
   title: { fontFamily: 'Outfit_800ExtraBold', fontSize: 32 },

@@ -150,7 +150,6 @@ export default function TrackScreen() {
         extraScrollHeight={100}
         enableOnAndroid={true}
       >
-
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <Image
@@ -164,6 +163,10 @@ export default function TrackScreen() {
           <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={2}>
             {MOTIVATIONAL_PROMPT}
           </Text>
+        </View>
+
+
+
 
           <LinearGradient
             colors={[colors.gradientStart, colors.gradientEnd]}
@@ -199,7 +202,7 @@ export default function TrackScreen() {
               </View>
             </View>
           </LinearGradient>
-        </View>
+
 
         <View style={[styles.inputCard, { backgroundColor: colors.surface, borderColor: colors.cardBorder }]}>
           <View style={[styles.inputRow, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
@@ -367,10 +370,10 @@ export default function TrackScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  header: { marginBottom: 20 },
   glow: { position: 'absolute', width: 300, height: 300, borderRadius: 150 },
-  scrollContent: { padding: 16, paddingBottom: 20 },
-  header: { marginBottom: 16, marginTop: 8 },
-  headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 20, paddingTop: 8 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, width: '100%' },
   logoSmall: { width: 18, height: 18, marginRight: 10 },
   brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', fontSize: 10, letterSpacing: 2 },
   title: { fontFamily: 'Outfit_800ExtraBold', fontSize: 32 },
