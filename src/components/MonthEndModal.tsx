@@ -5,15 +5,43 @@ import {
   StyleSheet, 
   Modal, 
   TouchableOpacity, 
-  TextInput 
+  TextInput,
+  StatusBar,
+  Dimensions
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Calendar as CalendarIcon, ArrowRightCircle, Trash2, CheckCircle2, Settings as SettingsIcon, AlertCircle, Pencil, MoreHorizontal, TrendingUp, X } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { 
+  Calendar as CalendarIcon, ArrowRightCircle, Trash2, CheckCircle2, 
+  Settings as SettingsIcon, AlertCircle, Pencil, MoreHorizontal, 
+  TrendingUp, X, ChevronLeft, ChevronRight,
+  Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, ShoppingBasket
+} from 'lucide-react-native';
 import { useLedgr } from '../lib/LedgrContext';
-import { Budget } from '../lib/store';
+import { Budget, ExpenseCategory } from '../lib/store';
 import { useThemeColors } from '../lib/ThemeContext';
+
+const CATEGORY_ICONS: Record<string, any> = {
+  Food: Coffee,
+  Transport: Car,
+  Bills: HomeIcon,
+  Shopping: ShoppingBag,
+  Grocery: ShoppingBasket,
+  Health: Heart,
+  Other: MoreHorizontal,
+};
+
+const CATEGORY_COLORS: Record<string, string> = {
+  Food: '#F59E0B',
+  Transport: '#3B82F6',
+  Bills: '#10B981',
+  Shopping: '#EC4899',
+  Grocery: '#2DD4BF',
+  Health: '#EF4444',
+  Other: '#6B7280',
+};
 
 export default function MonthEndModal({ visible, data }: { visible: boolean; data: any }) {
   const { resolveMonthEnd, saveRolloverRecovery, budget, budgetHistory, expenses, dismissMonthSummary, showMonthSummary } = useLedgr();
@@ -67,6 +95,8 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
   
   const dateObj = prevMonth ? new Date(prevMonth + '-02') : new Date();
   const monthName = dateObj.toLocaleString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
+  const shortMonthName = dateObj.toLocaleString('en-US', { month: 'long' });
+  const yearStr = dateObj.getFullYear().toString();
   const daysInMonth = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate();
 
   const availableMonths = useMemo(() => {
@@ -91,6 +121,27 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
       return d.toISOString().startsWith(prevMonth);
     });
   }, [expenses, prevMonth]);
+
+  // Category breakdown data — bar reflects budget consumption per category
+  const categoryBreakdown = useMemo(() => {
+    if (prevMonthExpenses.length === 0) return [];
+    const catMap: Record<string, number> = {};
+    prevMonthExpenses.forEach((e: any) => {
+      catMap[e.category] = (catMap[e.category] || 0) + e.amount;
+    });
+    return Object.entries(catMap)
+      .sort((a, b) => b[1] - a[1])
+      .map(([cat, amount]) => {
+        const allocated = currentBudget.categories?.[cat] || 0;
+        const budgetUsagePct = allocated > 0 ? (amount / allocated) * 100 : 0;
+        return {
+          category: cat,
+          amount,
+          budgetUsagePct,
+          isOver: amount > allocated && allocated > 0,
+        };
+      });
+  }, [prevMonthExpenses, totalSpent, currentBudget]);
 
   const insights = useMemo(() => {
     if (prevMonthExpenses.length === 0) return [];
@@ -204,61 +255,197 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
 
   if (!data) return null;
 
+  const budgetUsage = hasBudget && totalBudget > 0 ? totalSpent / totalBudget : 0;
+
   return (
-    <Modal visible={visible} animationType="slide" transparent={true}>
-      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
-        <View style={styles.container}>
-          <LinearGradient
-            colors={[colors.modalGradientStart, colors.modalGradientEnd] as const}
-            style={[styles.modalContent, { borderColor: colors.cardBorder }]}
+    <Modal visible={visible} animationType="slide" transparent={false}>
+      <SafeAreaView style={[styles.fullScreen, { backgroundColor: colors.background }]} edges={['top']}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={[styles.closeBtn, { backgroundColor: colors.closeBtnBg }]}
+            onPress={dismissMonthSummary}
           >
-            <View style={styles.header}>
-              {data?.isReviewMode ? (
-                <View style={[styles.titleRow, { flex: 1, justifyContent: 'center' }]}>
-                  <TouchableOpacity onPress={() => handleMonthSwitch(-1)} style={{ padding: 8 }}>
-                    <Text style={{ color: colors.accent, fontFamily: 'Outfit_800ExtraBold', fontSize: 16 }}>{"<"}</Text>
-                  </TouchableOpacity>
-                  <CalendarIcon color={colors.accent} size={20} />
-                  <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-                    {monthName}
-                  </Text>
-                  <TouchableOpacity onPress={() => handleMonthSwitch(1)} style={{ padding: 8 }}>
-                    <Text style={{ color: colors.accent, fontFamily: 'Outfit_800ExtraBold', fontSize: 16 }}>{">"}</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.titleRow}>
-                  <CalendarIcon color={colors.accent} size={20} />
-                  <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-                    {step === 3 ? "Next Month's Budget" : "Month Summary"}
-                  </Text>
-                </View>
-              )}
+            <X color={colors.textSecondary} size={20} />
+          </TouchableOpacity>
+
+          {data?.isReviewMode ? (
+            <View style={styles.monthNavRow}>
               <TouchableOpacity 
-                style={{ position: 'absolute', right: 0, padding: 4 }}
-                onPress={dismissMonthSummary}
+                onPress={() => handleMonthSwitch(-1)} 
+                style={[styles.monthNavBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}
               >
-                <X color={colors.textTertiary} size={24} />
+                <ChevronLeft size={18} color={colors.textPrimary} />
+              </TouchableOpacity>
+              <View style={styles.monthTitleBlock}>
+                <Text style={[styles.monthTitle, { color: colors.textPrimary }]}>{shortMonthName}</Text>
+                <Text style={[styles.yearTitle, { color: colors.textTertiary }]}>{yearStr}</Text>
+              </View>
+              <TouchableOpacity 
+                onPress={() => handleMonthSwitch(1)} 
+                style={[styles.monthNavBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}
+              >
+                <ChevronRight size={18} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
+          ) : (
+            <View style={styles.monthNavRow}>
+              <View style={styles.monthTitleBlock}>
+                <Text style={[styles.monthTitle, { color: colors.textPrimary }]}>
+                  {step === 3 ? "Next Month's Budget" : shortMonthName}
+                </Text>
+                {step !== 3 && <Text style={[styles.yearTitle, { color: colors.textTertiary }]}>{yearStr}</Text>}
+              </View>
+            </View>
+          )}
 
-            <KeyboardAwareScrollView 
-              showsVerticalScrollIndicator={false} 
-              style={{ flexShrink: 1 }}
-              contentContainerStyle={{ paddingBottom: 16 }}
-            >
-              {prevMonthExpenses.length === 0 ? (
-                <View style={[styles.stepContainer, { alignItems: 'center', paddingVertical: 40 }]}>
-                    <AlertCircle color={colors.textTertiary} size={48} />
-                    <Text style={{ fontFamily: 'Outfit_600SemiBold', fontSize: 18, color: colors.textSecondary, marginTop: 16, textAlign: 'center' }}>
-                      No Data for {monthName}
-                    </Text>
-                    <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 14, color: colors.textTertiary, marginTop: 8, textAlign: 'center', paddingHorizontal: 20 }}>
-                      No expenses have been recorded for this month.
-                    </Text>
+          <View style={{ width: 36 }} />
+        </View>
 
-                    {!data?.isReviewMode && (
-                      <View style={[styles.actionGrid, { marginTop: 32, width: '100%' }]}>
+        <KeyboardAwareScrollView 
+          showsVerticalScrollIndicator={false} 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          {prevMonthExpenses.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <AlertCircle color={colors.textTertiary} size={48} />
+              <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>
+                No Data for {monthName}
+              </Text>
+              <Text style={[styles.emptySub, { color: colors.textTertiary }]}>
+                No expenses have been recorded for this month.
+              </Text>
+
+              {!data?.isReviewMode && (
+                <View style={[styles.actionGrid, { marginTop: 32, width: '100%' }]}>
+                  <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.accent }]} onPress={() => handleStep1Surplus(remaining)}>
+                    <ArrowRightCircle color={colors.background} size={20} />
+                    <View style={styles.actionTextContainer}>
+                      <Text style={[styles.actionTitle, { color: colors.background }]}>Roll Over</Text>
+                      <Text style={[styles.actionSub, { color: colors.background, opacity: 0.7 }]}>Add to next month's budget</Text>
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.closeBtnBg, borderWidth: 1, borderColor: colors.cardBorder }]} onPress={() => handleStep1Surplus(0)}>
+                    <Trash2 color={colors.textPrimary} size={20} />
+                    <View style={styles.actionTextContainer}>
+                      <Text style={[styles.actionTitle, { color: colors.textPrimary }]}>Discard</Text>
+                      <Text style={[styles.actionSub, { color: colors.textSecondary }]}>Start fresh with base budget</Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          ) : (
+            <>
+              {step !== 3 && (
+                <>
+                  {/* Budget / Spent / Left — prominent card */}
+                  <LinearGradient 
+                    colors={[colors.gradientStart, colors.gradientEnd]} 
+                    style={[styles.budgetCard, { borderColor: colors.cardBorder }]}
+                  >
+                    <View style={styles.budgetCardRow}>
+                      <View style={styles.budgetStatBlock}>
+                        <Text style={[styles.budgetStatLabel, { color: colors.textTertiary }]}>BUDGET</Text>
+                        <Text style={[styles.budgetStatValue, { color: colors.textPrimary }]}>
+                          {hasBudget ? `PKR ${totalBudget.toLocaleString()}` : '--'}
+                        </Text>
+                      </View>
+                      <View style={[styles.budgetStatDivider, { backgroundColor: colors.divider }]} />
+                      <View style={styles.budgetStatBlock}>
+                        <Text style={[styles.budgetStatLabel, { color: colors.textTertiary }]}>SPENT</Text>
+                        <Text style={[styles.budgetStatValue, { color: colors.textPrimary }]}>
+                          PKR {totalSpent.toLocaleString()}
+                        </Text>
+                      </View>
+                      <View style={[styles.budgetStatDivider, { backgroundColor: colors.divider }]} />
+                      <View style={styles.budgetStatBlock}>
+                        <Text style={[styles.budgetStatLabel, { color: hasBudget ? (isOverspent ? colors.danger : colors.textTertiary) : colors.textTertiary }]}>
+                          {hasBudget ? (isOverspent ? 'DEFICIT' : 'LEFT') : 'BALANCE'}
+                        </Text>
+                        <Text style={[styles.budgetStatValue, { color: hasBudget ? (isOverspent ? colors.danger : colors.accent) : colors.textPrimary }]}>
+                          {hasBudget ? `PKR ${Math.abs(remaining).toLocaleString()}` : '--'}
+                        </Text>
+                      </View>
+                    </View>
+                    {hasBudget && (
+                      <View style={[styles.budgetProgressBg, { backgroundColor: colors.divider }]}>
+                        <View style={[
+                          styles.budgetProgressFill, 
+                          { 
+                            width: `${Math.min(100, budgetUsage * 100)}%`, 
+                            backgroundColor: isOverspent ? colors.danger : colors.accent 
+                          }
+                        ]} />
+                      </View>
+                    )}
+                  </LinearGradient>
+
+                  {/* Category Breakdown */}
+                  {categoryBreakdown.length > 0 && (
+                    <View style={styles.sectionBlock}>
+                      <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>CATEGORY BREAKDOWN</Text>
+                      <View style={[styles.breakdownCard, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}>
+                        {categoryBreakdown.map((item, index) => {
+                          const Icon = CATEGORY_ICONS[item.category] || MoreHorizontal;
+                          const catColor = CATEGORY_COLORS[item.category] || '#6B7280';
+                          const barPct = Math.min(100, item.budgetUsagePct);
+                          const barColor = item.isOver ? colors.danger : catColor;
+                          return (
+                            <View key={item.category} style={[styles.breakdownRow, index < categoryBreakdown.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.divider + '30' }]}>
+                              <View style={[styles.breakdownIconBox, { backgroundColor: `${catColor}15` }]}>
+                                <Icon color={catColor} size={14} />
+                              </View>
+                              <View style={styles.breakdownInfo}>
+                                <Text style={[styles.breakdownCatName, { color: colors.textPrimary }]}>{item.category}</Text>
+                                <View style={styles.breakdownBarRow}>
+                                  <View style={[styles.breakdownBarBg, { backgroundColor: colors.divider }]}>
+                                    <View style={[styles.breakdownBarFill, { width: `${barPct}%`, backgroundColor: barColor }]} />
+                                  </View>
+                                  <Text style={[styles.breakdownBarLabel, { color: item.isOver ? colors.danger : colors.textTertiary }]}>
+                                    {item.budgetUsagePct.toFixed(0)}%
+                                  </Text>
+                                </View>
+                              </View>
+                              <Text style={[styles.breakdownAmount, { color: colors.textPrimary }]}>
+                                {item.amount.toLocaleString()}
+                              </Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  )}
+                </>
+              )}
+
+              {(step === 1 || data?.isReviewMode) && (
+                <View style={styles.stepContainer}>
+                  {(!isOverspent || data?.isReviewMode) && insights.length > 0 && (
+                    <View style={styles.sectionBlock}>
+                      <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>MONTHLY INSIGHTS</Text>
+                      <View style={styles.insightsGrid}>
+                        {insights.map((insight) => (
+                          <View key={insight.id} style={[styles.insightCell, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}>
+                            <View style={[styles.insightIconCircle, { backgroundColor: `${insight.color}15` }]}>
+                              <insight.icon color={insight.color} size={14} />
+                            </View>
+                            <Text style={[styles.insightTitle, { color: colors.textPrimary }]}>{insight.title}</Text>
+                            <Text style={[styles.insightValue, { color: insight.color }]}>{insight.value}</Text>
+                            <Text style={[styles.insightSub, { color: colors.textTertiary }]}>{insight.sub}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+
+                  {!data?.isReviewMode && !isOverspent && (
+                    <>
+                      <Text style={[styles.promptText, { color: colors.textPrimary }]}>
+                        What would you like to do with your PKR {remaining.toLocaleString()} remaining?
+                      </Text>
+                      <View style={styles.actionGrid}>
                         <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.accent }]} onPress={() => handleStep1Surplus(remaining)}>
                           <ArrowRightCircle color={colors.background} size={20} />
                           <View style={styles.actionTextContainer}>
@@ -274,209 +461,197 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
                           </View>
                         </TouchableOpacity>
                       </View>
-                    )}
-                </View>
-              ) : (
-                <>
-                  {step !== 3 && (
-                    <>
-                      <View style={[styles.statusBanner, isOverspent ? { backgroundColor: colors.dangerBg, borderColor: colors.danger + '30' } : { backgroundColor: colors.accentBg, borderColor: colors.accent + '30' }]}>
-                        <View style={styles.bannerLeft}>
-                          <Text style={[styles.statusLabel, { color: isOverspent ? colors.danger : colors.accent }]}>{monthName}</Text>
-                          <Text style={[styles.statusThreshold, { color: colors.textTertiary }]}>Monthly Recap</Text>
-                        </View>
-                      </View>
-
-                      <View style={[styles.statsOverview, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}>
-                        <View style={styles.statBox}>
-                          <Text style={[styles.statBoxLabel, { color: colors.textTertiary }]}>BUDGET</Text>
-                          <Text style={[styles.statBoxValue, { color: colors.textPrimary }]}>{hasBudget ? `PKR ${totalBudget.toLocaleString()}` : '--'}</Text>
-                        </View>
-                        <View style={[styles.statBoxDivider, { backgroundColor: colors.divider }]} />
-                        <View style={styles.statBox}>
-                          <Text style={[styles.statBoxLabel, { color: colors.textTertiary }]}>SPENT</Text>
-                          <Text style={[styles.statBoxValue, { color: colors.textPrimary }]}>PKR {totalSpent.toLocaleString()}</Text>
-                        </View>
-                        <View style={[styles.statBoxDivider, { backgroundColor: colors.divider }]} />
-                        <View style={styles.statBox}>
-                          <Text style={[styles.statBoxLabel, { color: hasBudget ? (isOverspent ? colors.danger : colors.textTertiary) : colors.textTertiary }]}>
-                            {hasBudget ? (isOverspent ? 'DEFICIT' : 'LEFT') : 'BALANCE'}
-                          </Text>
-                          <Text style={[styles.statBoxValue, { color: hasBudget ? (isOverspent ? colors.danger : colors.accent) : colors.textPrimary }]}>
-                            {hasBudget ? `PKR ${Math.abs(remaining).toLocaleString()}` : '--'}
-                          </Text>
-                        </View>
-                      </View>
                     </>
                   )}
-
-                  {(step === 1 || data?.isReviewMode) && (
-                    <View style={[styles.stepContainer, data?.isReviewMode && { marginTop: 12 }]}>
-                        {(!isOverspent || data?.isReviewMode) && (
-                          <View style={[styles.insightsSection, { backgroundColor: colors.innerCardBg, borderColor: colors.divider }]}>
-                            <Text style={[styles.insightHeader, { color: colors.textTertiary }]}>MONTHLY INSIGHTS</Text>
-                            {insights.map((insight) => (
-                              <View key={insight.id} style={styles.insightRow}>
-                                <View style={[styles.insightIconCircle, { backgroundColor: `${insight.color}15` }]}>
-                                  <insight.icon color={insight.color} size={14} />
-                                </View>
-                                <View style={styles.insightContent}>
-                                  <Text style={[styles.insightTitle, { color: colors.textPrimary }]}>{insight.title}</Text>
-                                  <Text style={[styles.insightValue, { color: colors.textSecondary }]}>
-                                    {insight.value} — {insight.sub}
-                                  </Text>
-                                </View>
-                              </View>
-                            ))}
-                          </View>
-                        )}
-                      {!data?.isReviewMode && !isOverspent && (
-                        <>
-                          <Text style={[styles.promptText, { color: colors.textPrimary }]}>
-                            What would you like to do with your PKR {remaining.toLocaleString()} remaining?
-                          </Text>
-                          <View style={styles.actionGrid}>
-                            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.accent }]} onPress={() => handleStep1Surplus(remaining)}>
-                              <ArrowRightCircle color={colors.background} size={20} />
-                              <View style={styles.actionTextContainer}>
-                                <Text style={[styles.actionTitle, { color: colors.background }]}>Roll Over</Text>
-                                <Text style={[styles.actionSub, { color: colors.background, opacity: 0.7 }]}>Add to next month's budget</Text>
-                              </View>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.closeBtnBg, borderWidth: 1, borderColor: colors.cardBorder }]} onPress={() => handleStep1Surplus(0)}>
-                              <Trash2 color={colors.textPrimary} size={20} />
-                              <View style={styles.actionTextContainer}>
-                                <Text style={[styles.actionTitle, { color: colors.textPrimary }]}>Discard</Text>
-                                <Text style={[styles.actionSub, { color: colors.textSecondary }]}>Start fresh with base budget</Text>
-                              </View>
-                            </TouchableOpacity>
-                          </View>
-                        </>
-                      )}
-                      {data?.isReviewMode && (
-                        <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 12, color: colors.textTertiary, textAlign: 'center', marginTop: 16, marginBottom: 8, paddingHorizontal: 16 }}>
-                          Viewing historical insights. Budgets and rollovers cannot be modified from this view.
-                        </Text>
-                      )}
-                    </View>
+                  {data?.isReviewMode && (
+                    <Text style={[styles.disclaimerText, { color: colors.textTertiary }]}>
+                      Viewing historical insights. Budgets and rollovers cannot be modified from this view.
+                    </Text>
                   )}
-
-                  {step === 2 && !data?.isReviewMode && (
-                    <View style={styles.stepContainer}>
-                      {isOverspent && (
-                        <View style={[styles.deficitNotice, { backgroundColor: colors.danger + '15' }]}>
-                          <AlertCircle color={colors.danger} size={20} />
-                          <Text style={[styles.deficitNoticeText, { color: colors.danger }]}>
-                            You overspent by PKR {Math.abs(remaining).toLocaleString()} last month.
-                          </Text>
-                        </View>
-                      )}
-                      <Text style={[styles.promptText, { color: colors.textPrimary }]}>Use the same budget for next month or set a new one?</Text>
-                      <View style={styles.actionGrid}>
-                        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.success }]} onPress={handleKeepSame}>
-                          <CheckCircle2 color={colors.background} size={20} />
-                          <View style={styles.actionTextContainer}>
-                            <Text style={[styles.actionTitle, { color: colors.background }]}>Keep Same</Text>
-                            <Text style={[styles.actionSub, { color: colors.background, opacity: 0.7 }]}>Use existing base budget</Text>
-                          </View>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.closeBtnBg, borderWidth: 1, borderColor: colors.cardBorder }]} onPress={handleUpdate}>
-                          <SettingsIcon color={colors.textPrimary} size={20} />
-                          <View style={styles.actionTextContainer}>
-                            <Text style={[styles.actionTitle, { color: colors.textPrimary }]}>Update</Text>
-                            <Text style={[styles.actionSub, { color: colors.textSecondary }]}>Change base budget allocation</Text>
-                          </View>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-
-                  {step === 3 && !data?.isReviewMode && (
-                    <View style={styles.stepContainer}>
-                      <Text style={[styles.promptText, { color: colors.textPrimary }]}>Set your new base budget for the month</Text>
-                      <View style={[styles.budgetMainCard, { backgroundColor: colors.innerCardBg, borderColor: colors.divider }]}>
-                        <View style={styles.allocationHeader}>
-                          <Text style={[styles.allocationLabel, { color: colors.textTertiary }]}>BASE MONTHLY BUDGET</Text>
-                        </View>
-                        <View style={[styles.totalInputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
-                          <View style={styles.totalInputRow}>
-                            <Text style={[styles.totalCurrency, { color: colors.accent }]}>PKR</Text>
-                            <TextInput
-                              style={[styles.totalInput, { color: colors.textPrimary }]}
-                              keyboardType="numeric"
-                              value={localTotal.toString()}
-                              onChangeText={(val) => setLocalTotal(parseInt(val) || 0)}
-                            />
-                            <Pencil size={20} color={colors.accent} style={{ marginLeft: 12 }} />
-                          </View>
-                        </View>
-                      </View>
-                      <TouchableOpacity
-                        style={[styles.mainSaveButton, { backgroundColor: colors.saveBtnBg, opacity: localTotal > 0 ? 1 : 0.6 }]}
-                        onPress={handleFinalSave}
-                        disabled={localTotal <= 0}
-                      >
-                        <Text style={[styles.mainSaveText, { color: colors.saveBtnText }]}>Save & Allocate Categories</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </>
+                </View>
               )}
-            </KeyboardAwareScrollView>
-          </LinearGradient>
-        </View>
-      </View>
+
+              {step === 2 && !data?.isReviewMode && (
+                <View style={styles.stepContainer}>
+                  {isOverspent && (
+                    <View style={[styles.deficitNotice, { backgroundColor: colors.danger + '15' }]}>
+                      <AlertCircle color={colors.danger} size={20} />
+                      <Text style={[styles.deficitNoticeText, { color: colors.danger }]}>
+                        You overspent by PKR {Math.abs(remaining).toLocaleString()} last month.
+                      </Text>
+                    </View>
+                  )}
+                  <Text style={[styles.promptText, { color: colors.textPrimary }]}>Use the same budget for next month or set a new one?</Text>
+                  <View style={styles.actionGrid}>
+                    <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.success }]} onPress={handleKeepSame}>
+                      <CheckCircle2 color={colors.background} size={20} />
+                      <View style={styles.actionTextContainer}>
+                        <Text style={[styles.actionTitle, { color: colors.background }]}>Keep Same</Text>
+                        <Text style={[styles.actionSub, { color: colors.background, opacity: 0.7 }]}>Use existing base budget</Text>
+                      </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.closeBtnBg, borderWidth: 1, borderColor: colors.cardBorder }]} onPress={handleUpdate}>
+                      <SettingsIcon color={colors.textPrimary} size={20} />
+                      <View style={styles.actionTextContainer}>
+                        <Text style={[styles.actionTitle, { color: colors.textPrimary }]}>Update</Text>
+                        <Text style={[styles.actionSub, { color: colors.textSecondary }]}>Change base budget allocation</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              {step === 3 && !data?.isReviewMode && (
+                <View style={styles.stepContainer}>
+                  <Text style={[styles.promptText, { color: colors.textPrimary }]}>Set your new base budget for the month</Text>
+                  <View style={[styles.budgetMainCard, { backgroundColor: colors.innerCardBg, borderColor: colors.divider }]}>
+                    <View style={styles.allocationHeader}>
+                      <Text style={[styles.allocationLabel, { color: colors.textTertiary }]}>BASE MONTHLY BUDGET</Text>
+                    </View>
+                    <View style={[styles.totalInputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+                      <View style={styles.totalInputRow}>
+                        <Text style={[styles.totalCurrency, { color: colors.accent }]}>PKR</Text>
+                        <TextInput
+                          style={[styles.totalInput, { color: colors.textPrimary }]}
+                          keyboardType="numeric"
+                          value={localTotal.toString()}
+                          onChangeText={(val) => setLocalTotal(parseInt(val) || 0)}
+                        />
+                        <Pencil size={20} color={colors.accent} style={{ marginLeft: 12 }} />
+                      </View>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.mainSaveButton, { backgroundColor: colors.saveBtnBg, opacity: localTotal > 0 ? 1 : 0.6 }]}
+                    onPress={handleFinalSave}
+                    disabled={localTotal <= 0}
+                  >
+                    <Text style={[styles.mainSaveText, { color: colors.saveBtnText }]}>Save & Allocate Categories</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </>
+          )}
+        </KeyboardAwareScrollView>
+      </SafeAreaView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16 },
-  container: { width: '100%', maxHeight: '95%' },
-  modalContent: { borderRadius: 32, padding: 20, borderWidth: 1, flexShrink: 1 },
-  header: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  headerTitle: { fontFamily: 'Outfit_700Bold', fontSize: 16 },
+  fullScreen: { flex: 1 },
   
-  statusBanner: { padding: 10, borderRadius: 16, borderWidth: 1, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  bannerLeft: { flex: 1 },
-  statusLabel: { fontFamily: 'Outfit_800ExtraBold', fontSize: 18, letterSpacing: 1 },
-  statusThreshold: { fontFamily: 'Inter_500Medium', fontSize: 10, marginTop: 2 },
-  
-  statsOverview: { flexDirection: 'row', borderRadius: 16, padding: 12, marginBottom: 12, borderWidth: 1, justifyContent: 'space-between', alignItems: 'center' },
-  statBox: { flex: 1, alignItems: 'center' },
-  statBoxLabel: { fontFamily: 'Inter_700Bold', fontSize: 8, letterSpacing: 0.5, marginBottom: 2 },
-  statBoxValue: { fontFamily: 'Outfit_600SemiBold', fontSize: 13 },
-  statBoxDivider: { width: 1, height: 16 },
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    paddingHorizontal: 16, 
+    paddingVertical: 8 
+  },
+  closeBtn: { 
+    width: 32, 
+    height: 32, 
+    borderRadius: 16, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+  monthNavRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 12 
+  },
+  monthNavBtn: { 
+    width: 32, 
+    height: 32, 
+    borderRadius: 10, 
+    borderWidth: 1, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+  monthTitleBlock: { alignItems: 'center' },
+  monthTitle: { fontFamily: 'Outfit_800ExtraBold', fontSize: 18 },
+  yearTitle: { fontFamily: 'Inter_500Medium', fontSize: 10, marginTop: -1 },
 
-  insightsSection: { marginBottom: 12, borderRadius: 20, padding: 12, borderWidth: 1 },
-  insightHeader: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1.5, marginBottom: 10 },
-  insightRow: { flexDirection: 'row', gap: 10, marginBottom: 8 },
-  insightIconCircle: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  insightContent: { flex: 1 },
-  insightTitle: { fontFamily: 'Outfit_600SemiBold', fontSize: 13 },
-  insightValue: { fontFamily: 'Inter_500Medium', fontSize: 11, lineHeight: 16, marginTop: 1 },
+  scrollContent: { paddingHorizontal: 16, paddingBottom: 20 },
+
+  // Empty state
+  emptyContainer: { alignItems: 'center', paddingVertical: 40 },
+  emptyTitle: { fontFamily: 'Outfit_600SemiBold', fontSize: 16, marginTop: 12, textAlign: 'center' },
+  emptySub: { fontFamily: 'Inter_500Medium', fontSize: 12, marginTop: 6, textAlign: 'center', paddingHorizontal: 20 },
+
+  // Budget summary card
+  budgetCard: { 
+    borderRadius: 16, 
+    padding: 14, 
+    borderWidth: 1, 
+    marginBottom: 14 
+  },
+  budgetCardRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 10 
+  },
+  budgetStatBlock: { flex: 1, alignItems: 'center' },
+  budgetStatLabel: { fontFamily: 'Inter_700Bold', fontSize: 8, letterSpacing: 0.8, marginBottom: 2 },
+  budgetStatValue: { fontFamily: 'Outfit_600SemiBold', fontSize: 13 },
+  budgetStatDivider: { width: 1, height: 20, opacity: 0.3 },
+  budgetProgressBg: { height: 3, borderRadius: 2, overflow: 'hidden' },
+  budgetProgressFill: { height: '100%', borderRadius: 2 },
+
+  // Section
+  sectionBlock: { marginBottom: 12 },
+  sectionLabel: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1.5, marginBottom: 6 },
+
+  // Category breakdown
+  breakdownCard: { borderRadius: 14, paddingHorizontal: 10, paddingVertical: 2, borderWidth: 1 },
+  breakdownRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6 },
+  breakdownIconBox: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
+  breakdownInfo: { flex: 1, marginRight: 8 },
+  breakdownCatName: { fontFamily: 'Outfit_600SemiBold', fontSize: 12, marginBottom: 3 },
+  breakdownBarRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  breakdownBarBg: { flex: 1, height: 3, borderRadius: 2, overflow: 'hidden' },
+  breakdownBarFill: { height: '100%', borderRadius: 2 },
+  breakdownBarLabel: { fontFamily: 'Inter_700Bold', fontSize: 9, minWidth: 28, textAlign: 'right' },
+  breakdownAmount: { fontFamily: 'Outfit_600SemiBold', fontSize: 11 },
+
+  // Insights 2x2 grid
+  insightsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  insightCell: { 
+    width: '48%', 
+    borderRadius: 14, 
+    padding: 10, 
+    borderWidth: 1,
+    alignItems: 'flex-start'
+  },
+  insightIconCircle: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  insightTitle: { fontFamily: 'Inter_500Medium', fontSize: 10, marginBottom: 2 },
+  insightValue: { fontFamily: 'Outfit_600SemiBold', fontSize: 14 },
+  insightSub: { fontFamily: 'Inter_500Medium', fontSize: 9, marginTop: 1, lineHeight: 12 },
   
-  stepContainer: { marginTop: 0 },
-  promptText: { fontFamily: 'Outfit_600SemiBold', fontSize: 14, lineHeight: 20, marginBottom: 8, textAlign: 'center' },
+  // Steps
+  stepContainer: { marginTop: 2 },
+  promptText: { fontFamily: 'Outfit_600SemiBold', fontSize: 13, lineHeight: 18, marginBottom: 10, textAlign: 'center' },
   
   actionGrid: { gap: 8 },
-  actionBtn: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 20, gap: 10 },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 16, gap: 10 },
   actionTextContainer: { flex: 1 },
-  actionTitle: { fontFamily: 'Outfit_800ExtraBold', fontSize: 14 },
+  actionTitle: { fontFamily: 'Outfit_800ExtraBold', fontSize: 13 },
   actionSub: { fontFamily: 'Inter_500Medium', fontSize: 9, marginTop: 1 },
   
-  deficitNotice: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 20, padding: 12, borderRadius: 16 },
-  deficitNoticeText: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
+  deficitNotice: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 12, padding: 10, borderRadius: 12 },
+  deficitNoticeText: { fontFamily: 'Inter_700Bold', fontSize: 12 },
 
-  budgetMainCard: { padding: 16, borderRadius: 24, borderWidth: 1, marginBottom: 20 },
-  allocationHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  disclaimerText: { fontFamily: 'Inter_500Medium', fontSize: 10, textAlign: 'center', marginTop: 12, paddingHorizontal: 12 },
+
+  budgetMainCard: { padding: 12, borderRadius: 16, borderWidth: 1, marginBottom: 14 },
+  allocationHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   allocationLabel: { fontSize: 9, fontFamily: 'Inter_700Bold', letterSpacing: 1.5 },
-  totalInputWrapper: { borderRadius: 20, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1, minHeight: 64, justifyContent: 'center' },
+  totalInputWrapper: { borderRadius: 16, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, minHeight: 52, justifyContent: 'center' },
   totalInputRow: { flexDirection: 'row', alignItems: 'center' },
-  totalCurrency: { fontSize: 16, fontFamily: 'Outfit_600SemiBold', marginRight: 12 },
-  totalInput: { fontSize: 20, fontFamily: 'Outfit_600SemiBold', flex: 1, height: 40, padding: 0, textAlignVertical: 'center' },
+  totalCurrency: { fontSize: 14, fontFamily: 'Outfit_600SemiBold', marginRight: 10 },
+  totalInput: { fontSize: 18, fontFamily: 'Outfit_600SemiBold', flex: 1, height: 36, padding: 0, textAlignVertical: 'center' },
   
-  mainSaveButton: { borderRadius: 20, height: 56, alignItems: 'center', justifyContent: 'center', marginTop: 8, marginBottom: 16 },
-  mainSaveText: { fontFamily: 'Outfit_800ExtraBold', fontSize: 16 }
+  mainSaveButton: { borderRadius: 16, height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 6, marginBottom: 12 },
+  mainSaveText: { fontFamily: 'Outfit_800ExtraBold', fontSize: 14 }
 });
