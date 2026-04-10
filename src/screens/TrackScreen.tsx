@@ -230,7 +230,10 @@ export default function TrackScreen() {
               value={amountStr}
               onChangeText={setAmountStr}
               returnKeyType="done"
-              onSubmitEditing={() => Keyboard.dismiss()}
+              onSubmitEditing={() => {
+                Keyboard.dismiss();
+              }}
+              blurOnSubmit={true}
             />
           </View>
 
