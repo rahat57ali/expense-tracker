@@ -94,21 +94,31 @@ export default function BillsScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} scrollEventThrottle={16}>
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <Image source={require('../../assets/logo.png')} style={styles.logoSmall} resizeMode="contain" />
-            <Text style={[styles.brandNameSmall, { color: colors.textTertiary }]}>LEDGR</Text>
-          </View>
-          <View style={styles.titleRow}>
-            <Text style={[styles.title, { color: colors.textPrimary }]}>Bills</Text>
+            <View style={styles.headerTopLeft}>
+              <Image source={require('../../assets/logo.png')} style={styles.logoSmall} resizeMode="contain" />
+              <Text style={[styles.brandNameSmall, { color: colors.textTertiary }]}>LEDGR</Text>
+            </View>
             <View style={styles.headerRight}>
-              <View style={styles.summaryBox}>
-                <Text style={[styles.summaryLabel, { color: colors.textTertiary }]}>COMMITTED</Text>
-                <Text style={[styles.summaryValue, { color: colors.accent }]}>PKR {totalCommitted.toLocaleString()}</Text>
-              </View>
-              <TouchableOpacity style={[styles.addButton, { backgroundColor: colors.purple }]} onPress={() => setIsModalVisible(true)}>
-                <Plus color="#FFFFFF" size={18} />
-              </TouchableOpacity>
+              <Text style={[styles.headerTitleSmall, { color: colors.textPrimary }]}>Bills</Text>
             </View>
           </View>
+        </View>
+
+        <View style={styles.summaryCardContainer}>
+          <LinearGradient colors={[colors.gradientStart, colors.gradientEnd]} style={[styles.summaryCard, { borderColor: colors.cardBorder }]}>
+            <View style={styles.summaryCardRow}>
+              <View>
+                <Text style={[styles.summaryCardLabel, { color: colors.textSecondary }]}>COMMITTED THIS MONTH</Text>
+                <Text style={[styles.summaryCardValue, { color: colors.textPrimary }]}>PKR {totalCommitted.toLocaleString()}</Text>
+              </View>
+              <View style={[styles.summaryIconBox, { backgroundColor: `${colors.purple}15` }]}>
+                <CreditCard color={colors.purple} size={24} />
+              </View>
+            </View>
+            <View style={[styles.summaryProgressBg, { backgroundColor: 'rgba(0,0,0,0.1)' }]}>
+              <View style={[styles.summaryProgressFill, { width: '100%', backgroundColor: colors.purple }]} />
+            </View>
+          </LinearGradient>
         </View>
         <TouchableOpacity activeOpacity={1} onPress={() => setDeletingBillId(null)} style={{ flex: 1 }}>
           {bills.length === 0 ? (
@@ -260,26 +270,52 @@ export default function BillsScreen() {
         onClose={() => setIsPayModalVisible(false)}
         onConfirm={handleConfirmPayment}
       />
+      <TouchableOpacity 
+        style={[styles.fab, { backgroundColor: colors.purple, shadowColor: colors.purple }]}
+        onPress={() => setIsModalVisible(true)}
+        activeOpacity={0.8}
+      >
+        <Plus color="#FFFFFF" size={24} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 110, paddingTop: 8 },
-  header: { marginBottom: 20 },
-  headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  header: { marginBottom: 16 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  headerTopLeft: { flexDirection: 'row', alignItems: 'center' },
+  headerRight: { flexDirection: 'row', alignItems: 'center' },
+  headerDivider: { width: 1, height: 12, marginHorizontal: 12, opacity: 0.3 },
+  headerTitleSmall: { fontFamily: 'Outfit_600SemiBold', fontSize: 13, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.8 },
   logoSmall: { width: 18, height: 18, marginRight: 10 },
   brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', fontSize: 10, letterSpacing: 2 },
-  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 32, fontFamily: 'Outfit_800ExtraBold' },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  summaryBox: { alignItems: 'flex-end' },
-  summaryLabel: { fontSize: 8, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
-  summaryValue: { fontSize: 13, fontFamily: 'Outfit_600SemiBold', marginTop: -2 },
-  addButton: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', elevation: 2 },
-  subtitle: { fontSize: 13, fontFamily: 'Inter_500Medium', marginTop: 4 },
+  
+  summaryCardContainer: { paddingHorizontal: 20, marginBottom: 20 },
+  summaryCard: { padding: 20, borderRadius: 24, borderWidth: 1 },
+  summaryCardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  summaryCardLabel: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1, marginBottom: 4 },
+  summaryCardValue: { fontSize: 26, fontFamily: 'Outfit_600SemiBold' },
+  summaryIconBox: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  summaryProgressBg: { height: 4, borderRadius: 2, overflow: 'hidden' },
+  summaryProgressFill: { height: '100%', borderRadius: 2 },
 
+  fab: { 
+    position: 'absolute', 
+    right: 20, 
+    bottom: 100, 
+    width: 56, 
+    height: 56, 
+    borderRadius: 28, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8
+  },
+  subtitle: { fontSize: 13, fontFamily: 'Inter_500Medium', marginTop: 4 },
   emptyState: { alignItems: 'center', marginTop: 60, paddingHorizontal: 40 },
   emptyTitle: { fontSize: 18, fontFamily: 'Outfit_600SemiBold', marginBottom: 8 },
   emptySub: { fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 20 },

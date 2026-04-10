@@ -99,29 +99,8 @@ export default function SummaryScreen() {
               <Image source={require('../../assets/logo.png')} style={styles.logoSmall} resizeMode="contain" />
               <Text style={[styles.brandNameSmall, { color: colors.textTertiary }]}>LEDGR</Text>
             </View>
-            {isInsightsAvailable && (
-              <TouchableOpacity 
-                style={[styles.headerActionBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}
-                onPress={() => showMonthSummary(monthStr)}
-              >
-                <PieChart size={18} color={colors.accent} />
-              </TouchableOpacity>
-            )}
-          </View>
-          
-          <View style={styles.titleRow}>
-            <Text style={[styles.title, { color: colors.textPrimary }]}>Summary</Text>
-            
-            <View style={[styles.monthPicker, { borderColor: colors.cardBorderSubtle, backgroundColor: colors.surface }]}>
-              <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.pickerBtnSmall}>
-                <ChevronLeft size={16} color={colors.accent} />
-              </TouchableOpacity>
-              <View style={styles.monthLabelSmall}>
-                <Text style={[styles.monthTextSmall, { color: colors.textPrimary }]}>{format(new Date(selectedYear, selectedMonth), 'MMM yy')}</Text>
-              </View>
-              <TouchableOpacity onPress={() => changeMonth(1)} style={styles.pickerBtnSmall}>
-                <ChevronRight size={16} color={colors.accent} />
-              </TouchableOpacity>
+            <View style={styles.headerRight}>
+              <Text style={[styles.headerTitleSmall, { color: colors.textPrimary }]}>Summary</Text>
             </View>
           </View>
         </View>
@@ -130,7 +109,34 @@ export default function SummaryScreen() {
           <LinearGradient colors={[colors.gradientStart, colors.gradientEnd]} style={[styles.totalCard, { borderColor: colors.cardBorder }]}>
             <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>TOTAL SPENT</Text>
             <Text style={[styles.totalValue, { color: colors.textPrimary }]}>PKR {totalMonthly.toLocaleString()}</Text>
-            <View style={[styles.progressBarBg, { backgroundColor: colors.divider }]}>
+
+            <View style={styles.cardControlsRow}>
+              <View style={[styles.monthPicker, { borderColor: `${colors.accent}40`, backgroundColor: 'rgba(0,0,0,0.15)' }]}>
+                <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.pickerBtn}>
+                  <ChevronLeft size={16} color={colors.textPrimary} />
+                </TouchableOpacity>
+                <View style={styles.monthLabelBox}>
+                  <Text style={[styles.monthLabelText, { color: colors.textPrimary }]}>
+                    {format(new Date(selectedYear, selectedMonth), 'MMM yy')}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => changeMonth(1)} style={styles.pickerBtn}>
+                  <ChevronRight size={16} color={colors.textPrimary} />
+                </TouchableOpacity>
+              </View>
+
+              {isInsightsAvailable && (
+                  <TouchableOpacity 
+                    style={[styles.summaryActionBtn, { backgroundColor: colors.accent, shadowColor: colors.accent }]}
+                    onPress={() => showMonthSummary(monthStr)}
+                  >
+                    <PieChart size={14} color={colors.background} />
+                    <Text style={[styles.summaryActionText, { color: colors.background }]}>INSIGHTS</Text>
+                  </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={[styles.progressBarBg, { backgroundColor: 'rgba(0,0,0,0.1)' }]}>
               <View style={[styles.progressBarFill, { width: '100%', backgroundColor: colors.accent }]} />
             </View>
           </LinearGradient>
@@ -192,30 +198,42 @@ export default function SummaryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { marginBottom: 20 },
-  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  header: { marginBottom: 16 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   headerTopLeft: { flexDirection: 'row', alignItems: 'center' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerDivider: { width: 1, height: 12, marginHorizontal: 12, opacity: 0.3 },
+  headerTitleSmall: { fontFamily: 'Outfit_600SemiBold', fontSize: 13, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.8 },
   logoSmall: { width: 18, height: 18, marginRight: 10 },
   brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', fontSize: 10, letterSpacing: 2 },
-  headerActionBtn: { width: 36, height: 36, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  
-  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  title: { fontFamily: 'Outfit_800ExtraBold', fontSize: 32 },
-  
-  monthPicker: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1, padding: 2 },
-  pickerBtnSmall: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
-  monthLabelSmall: { paddingHorizontal: 4 },
-  monthTextSmall: { fontFamily: 'Outfit_600SemiBold', fontSize: 13, textTransform: 'uppercase' },
 
-  monthLabel: { paddingHorizontal: 10 },
-  monthText: { fontFamily: 'Inter_500Medium', fontSize: 16 },
+  totalCardContainer: { paddingHorizontal: 20, marginBottom: 20 },
+  totalCard: { padding: 20, borderRadius: 20, borderWidth: 1 },
+  totalLabel: { fontSize: 9, fontFamily: 'Inter_700Bold', letterSpacing: 1, marginBottom: 4 },
+  totalValue: { fontSize: 28, fontFamily: 'Outfit_600SemiBold', marginBottom: 16 },
 
-  totalCardContainer: { paddingHorizontal: 24, marginBottom: 24 },
-  totalCard: { padding: 24, borderRadius: 24, borderWidth: 1 },
-  totalLabel: { fontSize: 12, fontFamily: 'Inter_700Bold', letterSpacing: 1, marginBottom: 8 },
-  totalValue: { fontSize: 32, fontFamily: 'Outfit_600SemiBold' },
-  progressBarBg: { height: 6, borderRadius: 3, marginTop: 16, overflow: 'hidden' },
-  progressBarFill: { height: '100%', borderRadius: 3 },
+  cardControlsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  monthPicker: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1, height: 38, paddingHorizontal: 2 },
+  pickerBtn: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
+  monthLabelBox: { paddingHorizontal: 6 },
+  monthLabelText: { fontFamily: 'Outfit_600SemiBold', fontSize: 13, textTransform: 'uppercase' },
+
+  summaryActionBtn: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: 16, 
+    height: 38,
+    borderRadius: 12,
+    gap: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 4
+  },
+  summaryActionText: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.5 },
+
+  progressBarBg: { height: 4, borderRadius: 2, overflow: 'hidden' },
+  progressBarFill: { height: '100%', borderRadius: 2 },
 
   scrollContent: { paddingHorizontal: 20, paddingBottom: 110, paddingTop: 8 },
   categoryContainer: { borderRadius: 20, marginBottom: 12, overflow: 'hidden', borderWidth: 1 },

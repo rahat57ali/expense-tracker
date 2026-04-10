@@ -73,10 +73,12 @@ export default function CalendarScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <Image source={require('../../assets/logo.png')} style={styles.logoSmall} resizeMode="contain" />
-            <Text style={[styles.brandNameSmall, { color: colors.textTertiary }]}>LEDGR</Text>
+            <View style={styles.headerTopLeft}>
+              <Image source={require('../../assets/logo.png')} style={styles.logoSmall} resizeMode="contain" />
+              <Text style={[styles.brandNameSmall, { color: colors.textTertiary }]}>LEDGR</Text>
+            </View>
+            <Text style={[styles.headerTitleSmall, { color: colors.textPrimary }]}>Calendar</Text>
           </View>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>Calendar</Text>
         </View>
 
         <View style={[styles.calendarContainer, { borderBottomColor: colors.divider }]}>
@@ -176,11 +178,13 @@ export default function CalendarScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { marginBottom: 20 },
-  headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  header: { marginBottom: 12 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  headerTopLeft: { flexDirection: 'row', alignItems: 'center' },
+  headerDivider: { width: 1, height: 12, marginHorizontal: 12, opacity: 0.3 },
+  headerTitleSmall: { fontFamily: 'Outfit_600SemiBold', fontSize: 13, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.8 },
   logoSmall: { width: 18, height: 18, marginRight: 10 },
   brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', fontSize: 10, letterSpacing: 2 },
-  title: { fontFamily: 'Outfit_800ExtraBold', fontSize: 32 },
   subtitle: { fontFamily: 'Inter_500Medium', fontSize: 13, marginTop: 2 },
   
   calendarContainer: { marginHorizontal: 16, borderRadius: 24, paddingBottom: 16, borderBottomWidth: 1 },
