@@ -306,6 +306,7 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
           showsVerticalScrollIndicator={false} 
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          scrollEnabled={step === 3}
         >
           {prevMonthExpenses.length === 0 ? (
             <View style={styles.emptyContainer}>
@@ -395,7 +396,7 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
                           return (
                             <View key={item.category} style={[styles.breakdownRow, index < categoryBreakdown.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.divider + '30' }]}>
                               <View style={[styles.breakdownIconBox, { backgroundColor: `${catColor}15` }]}>
-                                <Icon color={catColor} size={14} />
+                                <Icon color={catColor} size={18} />
                               </View>
                               <View style={styles.breakdownInfo}>
                                 <Text style={[styles.breakdownCatName, { color: colors.textPrimary }]}>{item.category}</Text>
@@ -409,7 +410,7 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
                                 </View>
                               </View>
                               <Text style={[styles.breakdownAmount, { color: colors.textPrimary }]}>
-                                {item.amount.toLocaleString()}
+                                PKR {item.amount.toLocaleString()}
                               </Text>
                             </View>
                           );
@@ -428,12 +429,17 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
                       <View style={styles.insightsGrid}>
                         {insights.map((insight) => (
                           <View key={insight.id} style={[styles.insightCell, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}>
-                            <View style={[styles.insightIconCircle, { backgroundColor: `${insight.color}15` }]}>
-                              <insight.icon color={insight.color} size={14} />
+                            <View style={[styles.insightAccent, { backgroundColor: insight.color }]} />
+                            <View style={styles.insightCellInner}>
+                              <View style={styles.insightTopRow}>
+                                <Text style={[styles.insightTitle, { color: colors.textTertiary }]}>{insight.title}</Text>
+                                <View style={[styles.insightIconCircle, { backgroundColor: `${insight.color}18` }]}>
+                                  <insight.icon color={insight.color} size={12} />
+                                </View>
+                              </View>
+                              <Text style={[styles.insightValue, { color: colors.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{insight.value}</Text>
+                              <Text style={[styles.insightSub, { color: colors.textTertiary }]}>{insight.sub}</Text>
                             </View>
-                            <Text style={[styles.insightTitle, { color: colors.textPrimary }]}>{insight.title}</Text>
-                            <Text style={[styles.insightValue, { color: insight.color }]}>{insight.value}</Text>
-                            <Text style={[styles.insightSub, { color: colors.textTertiary }]}>{insight.sub}</Text>
                           </View>
                         ))}
                       </View>
@@ -572,7 +578,7 @@ const styles = StyleSheet.create({
   monthTitle: { fontFamily: 'Outfit_800ExtraBold', fontSize: 18 },
   yearTitle: { fontFamily: 'Inter_500Medium', fontSize: 10, marginTop: -1 },
 
-  scrollContent: { paddingHorizontal: 16, paddingBottom: 20 },
+  scrollContent: { paddingHorizontal: 16, paddingBottom: 16, flexGrow: 1 },
 
   // Empty state
   emptyContainer: { alignItems: 'center', paddingVertical: 40 },
@@ -584,7 +590,7 @@ const styles = StyleSheet.create({
     borderRadius: 16, 
     padding: 14, 
     borderWidth: 1, 
-    marginBottom: 14 
+    marginBottom: 12 
   },
   budgetCardRow: { 
     flexDirection: 'row', 
@@ -593,41 +599,49 @@ const styles = StyleSheet.create({
     marginBottom: 10 
   },
   budgetStatBlock: { flex: 1, alignItems: 'center' },
-  budgetStatLabel: { fontFamily: 'Inter_700Bold', fontSize: 8, letterSpacing: 0.8, marginBottom: 2 },
-  budgetStatValue: { fontFamily: 'Outfit_600SemiBold', fontSize: 13 },
-  budgetStatDivider: { width: 1, height: 20, opacity: 0.3 },
+  budgetStatLabel: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 0.8, marginBottom: 2 },
+  budgetStatValue: { fontFamily: 'Outfit_600SemiBold', fontSize: 14 },
+  budgetStatDivider: { width: 1, height: 22, opacity: 0.3 },
   budgetProgressBg: { height: 3, borderRadius: 2, overflow: 'hidden' },
   budgetProgressFill: { height: '100%', borderRadius: 2 },
 
   // Section
-  sectionBlock: { marginBottom: 12 },
-  sectionLabel: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1.5, marginBottom: 6 },
+  sectionBlock: { marginBottom: 10 },
+  sectionLabel: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.5, marginBottom: 6, marginLeft: 2 },
 
-  // Category breakdown
-  breakdownCard: { borderRadius: 14, paddingHorizontal: 10, paddingVertical: 2, borderWidth: 1 },
-  breakdownRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6 },
-  breakdownIconBox: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
-  breakdownInfo: { flex: 1, marginRight: 8 },
-  breakdownCatName: { fontFamily: 'Outfit_600SemiBold', fontSize: 12, marginBottom: 3 },
-  breakdownBarRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  breakdownBarBg: { flex: 1, height: 3, borderRadius: 2, overflow: 'hidden' },
-  breakdownBarFill: { height: '100%', borderRadius: 2 },
-  breakdownBarLabel: { fontFamily: 'Inter_700Bold', fontSize: 9, minWidth: 28, textAlign: 'right' },
-  breakdownAmount: { fontFamily: 'Outfit_600SemiBold', fontSize: 11 },
+  // Category breakdown — readable, properly sized
+  breakdownCard: { borderRadius: 16, paddingHorizontal: 12, paddingVertical: 4, borderWidth: 1 },
+  breakdownRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
+  breakdownIconBox: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  breakdownInfo: { flex: 1, marginRight: 10 },
+  breakdownCatName: { fontFamily: 'Outfit_600SemiBold', fontSize: 14, marginBottom: 4 },
+  breakdownBarRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  breakdownBarBg: { flex: 1, height: 5, borderRadius: 3, overflow: 'hidden' },
+  breakdownBarFill: { height: '100%', borderRadius: 3 },
+  breakdownBarLabel: { fontFamily: 'Inter_700Bold', fontSize: 10, minWidth: 30, textAlign: 'right' },
+  breakdownAmount: { fontFamily: 'Outfit_700Bold', fontSize: 14 },
 
-  // Insights 2x2 grid
+  // Insights 2x2 grid — premium card layout
   insightsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   insightCell: { 
     width: '48%', 
     borderRadius: 14, 
-    padding: 10, 
     borderWidth: 1,
-    alignItems: 'flex-start'
+    overflow: 'hidden',
+    flexDirection: 'row'
   },
-  insightIconCircle: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  insightTitle: { fontFamily: 'Inter_500Medium', fontSize: 10, marginBottom: 2 },
-  insightValue: { fontFamily: 'Outfit_600SemiBold', fontSize: 14 },
-  insightSub: { fontFamily: 'Inter_500Medium', fontSize: 9, marginTop: 1, lineHeight: 12 },
+  insightAccent: { width: 4 },
+  insightCellInner: { 
+    flex: 1, 
+    paddingVertical: 12, 
+    paddingHorizontal: 11, 
+    justifyContent: 'center' 
+  },
+  insightTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  insightIconCircle: { width: 22, height: 22, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
+  insightTitle: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 0.5, textTransform: 'uppercase' },
+  insightValue: { fontFamily: 'Outfit_800ExtraBold', fontSize: 19, marginBottom: 2 },
+  insightSub: { fontFamily: 'Inter_500Medium', fontSize: 10, lineHeight: 14 },
   
   // Steps
   stepContainer: { marginTop: 2 },
@@ -646,7 +660,7 @@ const styles = StyleSheet.create({
 
   budgetMainCard: { padding: 12, borderRadius: 16, borderWidth: 1, marginBottom: 14 },
   allocationHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  allocationLabel: { fontSize: 9, fontFamily: 'Inter_700Bold', letterSpacing: 1.5 },
+  allocationLabel: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.5 },
   totalInputWrapper: { borderRadius: 16, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, minHeight: 52, justifyContent: 'center' },
   totalInputRow: { flexDirection: 'row', alignItems: 'center' },
   totalCurrency: { fontSize: 14, fontFamily: 'Outfit_600SemiBold', marginRight: 10 },
