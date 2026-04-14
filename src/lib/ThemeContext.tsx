@@ -181,7 +181,7 @@ const LIGHT_COLORS: ThemeColors = {
   iconMuted: '#6B7280',
 
   gradientStart: '#FFFFFF',
-  gradientEnd: '#E0F2FE', // stronger engaging tint for cards
+  gradientEnd: '#E0F2FE',
 
   closeBtnBg: '#F3F4F6',
   pillBg: '#F3F4F6',
