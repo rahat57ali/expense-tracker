@@ -306,7 +306,6 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
           showsVerticalScrollIndicator={false} 
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
-          scrollEnabled={step === 3}
         >
           {prevMonthExpenses.length === 0 ? (
             <View style={styles.emptyContainer}>
