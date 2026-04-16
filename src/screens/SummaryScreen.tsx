@@ -3,7 +3,8 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, LayoutAnimation, 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLedgr } from '../lib/LedgrContext';
 import { useThemeColors } from '../lib/ThemeContext';
-import { ExpenseCategory } from '../lib/store';
+import { ExpenseCategory, Expense } from '../lib/store';
+import EditExpenseModal from '../components/EditExpenseModal';
 import { 
   Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, 
   ChevronDown, ChevronUp, Calendar, ShoppingBasket, PieChart, 
@@ -43,6 +44,8 @@ export default function SummaryScreen() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [expandedCategory, setExpandedCategory] = useState<ExpenseCategory | null>(null);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 
   const monthNames = ["January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
@@ -181,13 +184,21 @@ export default function SummaryScreen() {
                 {isExpanded && (
                   <View style={[styles.detailsList, { backgroundColor: colors.innerCardBg }]}>
                     {data.items.map((item, idx) => (
-                      <View key={item.id} style={[styles.detailItem, { borderBottomColor: colors.divider }, idx === data.items.length - 1 && { borderBottomWidth: 0 }]}>
+                      <TouchableOpacity 
+                        key={item.id} 
+                        style={[styles.detailItem, { borderBottomColor: colors.divider }, idx === data.items.length - 1 && { borderBottomWidth: 0 }]}
+                        onPress={() => {
+                          setEditingExpense(item);
+                          setIsEditModalVisible(true);
+                        }}
+                        activeOpacity={0.7}
+                      >
                         <View style={{ flex: 1 }}>
                           <Text style={[styles.detailName, { color: colors.textSecondary }]}>{item.name}</Text>
                           <Text style={[styles.detailDate, { color: colors.textTertiary }]}>{new Date(item.date).toLocaleDateString()}</Text>
                         </View>
                         <Text style={[styles.detailAmount, { color: colors.textPrimary }]}>PKR {item.amount.toLocaleString()}</Text>
-                      </View>
+                      </TouchableOpacity>
                     ))}
                   </View>
                 )}
@@ -195,7 +206,14 @@ export default function SummaryScreen() {
             );
           })
         )}
+        <View style={{ height: 30 }} />
       </ScrollView>
+
+      <EditExpenseModal
+        visible={isEditModalVisible}
+        onClose={() => setIsEditModalVisible(false)}
+        expense={editingExpense}
+      />
     </SafeAreaView>
   );
 }
