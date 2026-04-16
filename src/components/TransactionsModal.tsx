@@ -271,7 +271,7 @@ export default function TransactionsModal({ visible, onClose, onEditExpense }: T
       </SafeAreaView>
 
       {/* Date Picker Modal */}
-      <Modal visible={isDatePickerVisible} transparent animationType="fade">
+      <Modal visible={isDatePickerVisible} transparent animationType="fade" onRequestClose={() => setIsDatePickerVisible(false)}>
         <View style={[styles.dateOverlay, { backgroundColor: colors.overlay }]}>
           <View style={[styles.dateModalContainer, { backgroundColor: colors.surface, borderColor: colors.cardBorder }]}>
             <Text style={[styles.dateTitle, { color: colors.textPrimary }]}>Select Date Range</Text>

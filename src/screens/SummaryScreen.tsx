@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, LayoutAnimation, Platform, UIManager, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLedgr } from '../lib/LedgrContext';
 import { useThemeColors } from '../lib/ThemeContext';
 import { ExpenseCategory } from '../lib/store';
@@ -39,6 +39,7 @@ const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
 export default function SummaryScreen() {
   const { expenses, isLoaded, showMonthSummary, budgetHistory } = useLedgr();
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [expandedCategory, setExpandedCategory] = useState<ExpenseCategory | null>(null);
@@ -92,7 +93,10 @@ export default function SummaryScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={[styles.header, { backgroundColor: colors.background }]}>
           <View style={styles.headerTop}>
             <View style={styles.headerTopLeft}>
@@ -235,7 +239,7 @@ const styles = StyleSheet.create({
   progressBarBg: { height: 4, borderRadius: 2, overflow: 'hidden' },
   progressBarFill: { height: '100%', borderRadius: 2 },
 
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 110, paddingTop: 8 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
   categoryContainer: { borderRadius: 20, marginBottom: 12, overflow: 'hidden', borderWidth: 1 },
   categoryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
   catLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },

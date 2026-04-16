@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { G, Path, Circle, Text as SvgText } from 'react-native-svg';
 import { useLedgr } from '../lib/LedgrContext';
@@ -35,6 +35,7 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
 export default function DashboardScreen() {
   const { expenses, budget, isLoaded, allCategories } = useLedgr();
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isDailyDetailVisible, setIsDailyDetailVisible] = useState(false);
@@ -112,7 +113,9 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
+        showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.headerTopLeft}>
@@ -370,7 +373,7 @@ export default function DashboardScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 110, paddingTop: 8 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
   header: { marginBottom: 12 },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, width: '100%' },
   headerTopLeft: { flexDirection: 'row', alignItems: 'center' },

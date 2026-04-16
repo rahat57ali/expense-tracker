@@ -258,7 +258,7 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
   const budgetUsage = hasBudget && totalBudget > 0 ? totalSpent / totalBudget : 0;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={false}>
+    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={dismissMonthSummary}>
       <SafeAreaView style={[styles.fullScreen, { backgroundColor: colors.background }]} edges={['top']}>
         {/* Header */}
         <View style={styles.header}>

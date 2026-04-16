@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Calendar } from 'react-native-calendars';
 import { useLedgr } from '../lib/LedgrContext';
 import { format } from 'date-fns';
@@ -23,6 +23,7 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
 export default function CalendarScreen() {
   const { expenses, budget, isLoaded } = useLedgr();
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
@@ -70,7 +71,10 @@ export default function CalendarScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.headerTopLeft}>
@@ -195,7 +199,7 @@ const styles = StyleSheet.create({
   totalBadge: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 100, borderWidth: 1 },
   totalBadgeText: { fontFamily: 'Outfit_600SemiBold', fontSize: 14 },
 
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 110, paddingTop: 8 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
   strip: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderRadius: 18, borderWidth: 1, marginBottom: 10 },
   stripLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   stripIconBox: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },

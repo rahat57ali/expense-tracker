@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Alert, Keyboard, Image
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   CreditCard, Plus, Calendar as CalendarIcon, Clock, AlertCircle, RefreshCw,
@@ -28,6 +28,7 @@ export default function BillsScreen() {
   const { bills, addBill, updateBill, deleteBill, addExpense } = useLedgr();
   const { showSnackbar } = useSnackbar();
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
@@ -91,7 +92,10 @@ export default function BillsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} scrollEventThrottle={16}>
+      <ScrollView 
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.headerTopLeft}>
@@ -204,7 +208,7 @@ export default function BillsScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      <Modal visible={isModalVisible} animationType="slide" transparent={true}>
+      <Modal visible={isModalVisible} animationType="slide" transparent={true} onRequestClose={() => setIsModalVisible(false)}>
         <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
           <View style={styles.modalContent}>
             <LinearGradient colors={[colors.modalGradientStart, colors.modalGradientEnd]} style={styles.modalInner}>
@@ -271,7 +275,7 @@ export default function BillsScreen() {
         onConfirm={handleConfirmPayment}
       />
       <TouchableOpacity 
-        style={[styles.fab, { backgroundColor: colors.purple, shadowColor: colors.purple }]}
+        style={[styles.fab, { backgroundColor: colors.purple, shadowColor: colors.purple, bottom: 20 }]}
         onPress={() => setIsModalVisible(true)}
         activeOpacity={0.8}
       >
@@ -282,7 +286,7 @@ export default function BillsScreen() {
 }
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 110, paddingTop: 8 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
   header: { marginBottom: 16 },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   headerTopLeft: { flexDirection: 'row', alignItems: 'center' },

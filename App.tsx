@@ -13,8 +13,8 @@ import {
   Inter_500Medium,
   Inter_700Bold
 } from '@expo-google-fonts/inter';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, ActivityIndicator } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, ActivityIndicator, Platform } from 'react-native';
 import { Target, LayoutDashboard, Settings, BarChart2, Calendar as CalendarIcon, CreditCard } from 'lucide-react-native';
 
 import { LedgrProvider, useLedgr } from './src/lib/LedgrContext';
@@ -34,6 +34,7 @@ function Navigation() {
   const { isBillDueSoon, monthEndData, toggleDevTools } = useLedgr();
   const { showSnackbar } = useSnackbar();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [tapCount, setTapCount] = React.useState(0);
   const [lastTap, setLastTap] = React.useState(0);
 
@@ -76,11 +77,10 @@ function Navigation() {
             backgroundColor: colors.tabBarBg,
             borderTopWidth: 1,
             borderTopColor: colors.tabBarBorder,
-            position: 'absolute',
             elevation: 0,
-            height: 85,
-            paddingBottom: 30,
             paddingTop: 10,
+            paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
+            height: 65 + (insets.bottom > 0 ? insets.bottom : 0),
           },
           tabBarActiveTintColor: colors.tabBarActive,
           tabBarInactiveTintColor: colors.tabBarInactive,

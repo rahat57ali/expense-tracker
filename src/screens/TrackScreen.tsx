@@ -1,7 +1,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Platform, ScrollView, Keyboard } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLedgr } from '../lib/LedgrContext';
 import { useThemeColors } from '../lib/ThemeContext';
@@ -25,6 +25,7 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
 export default function TrackScreen() {
   const { expenses, budget, addExpense, isLoaded, allCategories } = useLedgr();
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const { showSnackbar } = useSnackbar();
   const [desc, setDesc] = useState('');
   const [amountStr, setAmountStr] = useState('');
@@ -144,7 +145,7 @@ export default function TrackScreen() {
       <View style={[styles.glow, { bottom: -100, right: -50, backgroundColor: 'rgba(138, 43, 226, 0.08)' }]} />
 
       <KeyboardAwareScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         extraScrollHeight={100}
@@ -366,6 +367,7 @@ export default function TrackScreen() {
 
         </View>
 
+        <View style={{ height: 30 }} />
       </KeyboardAwareScrollView>
 
       <EditExpenseModal
@@ -381,7 +383,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { marginBottom: 12 },
   glow: { position: 'absolute', width: 300, height: 300, borderRadius: 150 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 20, paddingTop: 8 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, width: '100%' },
   headerTopLeft: { flexDirection: 'row', alignItems: 'center' },
   headerDivider: { width: 1, height: 12, marginHorizontal: 12, opacity: 0.3 },

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Switch, Keyboard } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLedgr } from '../lib/LedgrContext';
 import { useTheme, useThemeColors } from '../lib/ThemeContext';
@@ -27,6 +27,7 @@ export default function SettingsScreen() {
   const { budget, updateBudget, isLoaded, expenses, allCategories, addCategory, deleteCategory, reloadBudgetState, showDevTools, importExpenses, simulateRollover } = useLedgr();
   const { showSnackbar } = useSnackbar();
   const { colors, isDark, toggleTheme } = useTheme();
+  const insets = useSafeAreaInsets();
   const [localBudget, setLocalBudget] = useState<Budget>(budget);
   const [newCatName, setNewCatName] = useState('');
   const [isAddingCat, setIsAddingCat] = useState(false);
@@ -119,7 +120,7 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <KeyboardAwareScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
         showsVerticalScrollIndicator={false}
         extraScrollHeight={100}
         enableOnAndroid={true}
@@ -350,6 +351,7 @@ export default function SettingsScreen() {
           </View>
         )}
 
+      <View style={{ height: 30 }} />
       </KeyboardAwareScrollView>
 
       <DeleteCategoryModal
@@ -358,13 +360,12 @@ export default function SettingsScreen() {
         onConfirm={confirmDeleteCategory}
         categoryName={categoryToDelete || ''}
       />
-    </SafeAreaView>
-  );
+    </SafeAreaView>  );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 100, paddingTop: 8 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
   header: { marginBottom: 12 },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, width: '100%' },
   headerTopLeft: { flexDirection: 'row', alignItems: 'center' },
