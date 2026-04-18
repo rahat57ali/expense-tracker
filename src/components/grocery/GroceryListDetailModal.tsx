@@ -83,6 +83,7 @@ export default function GroceryListDetailModal({ visible, listId, onClose }: Pro
   const hideAlert = () => setAlertConfig(prev => ({ ...prev, visible: false }));
 
   const priceRef = useRef<TextInput>(null);
+  const nameRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (list) {
@@ -113,6 +114,7 @@ export default function GroceryListDetailModal({ visible, listId, onClose }: Pro
     setItemPrice('');
     setItemQty('1');
     showSnackbar('Item added', 'success');
+    nameRef.current?.focus();
   };
 
   const handleUpdateItem = async () => {
@@ -395,6 +397,7 @@ export default function GroceryListDetailModal({ visible, listId, onClose }: Pro
               <View style={[styles.addItemCard, { backgroundColor: colors.surface, borderColor: colors.cardBorder }]}>
                 <Text style={[styles.addItemLabel, { color: colors.textTertiary }]}>ADD ITEM</Text>
                 <TextInput
+                  ref={nameRef}
                   style={[styles.addInput, { color: colors.textPrimary, backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}
                   placeholder="Item name"
                   placeholderTextColor={colors.textMuted}
@@ -471,7 +474,7 @@ export default function GroceryListDetailModal({ visible, listId, onClose }: Pro
                       <Image source={{ uri }} style={[styles.photoThumb, { borderColor: colors.cardBorderSubtle }]} />
                     </TouchableOpacity>
                   ))}
-                  {!isComplete && (
+                  {isComplete && (
                     <>
                       <TouchableOpacity style={[styles.addPhotoBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]} onPress={handleAttachPhoto}>
                         <Camera color={colors.accent} size={20} />
@@ -488,38 +491,44 @@ export default function GroceryListDetailModal({ visible, listId, onClose }: Pro
             </View>
           )}
 
-          {/* Action Buttons */}
-          {!isComplete && list.items.length > 0 && (
-            <View style={styles.actionSection}>
-              <TouchableOpacity 
-                style={[
-                  styles.actionBtn, 
-                  { backgroundColor: colors.accentBg, borderColor: `${colors.accent}30` },
-                  list.items.filter(i => i.isBought && i.estimatedPrice > 0).length === 0 && { opacity: 0.4 }
-                ]} 
-                onPress={handleLogExpenses}
-                disabled={list.items.filter(i => i.isBought && i.estimatedPrice > 0).length === 0}
-              >
-                <Receipt color={colors.accent} size={18} />
-                <Text style={[styles.actionBtnText, { color: colors.accent }]}>Log as Expenses</Text>
-              </TouchableOpacity>
-              {allBought && (
-                <TouchableOpacity
-                  style={[styles.actionBtn, { backgroundColor: colors.successBg, borderColor: `${colors.success}30` }]}
-                  onPress={() => { markComplete(list.id); showSnackbar('List completed!', 'success'); }}
-                >
-                  <Check color={colors.success} size={18} />
-                  <Text style={[styles.actionBtnText, { color: colors.success }]}>Mark as Complete</Text>
-                </TouchableOpacity>
+          {/* Post-Completion Actions */}
+          {isComplete && (
+            <>
+              {list.items.length > 0 && (
+                <View style={styles.actionSection}>
+                  <TouchableOpacity 
+                    style={[
+                      styles.actionBtn, 
+                      { backgroundColor: colors.accentBg, borderColor: `${colors.accent}30` },
+                      list.items.filter(i => i.isBought && i.estimatedPrice > 0).length === 0 && { opacity: 0.4 }
+                    ]} 
+                    onPress={handleLogExpenses}
+                    disabled={list.items.filter(i => i.isBought && i.estimatedPrice > 0).length === 0}
+                  >
+                    <Receipt color={colors.accent} size={18} />
+                    <Text style={[styles.actionBtnText, { color: colors.accent }]}>Log as Expenses</Text>
+                  </TouchableOpacity>
+                </View>
               )}
-            </View>
+
+              <TouchableOpacity style={[styles.deleteListBtn, { backgroundColor: colors.dangerBg, borderColor: `${colors.danger}30` }]} onPress={handleDeleteList}>
+                <Trash2 color={colors.danger} size={16} />
+                <Text style={[styles.deleteListText, { color: colors.danger }]}>Delete List</Text>
+              </TouchableOpacity>
+            </>
           )}
 
-          {/* Delete List */}
-          <TouchableOpacity style={[styles.deleteListBtn, { backgroundColor: colors.dangerBg, borderColor: `${colors.danger}30` }]} onPress={handleDeleteList}>
-            <Trash2 color={colors.danger} size={16} />
-            <Text style={[styles.deleteListText, { color: colors.danger }]}>Delete List</Text>
-          </TouchableOpacity>
+          {!isComplete && allBought && (
+            <View style={styles.actionSection}>
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: colors.successBg, borderColor: `${colors.success}30` }]}
+                onPress={() => { markComplete(list.id); showSnackbar('List completed!', 'success'); }}
+              >
+                <Check color={colors.success} size={18} />
+                <Text style={[styles.actionBtnText, { color: colors.success }]}>Mark as Complete</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <View style={{ height: 30 }} />
         </KeyboardAwareScrollView>

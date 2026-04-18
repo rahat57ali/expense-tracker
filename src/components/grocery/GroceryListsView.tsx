@@ -55,7 +55,10 @@ export default function GroceryListsView({ scrollContainerStyle }: Props) {
           style={[
             styles.listCard,
             { borderColor: colors.cardBorderSubtle },
-            isComplete && { opacity: 0.5 }
+            isComplete && { 
+              backgroundColor: colors.successBg, 
+              borderColor: colors.success + '40',
+            }
           ]}
         >
           <View style={styles.cardTop}>
