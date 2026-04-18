@@ -439,10 +439,10 @@ export default function TrackScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { marginBottom: 12 },
+  header: { paddingHorizontal: 20, paddingTop: 12, marginBottom: 16 },
   glow: { position: 'absolute', width: 300, height: 300, borderRadius: 150 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
-  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, width: '100%' },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, width: '100%' },
   headerTopLeft: { flexDirection: 'row', alignItems: 'center' },
   headerDivider: { width: 1, height: 12, marginHorizontal: 12, opacity: 0.3 },
   headerTitleSmall: { fontFamily: 'Outfit_600SemiBold', fontSize: 13, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.8 },
@@ -513,7 +513,19 @@ const styles = StyleSheet.create({
   quickStatLabel: {},
   quickStatValue: { fontFamily: 'Inter_700Bold' },
   quickStatDivider: { marginHorizontal: 8 },
-  modeToggle: { flexDirection: 'row', borderRadius: 14, borderWidth: 1, padding: 3, marginTop: 12, marginBottom: 4 },
-  modeBtn: { flex: 1, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  modeBtnText: { fontFamily: 'Outfit_600SemiBold', fontSize: 13 },
+  modeToggle: { 
+    flexDirection: 'row', 
+    borderRadius: 16, 
+    borderWidth: 1, 
+    padding: 4, 
+    marginTop: 4, 
+    marginBottom: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2
+  },
+  modeBtn: { flex: 1, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  modeBtnText: { fontFamily: 'Outfit_700Bold', fontSize: 13 },
 });

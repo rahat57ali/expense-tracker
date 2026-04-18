@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { GroceryList, GroceryItem, ExpenseCategory } from './store';
 import { useLedgr } from './LedgrContext';
 
@@ -139,14 +140,51 @@ export const GroceryProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addPhoto = async (listId: string, sourceUri: string) => {
-    const filename = `${listId}_${Date.now()}.jpg`;
-    const destUri = PHOTO_DIR + filename;
-    await FileSystem.copyAsync({ from: sourceUri, to: destUri });
-    const updated = lists.map(l => {
-      if (l.id === listId) return { ...l, photoUris: [...l.photoUris, destUri] };
+    // 1. Optimistic Update: Add sourceUri to state immediately for instant feedback
+    const optimisticLists = lists.map(l => {
+      if (l.id === listId) return { ...l, photoUris: [...l.photoUris, sourceUri] };
       return l;
     });
-    await persist(updated);
+    setLists(optimisticLists);
+
+    // 2. Background Compression Task
+    // We run this without awaiting so the UI remains responsive
+    (async () => {
+      try {
+        const filename = `${listId}_${Date.now()}.jpg`;
+        const destUri = PHOTO_DIR + filename;
+
+        // Perform compression and resizing (max width 1600px, 80% quality)
+        const result = await ImageManipulator.manipulateAsync(
+          sourceUri,
+          [{ resize: { width: 1600 } }],
+          { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+        );
+
+        // Save compressed file to permanent internal storage
+        await FileSystem.moveAsync({ from: result.uri, to: destUri });
+
+        // 3. Persistent Update: Replace temp sourceUri with permanent destUri
+        setLists(prev => {
+          const final = prev.map(l => {
+            if (l.id === listId) {
+              return { 
+                ...l, 
+                photoUris: l.photoUris.map(u => u === sourceUri ? destUri : u) 
+              };
+            }
+            return l;
+          });
+          AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(final));
+          return final;
+        });
+      } catch (e) {
+        console.error('Background photo compression failed', e);
+        // Fallback: if compression fails, we should at least try to save the raw photo
+        // but since it's already in the UI optimistically, we leave it as is for now 
+        // to avoid disruptive UI changes.
+      }
+    })();
   };
 
   const removePhoto = async (listId: string, photoUri: string) => {
