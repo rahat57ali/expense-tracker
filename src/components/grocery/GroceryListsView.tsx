@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import {
-  View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, FlatList
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, FlatList } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 import { Plus, ShoppingBasket, Camera, Check, ClipboardList } from 'lucide-react-native';
 import { useThemeColors } from '../../lib/ThemeContext';
 import { useGrocery } from '../../lib/GroceryContext';
@@ -15,7 +14,7 @@ interface Props {
 
 export default function GroceryListsView({ scrollContainerStyle }: Props) {
   const colors = useThemeColors();
-  const { lists, createList } = useGrocery();
+  const { lists, createList, addPhoto } = useGrocery();
   const [showCreateInput, setShowCreateInput] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [selectedList, setSelectedList] = useState<GroceryList | null>(null);
@@ -31,6 +30,19 @@ export default function GroceryListsView({ scrollContainerStyle }: Props) {
     setShowCreateInput(false);
     setSelectedList(created);
     setIsDetailVisible(true);
+  };
+  
+  const handleAddPhoto = async (listId: string) => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Permission needed', 'Camera access is required to take receipt photos.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
+    if (!result.canceled && result.assets[0]) {
+      await addPhoto(listId, result.assets[0].uri);
+      Alert.alert('Success', 'Receipt photo captured');
+    }
   };
 
   const openList = (list: GroceryList) => {
@@ -61,21 +73,42 @@ export default function GroceryListsView({ scrollContainerStyle }: Props) {
             }
           ]}
         >
-          <View style={styles.cardTop}>
+          <View style={styles.cardMain}>
             <View style={[styles.cardIconBox, { backgroundColor: isComplete ? colors.successBg : colors.accentBg }]}>
               {isComplete
                 ? <Check color={colors.success} size={20} />
                 : <ShoppingBasket color={colors.accent} size={20} />
               }
             </View>
-            <View style={{ flex: 1 }}>
+            
+            <View style={styles.cardCenter}>
               <Text style={[styles.cardTitle, { color: colors.textPrimary }]} numberOfLines={1}>{list.title}</Text>
               <Text style={[styles.cardDate, { color: colors.textTertiary }]}>
                 {new Date(list.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
               </Text>
             </View>
-            <View style={styles.cardMeta}>
-              {hasPhotos && (
+
+            <View style={styles.cardRight}>
+              <View style={styles.cardStatsColumn}>
+                <Text style={[styles.statValue, { color: isComplete ? colors.success : colors.accent }]}>
+                  {boughtItems}/{totalItems}
+                </Text>
+                <Text style={[styles.statLabel, { color: colors.textTertiary }]}>BOUGHT</Text>
+              </View>
+
+              {isComplete ? (
+                <TouchableOpacity 
+                  style={[styles.cameraActionBtn, { backgroundColor: colors.accentBg }]}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleAddPhoto(list.id);
+                  }}
+                >
+                  <Camera color={colors.accent} size={18} />
+                </TouchableOpacity>
+              ) : null}
+              
+              {hasPhotos && !isComplete && (
                 <View style={[styles.photoBadge, { backgroundColor: colors.purpleBg }]}>
                   <Camera color={colors.purple} size={12} />
                   <Text style={[styles.photoBadgeText, { color: colors.purple }]}>{list.photoUris.length}</Text>
@@ -83,24 +116,15 @@ export default function GroceryListsView({ scrollContainerStyle }: Props) {
               )}
             </View>
           </View>
-          <View style={styles.cardBottom}>
-            <View style={[styles.progressBarBg, { backgroundColor: colors.divider }]}>
-              <View style={[
-                styles.progressBarFill,
-                {
-                  width: totalItems > 0 ? `${(boughtItems / totalItems) * 100}%` : '0%',
-                  backgroundColor: isComplete ? colors.success : colors.accent
-                }
-              ]} />
-            </View>
-            <View style={styles.cardStats}>
-              <Text style={[styles.statText, { color: colors.textTertiary }]}>
-                {totalItems} {totalItems === 1 ? 'item' : 'items'}
-              </Text>
-              <Text style={[styles.statText, { color: isComplete ? colors.success : colors.accent }]}>
-                {boughtItems} of {totalItems} bought
-              </Text>
-            </View>
+
+          <View style={[styles.progressBarBg, { backgroundColor: colors.divider, height: 4, marginTop: 12 }]}>
+            <View style={[
+              styles.progressBarFill,
+              {
+                width: totalItems > 0 ? `${(boughtItems / totalItems) * 100}%` : '0%',
+                backgroundColor: isComplete ? colors.success : colors.accent
+              }
+            ]} />
           </View>
         </LinearGradient>
       </TouchableOpacity>
@@ -240,41 +264,48 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   listCard: {
-    borderRadius: 22,
-    padding: 18,
+    borderRadius: 20,
+    padding: 16,
     borderWidth: 1,
     marginBottom: 12,
   },
-  cardTop: {
+  cardMain: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    marginBottom: 14,
+    gap: 12,
   },
   cardIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardTitle: { fontFamily: 'Outfit_700Bold', fontSize: 18 },
-  cardDate: { fontFamily: 'Inter_600SemiBold', fontSize: 11, marginTop: 2, opacity: 0.7 },
-  cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardCenter: { flex: 1 },
+  cardTitle: { fontFamily: 'Outfit_700Bold', fontSize: 16 },
+  cardDate: { fontFamily: 'Inter_600SemiBold', fontSize: 10, marginTop: 2, opacity: 0.6 },
+  cardRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  cardStatsColumn: { alignItems: 'flex-end', minWidth: 60 },
+  statValue: { fontFamily: 'Outfit_800ExtraBold', fontSize: 18, lineHeight: 20 },
+  statLabel: { fontFamily: 'Inter_800ExtraBold', fontSize: 8, letterSpacing: 0.5 },
+  cameraActionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   photoBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  photoBadgeText: { fontFamily: 'Inter_800ExtraBold', fontSize: 10 },
-  cardBottom: { gap: 10 },
-  progressBarBg: { height: 6, borderRadius: 3, overflow: 'hidden' },
-  progressBarFill: { height: '100%', borderRadius: 3 },
-  cardStats: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  statText: { fontFamily: 'Inter_600SemiBold', fontSize: 12 },
+  photoBadgeText: { fontFamily: 'Inter_800ExtraBold', fontSize: 9 },
+  progressBarBg: { height: 4, borderRadius: 2, overflow: 'hidden' },
+  progressBarFill: { height: '100%', borderRadius: 2 },
   emptyState: { alignItems: 'center', paddingTop: 80 },
   emptyTitle: { fontFamily: 'Outfit_700Bold', fontSize: 20, marginTop: 20 },
   emptySub: { fontFamily: 'Inter_500Medium', fontSize: 14, marginTop: 8, textAlign: 'center', paddingHorizontal: 40, lineHeight: 20 },
