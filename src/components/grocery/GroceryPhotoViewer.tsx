@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
-  View, Text, StyleSheet, Modal, TouchableOpacity, Image, Dimensions, Alert
+  View, Text, StyleSheet, TouchableOpacity, Dimensions, Platform
 } from 'react-native';
-import { X, Trash2, ChevronLeft, ChevronRight, Receipt } from 'lucide-react-native';
+import ImageView from 'react-native-image-viewing';
+import { X, Trash2 } from 'lucide-react-native';
 import { useThemeColors } from '../../lib/ThemeContext';
 import CustomAlert from '../CustomAlert';
 
@@ -18,12 +19,20 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function GroceryPhotoViewer({ visible, photos, initialIndex, onClose, onDelete }: Props) {
   const colors = useThemeColors();
-  const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  const [alertVisible, setAlertVisible] = useState(false);
+  const [currentIndex, setCurrentIndex] = React.useState(initialIndex);
+  const [alertVisible, setAlertVisible] = React.useState(false);
 
+  // Sync index when viewer opens or initialIndex changes
+  React.useEffect(() => {
+    if (visible) {
+      setCurrentIndex(initialIndex);
+    }
+  }, [visible, initialIndex]);
+
+  const images = React.useMemo(() => photos.map(uri => ({ uri })), [photos]);
   const currentPhoto = photos[currentIndex];
 
-  if (!currentPhoto) return null;
+  if (photos.length === 0) return null;
 
   const handleDelete = () => {
     setAlertVisible(true);
@@ -34,52 +43,44 @@ export default function GroceryPhotoViewer({ visible, photos, initialIndex, onCl
     onDelete(currentPhoto);
     if (photos.length <= 1) {
       onClose();
-    } else if (currentIndex >= photos.length - 1) {
-      setCurrentIndex(Math.max(0, currentIndex - 1));
+    } else {
+      // Library handle internal index but we keep state for header/delete logic
+      if (currentIndex >= photos.length - 1) {
+        setCurrentIndex(Math.max(0, currentIndex - 1));
+      }
     }
   };
 
-  const goNext = () => {
-    if (currentIndex < photos.length - 1) setCurrentIndex(currentIndex + 1);
-  };
+  const HeaderComponent = ({ imageIndex }: { imageIndex: number }) => {
+    // Sync external state for delete logic if needed, though library handles display
+    React.useEffect(() => {
+      setCurrentIndex(imageIndex);
+    }, [imageIndex]);
 
-  const goPrev = () => {
-    if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
+    return (
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+          <X color="#FFFFFF" size={22} />
+        </TouchableOpacity>
+        <Text style={styles.counter}>{imageIndex + 1} / {photos.length}</Text>
+        <TouchableOpacity onPress={handleDelete} style={[styles.deleteBtn, { backgroundColor: 'rgba(239, 68, 68, 0.2)' }]}>
+          <Trash2 color="#EF4444" size={18} />
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   return (
-    <Modal visible={visible} animationType="fade" transparent={true} onRequestClose={onClose}>
-      <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.95)' }]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: colors.closeBtnBg }]}>
-            <X color="#FFFFFF" size={22} />
-          </TouchableOpacity>
-          <Text style={styles.counter}>{currentIndex + 1} / {photos.length}</Text>
-          <TouchableOpacity onPress={handleDelete} style={[styles.deleteBtn, { backgroundColor: colors.dangerBg }]}>
-            <Trash2 color={colors.danger} size={18} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Image */}
-        <View style={styles.imageContainer}>
-          {currentIndex > 0 && (
-            <TouchableOpacity style={[styles.navBtn, styles.navLeft]} onPress={goPrev}>
-              <ChevronLeft color="#FFFFFF" size={28} />
-            </TouchableOpacity>
-          )}
-          <Image
-            source={{ uri: currentPhoto }}
-            style={styles.image}
-            resizeMode="contain"
-          />
-          {currentIndex < photos.length - 1 && (
-            <TouchableOpacity style={[styles.navBtn, styles.navRight]} onPress={goNext}>
-              <ChevronRight color="#FFFFFF" size={28} />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+    <>
+      <ImageView
+        images={images}
+        imageIndex={currentIndex}
+        visible={visible}
+        onRequestClose={onClose}
+        HeaderComponent={HeaderComponent}
+        swipeToCloseEnabled={true}
+        doubleTapToZoomEnabled={true}
+      />
       <CustomAlert
         visible={alertVisible}
         title="Delete Photo"
@@ -90,7 +91,7 @@ export default function GroceryPhotoViewer({ visible, photos, initialIndex, onCl
         onConfirm={confirmDelete}
         onCancel={() => setAlertVisible(false)}
       />
-    </Modal>
+    </>
   );
 }
 
@@ -101,8 +102,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 50,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 12,
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
   closeBtn: {
     width: 40,
@@ -112,9 +114,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   counter: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 14,
     color: '#FFFFFF',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   deleteBtn: {
     width: 40,
@@ -123,25 +128,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  imageContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  image: {
-    width: SCREEN_WIDTH - 32,
-    height: SCREEN_HEIGHT * 0.7,
-  },
-  navBtn: {
-    position: 'absolute',
-    zIndex: 10,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navLeft: { left: 16 },
-  navRight: { right: 16 },
 });
