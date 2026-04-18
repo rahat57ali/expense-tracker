@@ -8,8 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import {
   X, Plus, Check, Trash2, Camera, ShoppingBasket, Pencil,
-  Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal,
-  Layers, List, Receipt, CircleCheck, Circle, AlertTriangle, Minus
+  Receipt, CircleCheck, Circle, Minus
 } from 'lucide-react-native';
 import CustomAlert from '../CustomAlert';
 import { useThemeColors } from '../../lib/ThemeContext';
@@ -19,11 +18,6 @@ import { useSnackbar } from '../Snackbar';
 import { ExpenseCategory, GroceryItem, GroceryList } from '../../lib/store';
 import GroceryPhotoViewer from './GroceryPhotoViewer';
 
-const CATEGORY_ICONS: Record<string, any> = {
-  Food: Coffee, Transport: Car, Bills: HomeIcon,
-  Shopping: ShoppingBag, Grocery: ShoppingBasket,
-  Health: Heart, Other: MoreHorizontal,
-};
 
 interface Props {
   visible: boolean;
@@ -58,8 +52,6 @@ export default function GroceryListDetailModal({ visible, listId, onClose }: Pro
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState('');
 
-  // View mode
-  const [groupByCategory, setGroupByCategory] = useState(false);
 
   // Photo viewer
   const [photoViewerVisible, setPhotoViewerVisible] = useState(false);
@@ -236,12 +228,8 @@ export default function GroceryListDetailModal({ visible, listId, onClose }: Pro
     setEditQty(item.quantity.toString());
   };
 
-  const getGroupedItems = () => {
-    return [{ category: null, items: list.items }];
-  };
 
   const renderItemRow = (item: GroceryItem) => {
-    const Icon = CATEGORY_ICONS[item.category] || MoreHorizontal;
 
     if (editingItem?.id === item.id) {
       return (
@@ -376,12 +364,6 @@ export default function GroceryListDetailModal({ visible, listId, onClose }: Pro
               </View>
             )}
           </View>
-          <TouchableOpacity
-            onPress={() => setGroupByCategory(!groupByCategory)}
-            style={[styles.toggleBtn, { backgroundColor: groupByCategory ? colors.accentBg : colors.closeBtnBg }]}
-          >
-            {groupByCategory ? <Layers color={colors.accent} size={18} /> : <List color={colors.textSecondary} size={18} />}
-          </TouchableOpacity>
         </View>
 
         {/* Content */}
@@ -475,13 +457,38 @@ export default function GroceryListDetailModal({ visible, listId, onClose }: Pro
             )
           )}
 
-          {/* Receipt Photos section removed from detail modal per instructions */}
+          {/* Receipt Photos */}
+          {list.photoUris.length > 0 && (
+            <View style={styles.photosSection}>
+              <Text style={[styles.photosLabel, { color: colors.textTertiary }]}>RECEIPT PHOTOS</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.photosRow}>
+                  {list.photoUris.map((uri, idx) => (
+                    <TouchableOpacity key={uri} onPress={() => { setPhotoViewerIndex(idx); setPhotoViewerVisible(true); }}>
+                      <Image source={{ uri }} style={[styles.photoThumb, { borderColor: colors.cardBorderSubtle }]} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+          )}
 
           {/* Post-Completion Actions */}
           {isComplete && (
             <>
-              {list.items.length > 0 && (
-                <View style={styles.actionSection}>
+              <View style={styles.actionSection}>
+                <View style={styles.photoActionsRow}>
+                  <TouchableOpacity style={[styles.photoActionBtn, { backgroundColor: colors.accentBg, borderColor: `${colors.accent}30` }]} onPress={handleAttachPhoto}>
+                    <Camera color={colors.accent} size={18} />
+                    <Text style={[styles.photoActionBtnText, { color: colors.accent }]}>Gallery</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.photoActionBtn, { backgroundColor: colors.purpleBg, borderColor: `${colors.purple}30` }]} onPress={handleTakePhoto}>
+                    <Camera color={colors.purple} size={18} />
+                    <Text style={[styles.photoActionBtnText, { color: colors.purple }]}>Camera</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {list.items.length > 0 && (
                   <TouchableOpacity 
                     style={[
                       styles.actionBtn, 
@@ -494,8 +501,8 @@ export default function GroceryListDetailModal({ visible, listId, onClose }: Pro
                     <Receipt color={colors.accent} size={18} />
                     <Text style={[styles.actionBtnText, { color: colors.accent }]}>Log as Expenses</Text>
                   </TouchableOpacity>
-                </View>
-              )}
+                )}
+              </View>
 
               <TouchableOpacity style={[styles.deleteListBtn, { backgroundColor: colors.dangerBg, borderColor: `${colors.danger}30` }]} onPress={handleDeleteList}>
                 <Trash2 color={colors.danger} size={16} />
@@ -605,33 +612,33 @@ const styles = StyleSheet.create({
     alignItems: 'center', 
     justifyContent: 'center', 
     gap: 8, 
-    height: 52, 
-    borderRadius: 16, 
+    height: 44, 
+    borderRadius: 14, 
     borderWidth: 1.5, 
     borderStyle: 'dashed', 
-    marginTop: 20 
+    marginTop: 16 
   },
-  addItemBtnText: { fontFamily: 'Outfit_700Bold', fontSize: 15 },
+  addItemBtnText: { fontFamily: 'Outfit_700Bold', fontSize: 14 },
   addItemCard: { 
-    borderRadius: 24, 
-    padding: 20, 
+    borderRadius: 20, 
+    padding: 16, 
     borderWidth: 1.5, 
-    marginTop: 20,
+    marginTop: 16,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  addItemLabel: { fontFamily: 'Inter_900Black', fontSize: 10, letterSpacing: 2, marginBottom: 16, opacity: 0.5 },
-  addInput: { fontFamily: 'Inter_600SemiBold', fontSize: 16, borderRadius: 14, height: 52, paddingHorizontal: 16, borderWidth: 1.5, marginBottom: 12 },
-  addRow: { flexDirection: 'row', gap: 10, marginBottom: 16, alignItems: 'center' },
-  addInputSmall: { flex: 1, flexDirection: 'row', alignItems: 'center', borderRadius: 14, height: 52, paddingHorizontal: 14, borderWidth: 1.5 },
-  addPrefix: { fontFamily: 'Inter_800ExtraBold', fontSize: 11, marginRight: 8, opacity: 0.7 },
-  addInputInner: { flex: 1, fontFamily: 'Outfit_700Bold', fontSize: 18, padding: 0 },
+  addItemLabel: { fontFamily: 'Inter_900Black', fontSize: 10, letterSpacing: 2, marginBottom: 12, opacity: 0.5 },
+  addInput: { fontFamily: 'Inter_600SemiBold', fontSize: 15, borderRadius: 12, height: 46, paddingHorizontal: 14, borderWidth: 1.5, marginBottom: 10 },
+  addRow: { flexDirection: 'row', gap: 10, marginBottom: 12, alignItems: 'center' },
+  addInputSmall: { flex: 1, flexDirection: 'row', alignItems: 'center', borderRadius: 12, height: 46, paddingHorizontal: 12, borderWidth: 1.5 },
+  addPrefix: { fontFamily: 'Inter_800ExtraBold', fontSize: 11, marginRight: 6, opacity: 0.7 },
+  addInputInner: { flex: 1, fontFamily: 'Outfit_700Bold', fontSize: 16, padding: 0 },
   addActions: { flexDirection: 'row', gap: 10 },
-  addActionBtn: { flex: 1, height: 48, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  addActionText: { fontFamily: 'Outfit_700Bold', fontSize: 15 },
+  addActionBtn: { flex: 1, height: 44, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  addActionText: { fontFamily: 'Outfit_700Bold', fontSize: 14 },
   // Edit item
   editItemCard: { borderRadius: 16, padding: 16, borderWidth: 1, marginVertical: 8 },
   editInput: { fontFamily: 'Inter_500Medium', fontSize: 15, borderRadius: 12, height: 44, paddingHorizontal: 14, borderWidth: 1, marginBottom: 8 },
@@ -643,7 +650,14 @@ const styles = StyleSheet.create({
   editActionBtn: { flex: 1, height: 40, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   editActionText: { fontFamily: 'Outfit_800ExtraBold', fontSize: 13 },
   // Photos
-  // Photos section styles removed as it's no longer used in this modal
+  // Photos
+  photosSection: { marginTop: 20 },
+  photosLabel: { fontFamily: 'Inter_800ExtraBold', fontSize: 10, letterSpacing: 1.5, marginBottom: 12, opacity: 0.6 },
+  photosRow: { flexDirection: 'row', gap: 12 },
+  photoThumb: { width: 70, height: 70, borderRadius: 12, borderWidth: 1 },
+  photoActionsRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  photoActionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 48, borderRadius: 14, borderWidth: 1 },
+  photoActionBtnText: { fontFamily: 'Outfit_700Bold', fontSize: 14 },
   // Actions
   actionSection: { marginTop: 24, gap: 12 },
   actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 56, borderRadius: 16, borderWidth: 1 },

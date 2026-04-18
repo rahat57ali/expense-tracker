@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, FlatList } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as ImagePicker from 'expo-image-picker';
 import { Plus, ShoppingBasket, Camera, Check, ClipboardList } from 'lucide-react-native';
 import { useThemeColors } from '../../lib/ThemeContext';
 import { useGrocery } from '../../lib/GroceryContext';
@@ -30,19 +29,6 @@ export default function GroceryListsView({ scrollContainerStyle }: Props) {
     setShowCreateInput(false);
     setSelectedList(created);
     setIsDetailVisible(true);
-  };
-  
-  const handleAddPhoto = async (listId: string) => {
-    const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert('Permission needed', 'Camera access is required to take receipt photos.');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
-    if (!result.canceled && result.assets[0]) {
-      await addPhoto(listId, result.assets[0].uri);
-      Alert.alert('Success', 'Receipt photo captured');
-    }
   };
 
   const openList = (list: GroceryList) => {
@@ -96,19 +82,7 @@ export default function GroceryListsView({ scrollContainerStyle }: Props) {
                 <Text style={[styles.statLabel, { color: colors.textTertiary }]}>BOUGHT</Text>
               </View>
 
-              {isComplete ? (
-                <TouchableOpacity 
-                  style={[styles.cameraActionBtn, { backgroundColor: colors.accentBg }]}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    handleAddPhoto(list.id);
-                  }}
-                >
-                  <Camera color={colors.accent} size={18} />
-                </TouchableOpacity>
-              ) : null}
-              
-              {hasPhotos && !isComplete && (
+              {hasPhotos && (
                 <View style={[styles.photoBadge, { backgroundColor: colors.purpleBg }]}>
                   <Camera color={colors.purple} size={12} />
                   <Text style={[styles.photoBadgeText, { color: colors.purple }]}>{list.photoUris.length}</Text>
@@ -288,13 +262,6 @@ const styles = StyleSheet.create({
   cardStatsColumn: { alignItems: 'flex-end', minWidth: 60 },
   statValue: { fontFamily: 'Outfit_800ExtraBold', fontSize: 18, lineHeight: 20 },
   statLabel: { fontFamily: 'Inter_800ExtraBold', fontSize: 8, letterSpacing: 0.5 },
-  cameraActionBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   photoBadge: {
     flexDirection: 'row',
     alignItems: 'center',
