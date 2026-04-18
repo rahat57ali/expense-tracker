@@ -115,16 +115,24 @@ export default function EditExpenseModal({ visible, onClose, expense }: EditExpe
             colors={[colors.modalGradientStart, colors.modalGradientEnd] as const}
             style={[styles.modalContent, { borderColor: colors.cardBorder }]}
           >
-            <View style={styles.header}>
-              <View>
-                <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Edit Transaction</Text>
+            <KeyboardAwareScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              extraScrollHeight={120}
+              enableOnAndroid={true}
+              keyboardOpeningTime={0}
+              style={{ flexShrink: 1 }}
+            >
+              <View style={styles.header}>
+                <View>
+                  <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Edit Transaction</Text>
+                </View>
+                <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: colors.closeBtnBg }]}>
+                  <X color={colors.textSecondary} size={20} />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: colors.closeBtnBg }]}>
-                <X color={colors.textSecondary} size={20} />
-              </TouchableOpacity>
-            </View>
 
-            <View style={styles.form}>
+              <View style={styles.form}>
               <Text style={[styles.label, { color: colors.textTertiary }]}>DESCRIPTION</Text>
               <View style={[styles.inputRow, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
                 <TextInput
@@ -194,6 +202,7 @@ export default function EditExpenseModal({ visible, onClose, expense }: EditExpe
                 })}
               </View>
             </View>
+          </KeyboardAwareScrollView>
 
             {/* Fixed bottom actions — always visible */}
             <View style={styles.actions}>

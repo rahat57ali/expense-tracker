@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Platform, ScrollView, Keyboard } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Platform, ScrollView, Keyboard, Dimensions } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,6 +11,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSnackbar } from '../components/Snackbar';
 import EditExpenseModal from '../components/EditExpenseModal';
 import { getDaysRemainingInMonth, isToday } from '../lib/dateUtils';
+import GroceryListsView from '../components/grocery/GroceryListsView';
 
 const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
   Food: Coffee,
@@ -27,6 +28,7 @@ export default function TrackScreen() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { showSnackbar } = useSnackbar();
+  const [mode, setMode] = useState<'expense' | 'grocery'>('expense');
   const [desc, setDesc] = useState('');
   const [amountStr, setAmountStr] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | null>(null);
@@ -36,9 +38,11 @@ export default function TrackScreen() {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 
   const catScrollRef = useRef<ScrollView>(null);
+  const horizontalScrollRef = useRef<ScrollView>(null);
   const [scrollX, setScrollX] = useState(0);
   const [contentWidth, setContentWidth] = useState(0);
   const [viewWidth, setViewWidth] = useState(0);
+  const SCREEN_WIDTH = Dimensions.get('window').width;
 
   const isAtStart = scrollX <= 5;
   const isAtEnd = scrollX >= (contentWidth - viewWidth - 5);
@@ -138,19 +142,25 @@ export default function TrackScreen() {
     return { spent, limit, remaining, isOver: spent > limit };
   };
 
+  const handleModeSwitch = (newMode: 'expense' | 'grocery') => {
+    setMode(newMode);
+    horizontalScrollRef.current?.scrollTo({ x: newMode === 'expense' ? 0 : SCREEN_WIDTH, animated: true });
+  };
+
+  const onHorizontalScrollEnd = (e: any) => {
+    const offsetX = e.nativeEvent.contentOffset.x;
+    const newIdx = Math.round(offsetX / SCREEN_WIDTH);
+    const newMode = newIdx === 0 ? 'expense' : 'grocery';
+    if (newMode !== mode) setMode(newMode);
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       {/* Glow effects only visible in dark mode — they're rgba so they fade naturally */}
       <View style={[styles.glow, { bottom: -100, left: -50, backgroundColor: 'rgba(0, 240, 255, 0.08)' }]} />
       <View style={[styles.glow, { bottom: -100, right: -50, backgroundColor: 'rgba(138, 43, 226, 0.08)' }]} />
 
-      <KeyboardAwareScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        extraScrollHeight={100}
-        enableOnAndroid={true}
-      >
+
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.headerTopLeft}>
@@ -163,6 +173,46 @@ export default function TrackScreen() {
             </View>
             <Text style={[styles.headerTitleSmall, { color: colors.textPrimary }]}>Track</Text>
           </View>
+
+          {/* Mode Toggle */}
+          <View style={[styles.modeToggle, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}>
+            <TouchableOpacity
+              style={[styles.modeBtn, mode === 'expense' && { backgroundColor: colors.accent }]}
+              onPress={() => handleModeSwitch('expense')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.modeBtnText, { color: colors.textTertiary }, mode === 'expense' && { color: colors.background }]}>Track Expense</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modeBtn, mode === 'grocery' && { backgroundColor: colors.accent }]}
+              onPress={() => handleModeSwitch('grocery')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.modeBtnText, { color: colors.textTertiary }, mode === 'grocery' && { color: colors.background }]}>Grocery Lists</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <ScrollView
+          ref={horizontalScrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={onHorizontalScrollEnd}
+          scrollEventThrottle={16}
+          bounces={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* TRACK EXPENSE PAGE */}
+          <KeyboardAwareScrollView
+            style={{ width: SCREEN_WIDTH }}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            extraScrollHeight={120}
+            enableOnAndroid={true}
+            keyboardOpeningTime={0}
+          >
           <View style={styles.bannerRow}>
             <View style={[styles.bannerHighlight, { backgroundColor: colors.accent }]} />
             <Sparkles size={14} color={colors.accent} style={{ marginRight: 8, marginTop: 2 }} />
@@ -170,10 +220,6 @@ export default function TrackScreen() {
               {MOTIVATIONAL_PROMPT}
             </Text>
           </View>
-        </View>
-
-
-
 
           <LinearGradient
             colors={[colors.gradientStart, colors.gradientEnd]}
@@ -366,9 +412,21 @@ export default function TrackScreen() {
           )}
 
         </View>
+        </KeyboardAwareScrollView>
 
-        <View style={{ height: 30 }} />
-      </KeyboardAwareScrollView>
+        {/* GROCERY LISTS PAGE */}
+        <KeyboardAwareScrollView
+          style={{ width: SCREEN_WIDTH }}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          extraScrollHeight={120}
+          enableOnAndroid={true}
+          keyboardOpeningTime={0}
+        >
+          <GroceryListsView />
+        </KeyboardAwareScrollView>
+      </ScrollView>
 
       <EditExpenseModal
         visible={isEditModalVisible}
@@ -455,4 +513,7 @@ const styles = StyleSheet.create({
   quickStatLabel: {},
   quickStatValue: { fontFamily: 'Inter_700Bold' },
   quickStatDivider: { marginHorizontal: 8 },
+  modeToggle: { flexDirection: 'row', borderRadius: 14, borderWidth: 1, padding: 3, marginTop: 12, marginBottom: 4 },
+  modeBtn: { flex: 1, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  modeBtnText: { fontFamily: 'Outfit_600SemiBold', fontSize: 13 },
 });

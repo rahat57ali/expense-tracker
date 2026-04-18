@@ -1,0 +1,650 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ScrollView, Alert, Image, Keyboard
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
+import {
+  X, Plus, Check, Trash2, Camera, ShoppingBasket, Pencil,
+  Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal,
+  Layers, List, Receipt, CircleCheck, Circle, AlertTriangle, Minus
+} from 'lucide-react-native';
+import CustomAlert from '../CustomAlert';
+import { useThemeColors } from '../../lib/ThemeContext';
+import { useGrocery } from '../../lib/GroceryContext';
+import { useLedgr } from '../../lib/LedgrContext';
+import { useSnackbar } from '../Snackbar';
+import { ExpenseCategory, GroceryItem, GroceryList } from '../../lib/store';
+import GroceryPhotoViewer from './GroceryPhotoViewer';
+
+const CATEGORY_ICONS: Record<string, any> = {
+  Food: Coffee, Transport: Car, Bills: HomeIcon,
+  Shopping: ShoppingBag, Grocery: ShoppingBasket,
+  Health: Heart, Other: MoreHorizontal,
+};
+
+interface Props {
+  visible: boolean;
+  listId: string | null;
+  onClose: () => void;
+}
+
+export default function GroceryListDetailModal({ visible, listId, onClose }: Props) {
+  const colors = useThemeColors();
+  const { lists, updateList, deleteList, addItem, updateItem, removeItem, toggleBought, addPhoto, removePhoto, markComplete, logAsExpenses } = useGrocery();
+  const { allCategories } = useLedgr();
+  const { showSnackbar } = useSnackbar();
+
+  const list = lists.find(l => l.id === listId) || null;
+  const isComplete = list?.status === 'complete';
+
+  // Add item form
+  const [itemName, setItemName] = useState('');
+  const [itemPrice, setItemPrice] = useState('');
+  const [itemQty, setItemQty] = useState('1');
+  const [itemCategory, setItemCategory] = useState<ExpenseCategory>('Grocery');
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  // Edit item
+  const [editingItem, setEditingItem] = useState<GroceryItem | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editPrice, setEditPrice] = useState('');
+  const [editQty, setEditQty] = useState('1');
+  const [editCategory, setEditCategory] = useState<ExpenseCategory>('Grocery');
+
+  // Title edit
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+
+  // View mode
+  const [groupByCategory, setGroupByCategory] = useState(false);
+
+  // Photo viewer
+  const [photoViewerVisible, setPhotoViewerVisible] = useState(false);
+  const [photoViewerIndex, setPhotoViewerIndex] = useState(0);
+
+  // Custom Alert State
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    confirmLabel?: string;
+    confirmVariant?: 'default' | 'danger' | 'success';
+    Icon?: any;
+  }>({ visible: false, title: '', message: '', onConfirm: () => {} });
+
+  const showAlert = (config: Omit<typeof alertConfig, 'visible'>) => {
+    setAlertConfig({ ...config, visible: true });
+  };
+
+  const hideAlert = () => setAlertConfig(prev => ({ ...prev, visible: false }));
+
+  const priceRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (list) {
+      setEditTitle(list.title);
+    }
+    setShowAddForm(false);
+    setEditingItem(null);
+  }, [listId, visible]);
+
+  if (!list) return null;
+
+  const boughtCount = list.items.filter(i => i.isBought).length;
+  const totalCount = list.items.length;
+  const estimatedTotal = list.items.reduce((s, i) => s + (i.estimatedPrice * i.quantity), 0);
+  const boughtTotal = list.items.filter(i => i.isBought).reduce((s, i) => s + (i.estimatedPrice * i.quantity), 0);
+  const allBought = totalCount > 0 && boughtCount === totalCount;
+
+  const handleAddItem = async () => {
+    if (!itemName.trim()) return;
+    await addItem(list.id, {
+      name: itemName.trim(),
+      estimatedPrice: parseFloat(itemPrice) || 0,
+      quantity: parseInt(itemQty) || 1,
+      category: 'Grocery',
+      isBought: false,
+    });
+    setItemName('');
+    setItemPrice('');
+    setItemQty('1');
+    showSnackbar('Item added', 'success');
+  };
+
+  const handleUpdateItem = async () => {
+    if (!editingItem || !editName.trim()) return;
+    await updateItem(list.id, {
+      ...editingItem,
+      name: editName.trim(),
+      estimatedPrice: parseFloat(editPrice) || 0,
+      quantity: parseInt(editQty) || 1,
+      category: 'Grocery',
+    });
+    setEditingItem(null);
+    showSnackbar('Item updated', 'success');
+  };
+
+  const handleDeleteItem = (itemId: string) => {
+    showAlert({
+      title: 'Remove Item',
+      message: 'Remove this item from the list?',
+      confirmLabel: 'Remove',
+      confirmVariant: 'danger',
+      Icon: Trash2,
+      onConfirm: () => {
+        removeItem(list.id, itemId);
+        hideAlert();
+      }
+    });
+  };
+
+  const handleToggle = async (itemId: string) => {
+    // Optimistic check for "all bought"
+    const willBeBought = !list.items.find(i => i.id === itemId)?.isBought;
+    const otherItemsBought = list.items.filter(i => i.id !== itemId).every(i => i.isBought);
+    const isNowAllBought = willBeBought && otherItemsBought && list.items.length > 0;
+
+    await toggleBought(list.id, itemId);
+
+    if (isNowAllBought && list.status === 'active') {
+      setTimeout(() => {
+        showAlert({
+          title: 'All Done!',
+          message: 'All items are bought. Mark this list as complete?',
+          confirmLabel: 'Complete',
+          confirmVariant: 'success',
+          Icon: CircleCheck,
+          onConfirm: () => {
+            markComplete(list.id);
+            hideAlert();
+            showSnackbar('List completed!', 'success');
+          }
+        });
+      }, 300);
+    }
+  };
+
+  const handleTitleSave = async () => {
+    if (editTitle.trim() && editTitle.trim() !== list.title) {
+      await updateList({ ...list, title: editTitle.trim() });
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleAttachPhoto = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) {
+      await addPhoto(list.id, result.assets[0].uri);
+      showSnackbar('Receipt photo attached', 'success');
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Permission needed', 'Camera access is required to take receipt photos.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
+    if (!result.canceled && result.assets[0]) {
+      await addPhoto(list.id, result.assets[0].uri);
+      showSnackbar('Receipt photo taken', 'success');
+    }
+  };
+
+  const handleDeleteList = () => {
+    Alert.alert(
+      'Delete List',
+      'This will permanently delete the list and all attached receipt photos. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: async () => { await deleteList(list.id); onClose(); showSnackbar('List deleted', 'success'); } }
+      ]
+    );
+  };
+
+  const handleLogExpenses = () => {
+    const boughtWithPrice = list.items.filter(i => i.isBought && i.estimatedPrice > 0);
+    if (boughtWithPrice.length === 0) return;
+
+    showAlert({
+      title: 'Log as Expenses',
+      message: `This will create ${boughtWithPrice.length} expense entries from bought items. Continue?`,
+      confirmLabel: 'Log',
+      Icon: Receipt,
+      onConfirm: async () => {
+        await logAsExpenses(list.id);
+        hideAlert();
+        showSnackbar('Expenses logged!', 'success');
+      }
+    });
+  };
+
+  const startEditItem = (item: GroceryItem) => {
+    setEditingItem(item);
+    setEditName(item.name);
+    setEditPrice(item.estimatedPrice > 0 ? item.estimatedPrice.toString() : '');
+    setEditQty(item.quantity.toString());
+  };
+
+  const getGroupedItems = () => {
+    return [{ category: null, items: list.items }];
+  };
+
+  const renderItemRow = (item: GroceryItem) => {
+    const Icon = CATEGORY_ICONS[item.category] || MoreHorizontal;
+
+    if (editingItem?.id === item.id) {
+      return (
+        <View key={item.id} style={[styles.editItemCard, { backgroundColor: colors.surface, borderColor: colors.cardBorder }]}>
+          <TextInput
+            style={[styles.editInput, { color: colors.textPrimary, backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}
+            value={editName}
+            onChangeText={setEditName}
+            placeholder="Item name"
+            placeholderTextColor={colors.textMuted}
+          />
+          <View style={styles.editRow}>
+            <View style={[styles.editInputSmall, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, flex: 1.5 }]}>
+              <Text style={[styles.editPrefix, { color: colors.accent }]}>PKR</Text>
+              <TextInput
+                style={[styles.editInputInner, { color: colors.textPrimary }]}
+                value={editPrice}
+                onChangeText={setEditPrice}
+                placeholder="0"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={styles.stepperContainer}>
+              <TouchableOpacity
+                style={[styles.stepBtn, { backgroundColor: colors.pillBg }]}
+                onPress={() => setEditQty(Math.max(1, parseInt(editQty || '1') - 1).toString())}
+              >
+                <Minus size={14} color={colors.textSecondary} />
+              </TouchableOpacity>
+              <Text style={[styles.stepValue, { color: colors.textPrimary }]}>{editQty || '1'}</Text>
+              <TouchableOpacity
+                style={[styles.stepBtn, { backgroundColor: colors.pillBg }]}
+                onPress={() => setEditQty((parseInt(editQty || '1') + 1).toString())}
+              >
+                <Plus size={14} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={styles.editActions}>
+            <TouchableOpacity style={[styles.editActionBtn, { backgroundColor: colors.closeBtnBg }]} onPress={() => setEditingItem(null)}>
+              <Text style={[styles.editActionText, { color: colors.textSecondary }]}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.editActionBtn, { backgroundColor: colors.saveBtnBg }]} onPress={handleUpdateItem}>
+              <Text style={[styles.editActionText, { color: colors.saveBtnText }]}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <View key={item.id} style={[styles.itemRow, { borderBottomColor: colors.divider }]}>
+        <TouchableOpacity onPress={() => !isComplete && handleToggle(item.id)} style={styles.checkbox} disabled={isComplete}>
+          {item.isBought
+            ? <CircleCheck color={colors.success} size={24} />
+            : <Circle color={colors.textMuted} size={24} />
+          }
+        </TouchableOpacity>
+        <View style={styles.itemInfo}>
+          <Text style={[styles.itemName, { color: colors.textPrimary }, item.isBought && styles.strikethrough, item.isBought && { color: colors.textTertiary }]} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <View style={styles.itemMetaRow}>
+            {item.quantity > 1 && (
+              <View style={[styles.qtyBadge, { backgroundColor: colors.pillBg }]}>
+                <Text style={[styles.qtyText, { color: colors.textTertiary }]}>{item.quantity} units</Text>
+              </View>
+            )}
+          </View>
+        </View>
+        <View style={styles.itemRight}>
+          {item.estimatedPrice > 0 && (
+            <Text style={[styles.itemPrice, { color: colors.textSecondary }, item.isBought && { color: colors.textMuted }]}>
+              PKR {(item.estimatedPrice * item.quantity).toLocaleString()}
+            </Text>
+          )}
+          {!isComplete && (
+            <View style={styles.itemActions}>
+              <TouchableOpacity onPress={() => startEditItem(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Pencil color={colors.textMuted} size={14} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleDeleteItem(item.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Trash2 color={colors.textMuted} size={14} />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: colors.closeBtnBg }]}>
+            <X color={colors.textSecondary} size={20} />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            {isEditingTitle ? (
+              <TextInput
+                style={[styles.titleInput, { color: colors.textPrimary, borderBottomColor: colors.accent }]}
+                value={editTitle}
+                onChangeText={setEditTitle}
+                onBlur={handleTitleSave}
+                onSubmitEditing={handleTitleSave}
+                autoFocus
+                returnKeyType="done"
+              />
+            ) : (
+              <TouchableOpacity onPress={() => !isComplete && setIsEditingTitle(true)}>
+                <Text style={[styles.headerTitle, { color: colors.textPrimary }]} numberOfLines={1}>{list.title}</Text>
+              </TouchableOpacity>
+            )}
+            {isComplete && (
+              <View style={[styles.completeBadge, { backgroundColor: colors.successBg }]}>
+                <Text style={[styles.completeBadgeText, { color: colors.success }]}>COMPLETED</Text>
+              </View>
+            )}
+          </View>
+          <TouchableOpacity
+            onPress={() => setGroupByCategory(!groupByCategory)}
+            style={[styles.toggleBtn, { backgroundColor: groupByCategory ? colors.accentBg : colors.closeBtnBg }]}
+          >
+            {groupByCategory ? <Layers color={colors.accent} size={18} /> : <List color={colors.textSecondary} size={18} />}
+          </TouchableOpacity>
+        </View>
+
+        {/* Content */}
+        <KeyboardAwareScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          extraScrollHeight={120}
+          enableOnAndroid={true}
+          keyboardShouldPersistTaps="handled"
+          keyboardOpeningTime={0}
+        >
+          {/* Items */}
+          {list.items.map(renderItemRow)}
+
+          {list.items.length === 0 && (
+            <View style={styles.emptyItems}>
+              <ShoppingBasket color={colors.textMuted} size={36} />
+              <Text style={[styles.emptyItemsText, { color: colors.textTertiary }]}>No items yet — add your first item below</Text>
+            </View>
+          )}
+
+          {/* Add Item Form */}
+          {!isComplete && (
+            showAddForm ? (
+              <View style={[styles.addItemCard, { backgroundColor: colors.surface, borderColor: colors.cardBorder }]}>
+                <Text style={[styles.addItemLabel, { color: colors.textTertiary }]}>ADD ITEM</Text>
+                <TextInput
+                  style={[styles.addInput, { color: colors.textPrimary, backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}
+                  placeholder="Item name"
+                  placeholderTextColor={colors.textMuted}
+                  value={itemName}
+                  onChangeText={setItemName}
+                  autoFocus
+                  returnKeyType="next"
+                  onSubmitEditing={() => priceRef.current?.focus()}
+                />
+                <View style={styles.addRow}>
+                  <View style={[styles.addInputSmall, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, flex: 1.5 }]}>
+                    <Text style={[styles.addPrefix, { color: colors.accent }]}>PKR</Text>
+                    <TextInput
+                      ref={priceRef}
+                      style={[styles.addInputInner, { color: colors.textPrimary }]}
+                      value={itemPrice}
+                      onChangeText={setItemPrice}
+                      placeholder="Price"
+                      placeholderTextColor={colors.textMuted}
+                      keyboardType="numeric"
+                      returnKeyType="done"
+                      onSubmitEditing={() => Keyboard.dismiss()}
+                    />
+                  </View>
+                  <View style={styles.stepperContainer}>
+                    <TouchableOpacity
+                      style={[styles.stepBtn, { backgroundColor: colors.pillBg }]}
+                      onPress={() => setItemQty(Math.max(1, parseInt(itemQty || '1') - 1).toString())}
+                    >
+                      <Minus size={14} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                    <Text style={[styles.stepValue, { color: colors.textPrimary }]}>{itemQty || '1'}</Text>
+                    <TouchableOpacity
+                      style={[styles.stepBtn, { backgroundColor: colors.pillBg }]}
+                      onPress={() => setItemQty((parseInt(itemQty || '1') + 1).toString())}
+                    >
+                      <Plus size={14} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={styles.addActions}>
+                  <TouchableOpacity style={[styles.addActionBtn, { backgroundColor: colors.closeBtnBg }]} onPress={() => setShowAddForm(false)}>
+                    <Text style={[styles.addActionText, { color: colors.textSecondary }]}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.addActionBtn, { backgroundColor: colors.saveBtnBg, opacity: itemName.trim() ? 1 : 0.4 }]}
+                    onPress={handleAddItem}
+                    disabled={!itemName.trim()}
+                  >
+                    <Plus color={colors.saveBtnText} size={16} />
+                    <Text style={[styles.addActionText, { color: colors.saveBtnText }]}>Add</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.addItemBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}
+                onPress={() => setShowAddForm(true)}
+              >
+                <Plus color={colors.accent} size={18} />
+                <Text style={[styles.addItemBtnText, { color: colors.accent }]}>Add Item</Text>
+              </TouchableOpacity>
+            )
+          )}
+
+          {/* Receipt Photos */}
+          {(list.photoUris.length > 0 || !isComplete) && (
+            <View style={styles.photosSection}>
+              <Text style={[styles.photosLabel, { color: colors.textTertiary }]}>RECEIPT PHOTOS</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.photosRow}>
+                  {list.photoUris.map((uri, idx) => (
+                    <TouchableOpacity key={uri} onPress={() => { setPhotoViewerIndex(idx); setPhotoViewerVisible(true); }}>
+                      <Image source={{ uri }} style={[styles.photoThumb, { borderColor: colors.cardBorderSubtle }]} />
+                    </TouchableOpacity>
+                  ))}
+                  {!isComplete && (
+                    <>
+                      <TouchableOpacity style={[styles.addPhotoBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]} onPress={handleAttachPhoto}>
+                        <Camera color={colors.accent} size={20} />
+                        <Text style={[styles.addPhotoBtnText, { color: colors.textTertiary }]}>Gallery</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.addPhotoBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]} onPress={handleTakePhoto}>
+                        <Camera color={colors.purple} size={20} />
+                        <Text style={[styles.addPhotoBtnText, { color: colors.textTertiary }]}>Camera</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Action Buttons */}
+          {!isComplete && list.items.length > 0 && (
+            <View style={styles.actionSection}>
+              <TouchableOpacity 
+                style={[
+                  styles.actionBtn, 
+                  { backgroundColor: colors.accentBg, borderColor: `${colors.accent}30` },
+                  list.items.filter(i => i.isBought && i.estimatedPrice > 0).length === 0 && { opacity: 0.4 }
+                ]} 
+                onPress={handleLogExpenses}
+                disabled={list.items.filter(i => i.isBought && i.estimatedPrice > 0).length === 0}
+              >
+                <Receipt color={colors.accent} size={18} />
+                <Text style={[styles.actionBtnText, { color: colors.accent }]}>Log as Expenses</Text>
+              </TouchableOpacity>
+              {allBought && (
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: colors.successBg, borderColor: `${colors.success}30` }]}
+                  onPress={() => { markComplete(list.id); showSnackbar('List completed!', 'success'); }}
+                >
+                  <Check color={colors.success} size={18} />
+                  <Text style={[styles.actionBtnText, { color: colors.success }]}>Mark as Complete</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {/* Delete List */}
+          <TouchableOpacity style={[styles.deleteListBtn, { backgroundColor: colors.dangerBg, borderColor: `${colors.danger}30` }]} onPress={handleDeleteList}>
+            <Trash2 color={colors.danger} size={16} />
+            <Text style={[styles.deleteListText, { color: colors.danger }]}>Delete List</Text>
+          </TouchableOpacity>
+
+          <View style={{ height: 30 }} />
+        </KeyboardAwareScrollView>
+
+        {/* Running Total Bar */}
+        {list.items.length > 0 && (
+          <View style={[styles.totalBar, { backgroundColor: colors.surface, borderTopColor: colors.divider }]}>
+            <View style={styles.totalCol}>
+              <Text style={[styles.totalLabel, { color: colors.textTertiary }]}>EST. TOTAL</Text>
+              <Text style={[styles.totalValue, { color: colors.textPrimary }]}>PKR {estimatedTotal.toLocaleString()}</Text>
+            </View>
+            <View style={[styles.totalDivider, { backgroundColor: colors.divider }]} />
+            <View style={styles.totalCol}>
+              <Text style={[styles.totalLabel, { color: colors.textTertiary }]}>BOUGHT</Text>
+              <Text style={[styles.totalValue, { color: colors.accent }]}>PKR {boughtTotal.toLocaleString()}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Photo Viewer */}
+        <GroceryPhotoViewer
+          visible={photoViewerVisible}
+          photos={list.photoUris}
+          initialIndex={photoViewerIndex}
+          onClose={() => setPhotoViewerVisible(false)}
+          onDelete={(uri) => removePhoto(list.id, uri)}
+        />
+        <CustomAlert 
+          visible={alertConfig.visible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          onConfirm={alertConfig.onConfirm}
+          onCancel={hideAlert}
+          confirmLabel={alertConfig.confirmLabel}
+          confirmVariant={alertConfig.confirmVariant}
+          Icon={alertConfig.Icon}
+        />
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 12,
+  },
+  closeBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  headerCenter: { flex: 1, alignItems: 'center' },
+  headerTitle: { fontFamily: 'Outfit_600SemiBold', fontSize: 18 },
+  titleInput: { fontFamily: 'Outfit_600SemiBold', fontSize: 18, borderBottomWidth: 2, paddingBottom: 4, textAlign: 'center', minWidth: 160 },
+  completeBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6, marginTop: 4 },
+  completeBadgeText: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1 },
+  toggleBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  scrollContent: { paddingHorizontal: 16 },
+  // Group header
+  groupHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, marginBottom: 8 },
+  groupDot: { width: 8, height: 8, borderRadius: 4 },
+  groupLabel: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.5 },
+  // Item row
+  itemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, gap: 12 },
+  checkbox: { padding: 2 },
+  itemInfo: { flex: 1 },
+  itemName: { fontFamily: 'Inter_500Medium', fontSize: 16 },
+  strikethrough: { textDecorationLine: 'line-through', opacity: 0.6 },
+  itemMetaRow: { flexDirection: 'row', gap: 6, marginTop: 4 },
+  qtyBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  qtyText: { fontFamily: 'Inter_700Bold', fontSize: 10 },
+  catBadgeSmall: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  catBadgeText: { fontFamily: 'Inter_700Bold', fontSize: 9 },
+  itemRight: { alignItems: 'flex-end', gap: 6 },
+  itemPrice: { fontFamily: 'Outfit_600SemiBold', fontSize: 15 },
+  itemActions: { flexDirection: 'row', gap: 16, marginTop: 4 },
+  // Empty items
+  emptyItems: { alignItems: 'center', paddingVertical: 40 },
+  emptyItemsText: { fontFamily: 'Inter_500Medium', fontSize: 13, marginTop: 12, textAlign: 'center' },
+  // Stepper
+  stepperContainer: { flexDirection: 'row', alignItems: 'center', gap: 12, marginLeft: 8 },
+  stepBtn: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  stepValue: { fontFamily: 'Outfit_600SemiBold', fontSize: 16, minWidth: 20, textAlign: 'center' },
+  // Add item
+  addItemBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 48, borderRadius: 14, borderWidth: 1, borderStyle: 'dashed', marginTop: 12 },
+  addItemBtnText: { fontFamily: 'Outfit_600SemiBold', fontSize: 14 },
+  addItemCard: { borderRadius: 20, padding: 16, borderWidth: 1, marginTop: 12 },
+  addItemLabel: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1.5, marginBottom: 12 },
+  addInput: { fontFamily: 'Inter_500Medium', fontSize: 15, borderRadius: 12, height: 48, paddingHorizontal: 14, borderWidth: 1, marginBottom: 8 },
+  addRow: { flexDirection: 'row', gap: 8, marginBottom: 12, alignItems: 'center' },
+  addInputSmall: { flex: 1, flexDirection: 'row', alignItems: 'center', borderRadius: 12, height: 48, paddingHorizontal: 12, borderWidth: 1 },
+  addPrefix: { fontFamily: 'Inter_700Bold', fontSize: 11, marginRight: 6 },
+  addInputInner: { flex: 1, fontFamily: 'Outfit_600SemiBold', fontSize: 16, padding: 0 },
+  addActions: { flexDirection: 'row', gap: 8 },
+  addActionBtn: { flex: 1, height: 44, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  addActionText: { fontFamily: 'Outfit_800ExtraBold', fontSize: 14 },
+  // Edit item
+  editItemCard: { borderRadius: 16, padding: 16, borderWidth: 1, marginVertical: 8 },
+  editInput: { fontFamily: 'Inter_500Medium', fontSize: 15, borderRadius: 12, height: 44, paddingHorizontal: 14, borderWidth: 1, marginBottom: 8 },
+  editRow: { flexDirection: 'row', gap: 8, marginBottom: 12, alignItems: 'center' },
+  editInputSmall: { flex: 1, flexDirection: 'row', alignItems: 'center', borderRadius: 12, height: 44, paddingHorizontal: 12, borderWidth: 1 },
+  editPrefix: { fontFamily: 'Inter_700Bold', fontSize: 11, marginRight: 6 },
+  editInputInner: { flex: 1, fontFamily: 'Outfit_600SemiBold', fontSize: 16, padding: 0 },
+  editActions: { flexDirection: 'row', gap: 8 },
+  editActionBtn: { flex: 1, height: 40, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  editActionText: { fontFamily: 'Outfit_800ExtraBold', fontSize: 13 },
+  // Photos
+  photosSection: { marginTop: 24 },
+  photosLabel: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1.5, marginBottom: 12 },
+  photosRow: { flexDirection: 'row', gap: 12 },
+  photoThumb: { width: 80, height: 80, borderRadius: 16, borderWidth: 1 },
+  addPhotoBtn: { width: 80, height: 80, borderRadius: 16, borderWidth: 1, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  addPhotoBtnText: { fontFamily: 'Inter_500Medium', fontSize: 10 },
+  // Actions
+  actionSection: { marginTop: 24, gap: 12 },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 56, borderRadius: 16, borderWidth: 1 },
+  actionBtnText: { fontFamily: 'Outfit_800ExtraBold', fontSize: 15 },
+  // Delete
+  deleteListBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 48, borderRadius: 16, borderWidth: 1, marginTop: 24 },
+  deleteListText: { fontFamily: 'Outfit_600SemiBold', fontSize: 14 },
+  // Total bar
+  totalBar: { flexDirection: 'row', paddingVertical: 14, paddingHorizontal: 24, borderTopWidth: 1, alignItems: 'center' },
+  totalCol: { flex: 1, alignItems: 'center' },
+  totalLabel: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1, marginBottom: 4 },
+  totalValue: { fontFamily: 'Outfit_600SemiBold', fontSize: 20 },
+  totalDivider: { width: 1, height: 32 },
+});

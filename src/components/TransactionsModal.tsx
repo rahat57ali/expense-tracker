@@ -187,12 +187,13 @@ export default function TransactionsModal({ visible, onClose, onEditExpense }: T
 
             {/* Tabs */}
             <View style={styles.tabsContainer}>
-              <FlatList
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                data={['All', 'Today', 'This Week', 'This Month', 'Custom'] as FilterTab[]}
-                keyExtractor={item => item}
-                contentContainerStyle={styles.tabsList}
+                <FlatList
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  data={['All', 'Today', 'This Week', 'This Month', 'Custom'] as FilterTab[]}
+                  keyExtractor={item => item}
+                  contentContainerStyle={styles.tabsList}
+                  keyboardShouldPersistTaps="handled"
                 renderItem={({ item }) => {
                   const isActive = activeTab === item;
                   return (

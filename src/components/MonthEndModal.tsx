@@ -306,6 +306,9 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
           showsVerticalScrollIndicator={false} 
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          extraScrollHeight={120}
+          enableOnAndroid={true}
+          keyboardOpeningTime={0}
         >
           {prevMonthExpenses.length === 0 ? (
             <View style={styles.emptyContainer}>

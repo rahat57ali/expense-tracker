@@ -11,7 +11,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSnackbar } from '../components/Snackbar';
 import DeleteCategoryModal from '../components/DeleteCategoryModal';
 import { exportExpensesToXLSX, importExpensesFromFile } from '../lib/dateUtils';
-import { Download, Upload, Share } from 'lucide-react-native';
+import { Download, Upload, Share, HardDrive, Trash2 as TrashIcon } from 'lucide-react-native';
+import CustomAlert from '../components/CustomAlert';
+import { useGrocery } from '../lib/GroceryContext';
+import { Alert } from 'react-native';
 
 const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
   Food: Coffee,
@@ -28,6 +31,25 @@ export default function SettingsScreen() {
   const { showSnackbar } = useSnackbar();
   const { colors, isDark, toggleTheme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { clearCompletedLists, getStorageSize, lists: groceryLists } = useGrocery();
+  const [groceryStorageBytes, setGroceryStorageBytes] = useState(0);
+
+  useEffect(() => {
+    getStorageSize().then(setGroceryStorageBytes);
+  }, [groceryLists]);
+
+  const formatBytes = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const [alertVisible, setAlertVisible] = useState(false);
+
+  const handleClearCompleted = () => {
+    setAlertVisible(true);
+  };
+
   const [localBudget, setLocalBudget] = useState<Budget>(budget);
   const [newCatName, setNewCatName] = useState('');
   const [isAddingCat, setIsAddingCat] = useState(false);
@@ -122,9 +144,10 @@ export default function SettingsScreen() {
       <KeyboardAwareScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
         showsVerticalScrollIndicator={false}
-        extraScrollHeight={100}
+        extraScrollHeight={120}
         enableOnAndroid={true}
         keyboardShouldPersistTaps="handled"
+        keyboardOpeningTime={0}
       >
         <View style={styles.header}>
           <View style={styles.headerTop}>
@@ -334,6 +357,28 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Grocery Data */}
+        <View style={[styles.dataCard, { backgroundColor: colors.card, borderColor: colors.cardBorder, marginTop: 12 }]}>
+          <View style={[styles.dataAction, { paddingBottom: 12 }]}>
+            <View style={[styles.dataIconBox, { backgroundColor: colors.accentBg }]}>
+              <HardDrive color={colors.accent} size={20} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.dataActionTitle, { color: colors.textPrimary }]}>Grocery Data</Text>
+              <Text style={[styles.dataActionSub, { color: colors.textTertiary }]}>
+                {formatBytes(groceryStorageBytes)} used · {groceryLists.filter(l => l.status === 'complete').length} completed {groceryLists.filter(l => l.status === 'complete').length === 1 ? 'list' : 'lists'}
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={[styles.smallActionBtn, { backgroundColor: colors.dangerBg, borderColor: `${colors.danger}30`, marginHorizontal: 16, marginBottom: 16, height: 44, justifyContent: 'center' }]}
+            onPress={handleClearCompleted}
+            disabled={groceryLists.filter(l => l.status === 'complete').length === 0}
+          >
+            <Text style={{ fontFamily: 'Outfit_600SemiBold', fontSize: 13, color: colors.danger, opacity: groceryLists.filter(l => l.status === 'complete').length === 0 ? 0.4 : 1 }}>Clear All Completed Lists</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* DEV TOOLS */}
         {showDevTools && (
           <View style={styles.devSection}>
@@ -360,6 +405,21 @@ export default function SettingsScreen() {
         onConfirm={confirmDeleteCategory}
         categoryName={categoryToDelete || ''}
       />
+
+        <CustomAlert
+          visible={alertVisible}
+          title="Clear Completed Lists"
+          message="This will permanently delete all completed grocery lists and their attached receipt photos. This cannot be undone."
+          confirmLabel="Clear Data"
+          confirmVariant="danger"
+          Icon={TrashIcon}
+          onConfirm={async () => {
+            setAlertVisible(false);
+            await clearCompletedLists();
+            showSnackbar('Completed lists cleared', 'success');
+          }}
+          onCancel={() => setAlertVisible(false)}
+        />
     </SafeAreaView>  );
 }
 

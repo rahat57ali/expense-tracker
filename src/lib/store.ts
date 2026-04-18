@@ -32,6 +32,24 @@ export interface RolloverRecoveryState {
   step: 2 | 3;
   rolloverAmount: number;
 }
+
+export interface GroceryItem {
+  id: string;
+  name: string;
+  estimatedPrice: number;
+  quantity: number;
+  category: ExpenseCategory;
+  isBought: boolean;
+}
+
+export interface GroceryList {
+  id: string;
+  title: string;
+  createdAt: string;
+  status: 'active' | 'complete';
+  items: GroceryItem[];
+  photoUris: string[];
+}
 export function autoCategorize(name: string): ExpenseCategory {
   const lower = name.toLowerCase();
   if (lower.match(/uber|taxi|metro|train|bus|fuel|gas|lyft|careem/)) return 'Transport';

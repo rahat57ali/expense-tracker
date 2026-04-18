@@ -18,6 +18,7 @@ import { View, ActivityIndicator, Platform } from 'react-native';
 import { Target, LayoutDashboard, Settings, BarChart2, Calendar as CalendarIcon, CreditCard } from 'lucide-react-native';
 
 import { LedgrProvider, useLedgr } from './src/lib/LedgrContext';
+import { GroceryProvider } from './src/lib/GroceryContext';
 import { SnackbarProvider, useSnackbar } from './src/components/Snackbar';
 import { ThemeProvider, useTheme } from './src/lib/ThemeContext';
 import TrackScreen from './src/screens/TrackScreen';
@@ -166,9 +167,11 @@ export default function App() {
     <SafeAreaProvider>
       <ThemeProvider>
         <LedgrProvider>
-          <SnackbarProvider>
-            <Navigation />
-          </SnackbarProvider>
+          <GroceryProvider>
+            <SnackbarProvider>
+              <Navigation />
+            </SnackbarProvider>
+          </GroceryProvider>
         </LedgrProvider>
       </ThemeProvider>
     </SafeAreaProvider>
