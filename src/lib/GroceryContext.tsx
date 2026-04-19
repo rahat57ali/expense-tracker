@@ -78,93 +78,109 @@ export const GroceryProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateList = async (list: GroceryList) => {
-    const updated = lists.map(l => l.id === list.id ? list : l);
-    await persist(updated);
+    setLists(prev => {
+      const updated = prev.map(l => l.id === list.id ? list : l);
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const deleteList = async (id: string) => {
-    const list = lists.find(l => l.id === id);
-    if (list) {
-      // Delete associated photos from disk
-      for (const uri of list.photoUris) {
-        try {
-          const info = await FileSystem.getInfoAsync(uri);
-          if (info.exists) await FileSystem.deleteAsync(uri);
-        } catch (_) {}
+    setLists(prev => {
+      const list = prev.find(l => l.id === id);
+      if (list) {
+        for (const uri of list.photoUris) {
+          try {
+            FileSystem.getInfoAsync(uri).then(info => {
+              if (info.exists) FileSystem.deleteAsync(uri);
+            });
+          } catch (_) {}
+        }
       }
-    }
-    const updated = lists.filter(l => l.id !== id);
-    await persist(updated);
+      const updated = prev.filter(l => l.id !== id);
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const addItem = async (listId: string, item: Omit<GroceryItem, 'id'>) => {
     const newItem: GroceryItem = { ...item, id: generateId() };
-    const updated = lists.map(l => {
-      if (l.id === listId) return { ...l, items: [...l.items, newItem] };
-      return l;
+    setLists(prev => {
+      const updated = prev.map(l => {
+        if (l.id === listId) return { ...l, items: [...l.items, newItem] };
+        return l;
+      });
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
     });
-    await persist(updated);
   };
 
   const updateItem = async (listId: string, item: GroceryItem) => {
-    const updated = lists.map(l => {
-      if (l.id === listId) {
-        return { ...l, items: l.items.map(i => i.id === item.id ? item : i) };
-      }
-      return l;
+    setLists(prev => {
+      const updated = prev.map(l => {
+        if (l.id === listId) {
+          return { ...l, items: l.items.map(i => i.id === item.id ? item : i) };
+        }
+        return l;
+      });
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
     });
-    await persist(updated);
   };
 
   const removeItem = async (listId: string, itemId: string) => {
-    const updated = lists.map(l => {
-      if (l.id === listId) {
-        return { ...l, items: l.items.filter(i => i.id !== itemId) };
-      }
-      return l;
+    setLists(prev => {
+      const updated = prev.map(l => {
+        if (l.id === listId) {
+          return { ...l, items: l.items.filter(i => i.id !== itemId) };
+        }
+        return l;
+      });
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
     });
-    await persist(updated);
   };
 
   const toggleBought = async (listId: string, itemId: string) => {
-    const updated = lists.map(l => {
-      if (l.id === listId) {
-        return {
-          ...l,
-          items: l.items.map(i => i.id === itemId ? { ...i, isBought: !i.isBought } : i),
-        };
-      }
-      return l;
+    setLists(prev => {
+      const updated = prev.map(l => {
+        if (l.id === listId) {
+          return {
+            ...l,
+            items: l.items.map(i => i.id === itemId ? { ...i, isBought: !i.isBought } : i),
+          };
+        }
+        return l;
+      });
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
     });
-    await persist(updated);
   };
 
   const addPhoto = async (listId: string, sourceUri: string) => {
-    // 1. Optimistic Update: Add sourceUri to state immediately for instant feedback
-    const optimisticLists = lists.map(l => {
-      if (l.id === listId) return { ...l, photoUris: [...l.photoUris, sourceUri] };
-      return l;
+    // 1. Optimistic Update: Add sourceUri to state immediately
+    const filename = `${listId}_${Date.now()}.jpg`;
+    const destUri = PHOTO_DIR + filename;
+
+    setLists(prev => {
+      const updated = prev.map(l => {
+        if (l.id === listId) return { ...l, photoUris: [...l.photoUris, sourceUri] };
+        return l;
+      });
+      return updated;
     });
-    setLists(optimisticLists);
 
     // 2. Background Compression Task
-    // We run this without awaiting so the UI remains responsive
     (async () => {
       try {
-        const filename = `${listId}_${Date.now()}.jpg`;
-        const destUri = PHOTO_DIR + filename;
-
-        // Perform compression and resizing (max width 1600px, 80% quality)
         const result = await ImageManipulator.manipulateAsync(
           sourceUri,
           [{ resize: { width: 1600 } }],
           { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
         );
-
-        // Save compressed file to permanent internal storage
         await FileSystem.moveAsync({ from: result.uri, to: destUri });
 
-        // 3. Persistent Update: Replace temp sourceUri with permanent destUri
+        // Replace temp sourceUri with permanent destUri
         setLists(prev => {
           const final = prev.map(l => {
             if (l.id === listId) {
@@ -179,10 +195,7 @@ export const GroceryProvider = ({ children }: { children: ReactNode }) => {
           return final;
         });
       } catch (e) {
-        console.error('Background photo compression failed', e);
-        // Fallback: if compression fails, we should at least try to save the raw photo
-        // but since it's already in the UI optimistically, we leave it as is for now 
-        // to avoid disruptive UI changes.
+        console.error('Photo compression failed', e);
       }
     })();
   };
@@ -192,30 +205,40 @@ export const GroceryProvider = ({ children }: { children: ReactNode }) => {
       const info = await FileSystem.getInfoAsync(photoUri);
       if (info.exists) await FileSystem.deleteAsync(photoUri);
     } catch (_) {}
-    const updated = lists.map(l => {
-      if (l.id === listId) return { ...l, photoUris: l.photoUris.filter(u => u !== photoUri) };
-      return l;
+    setLists(prev => {
+      const updated = prev.map(l => {
+        if (l.id === listId) return { ...l, photoUris: l.photoUris.filter(u => u !== photoUri) };
+        return l;
+      });
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
     });
-    await persist(updated);
   };
 
   const markComplete = async (id: string) => {
-    const updated = lists.map(l => l.id === id ? { ...l, status: 'complete' as const } : l);
-    await persist(updated);
+    setLists(prev => {
+      const updated = prev.map(l => l.id === id ? { ...l, status: 'complete' as const } : l);
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const clearCompletedLists = async () => {
-    const completed = lists.filter(l => l.status === 'complete');
-    for (const list of completed) {
-      for (const uri of list.photoUris) {
-        try {
-          const info = await FileSystem.getInfoAsync(uri);
-          if (info.exists) await FileSystem.deleteAsync(uri);
-        } catch (_) {}
+    setLists(prev => {
+      const completed = prev.filter(l => l.status === 'complete');
+      for (const list of completed) {
+        for (const uri of list.photoUris) {
+          try {
+            FileSystem.getInfoAsync(uri).then(info => {
+              if (info.exists) FileSystem.deleteAsync(uri);
+            });
+          } catch (_) {}
+        }
       }
-    }
-    const updated = lists.filter(l => l.status !== 'complete');
-    await persist(updated);
+      const updated = prev.filter(l => l.status !== 'complete');
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const getStorageSize = async (): Promise<number> => {
