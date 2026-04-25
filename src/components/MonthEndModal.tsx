@@ -22,6 +22,7 @@ import {
 import { useLedgr } from '../lib/LedgrContext';
 import { Budget, ExpenseCategory } from '../lib/store';
 import { useThemeColors } from '../lib/ThemeContext';
+import { format } from 'date-fns';
 
 const CATEGORY_ICONS: Record<string, any> = {
   Food: Coffee,
@@ -118,7 +119,7 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
     if (!prevMonth) return [];
     return expenses.filter((e: any) => {
       const d = new Date(e.date);
-      return d.toISOString().startsWith(prevMonth);
+      return format(d, 'yyyy-MM') === prevMonth;
     });
   }, [expenses, prevMonth]);
 

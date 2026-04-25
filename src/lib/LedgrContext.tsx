@@ -332,7 +332,7 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
     const historicalSnapshot = budgetHistory[monthStr];
     
     const spent = expenses
-      .filter(e => e.date.startsWith(monthStr))
+      .filter(e => format(new Date(e.date), 'yyyy-MM') === monthStr)
       .reduce((sum, e) => sum + e.amount, 0);
     
     setMonthEndData({

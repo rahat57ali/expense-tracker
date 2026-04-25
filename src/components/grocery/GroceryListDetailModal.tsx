@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ScrollView, Alert, Image, Keyboard, Platform, KeyboardAvoidingView, Animated
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
@@ -30,6 +30,7 @@ export default function GroceryListDetailModal({ visible, listId, onClose }: Pro
   const { lists, updateList, deleteList, addItem, updateItem, removeItem, toggleBought, addPhoto, removePhoto, markComplete, logAsExpenses } = useGrocery();
   const { allCategories } = useLedgr();
   const { showSnackbar } = useSnackbar();
+  const insets = useSafeAreaInsets();
 
   const list = lists.find(l => l.id === listId) || null;
   const isComplete = list?.status === 'complete';
@@ -385,11 +386,11 @@ export default function GroceryListDetailModal({ visible, listId, onClose }: Pro
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
         <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
           style={{ flex: 1 }}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
         {/* Header */}
         <View style={styles.header}>
@@ -424,7 +425,7 @@ export default function GroceryListDetailModal({ visible, listId, onClose }: Pro
         <ScrollView
           ref={scrollViewRef}
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 16 }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -505,84 +506,85 @@ export default function GroceryListDetailModal({ visible, listId, onClose }: Pro
           )}
         </ScrollView>
 
-        {/* Sticky Add Item Section */}
-        {!isComplete && (
-          <View style={[styles.stickyAddContainer, { backgroundColor: colors.background, paddingBottom: isKeyboardVisible ? 0 : 4 }]}>
-            {showAddForm ? (
-              <View style={[styles.compactAddCard, { backgroundColor: colors.surface, borderColor: colors.cardBorder }]}>
-                <View style={styles.compactAddRow}>
-                  <TextInput
-                    ref={nameRef}
-                    style={[styles.compactInput, { color: colors.textPrimary, backgroundColor: colors.inputBg, borderColor: colors.inputBorder, flex: 2.5 }]}
-                    placeholder="Item name"
-                    placeholderTextColor={colors.textMuted}
-                    value={itemName}
-                    onChangeText={setItemName}
-                    autoFocus
-                    returnKeyType="next"
-                    onSubmitEditing={() => priceRef.current?.focus()}
-                  />
-                  <View style={[styles.compactInput, styles.compactPriceInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, flex: 1 }]}>
-                    <Text style={[styles.addPrefix, { color: colors.accent }]}>PKR</Text>
+        <View style={{ paddingBottom: isKeyboardVisible ? 0 : Math.max(insets.bottom, 16) }}>
+          {/* Sticky Add Item Section */}
+          {!isComplete && !editingItem && (
+            <View style={[styles.stickyAddContainer, { backgroundColor: colors.background }]}>
+              {showAddForm ? (
+                <View style={[styles.compactAddCard, { backgroundColor: colors.surface }]}>
+                  <View style={styles.compactAddRow}>
                     <TextInput
-                      ref={priceRef}
-                      style={[styles.addInputInner, { color: colors.textPrimary }]}
-                      value={itemPrice}
-                      onChangeText={setItemPrice}
-                      placeholder="0"
+                      ref={nameRef}
+                      style={[styles.compactInput, { color: colors.textPrimary, backgroundColor: colors.inputBg, flex: 2.5 }]}
+                      placeholder="Item name"
                       placeholderTextColor={colors.textMuted}
-                      keyboardType="numeric"
-                      returnKeyType="done"
-                      onSubmitEditing={handleAddItem}
+                      value={itemName}
+                      onChangeText={setItemName}
+                      autoFocus
+                      returnKeyType="next"
+                      onSubmitEditing={() => priceRef.current?.focus()}
                     />
+                    <View style={[styles.compactInput, styles.compactPriceInput, { backgroundColor: colors.inputBg, flex: 1 }]}>
+                      <Text style={[styles.addPrefix, { color: colors.accent }]}>PKR</Text>
+                      <TextInput
+                        ref={priceRef}
+                        style={[styles.addInputInner, { color: colors.textPrimary }]}
+                        value={itemPrice}
+                        onChangeText={setItemPrice}
+                        placeholder="0"
+                        placeholderTextColor={colors.textMuted}
+                        keyboardType="numeric"
+                        returnKeyType="done"
+                        onSubmitEditing={handleAddItem}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={[styles.compactAddRow, { marginTop: 12 }]}>
+                    <View style={styles.stepperContainer}>
+                      <TouchableOpacity
+                        style={[styles.stepBtn, { backgroundColor: colors.pillBg }]}
+                        onPress={() => setItemQty(Math.max(1, parseInt(itemQty || '1') - 1).toString())}
+                      >
+                        <Minus size={14} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                      <Text style={[styles.stepValue, { color: colors.textPrimary, fontSize: 15 }]}>{itemQty || '1'}</Text>
+                      <TouchableOpacity
+                        style={[styles.stepBtn, { backgroundColor: colors.pillBg }]}
+                        onPress={() => setItemQty((parseInt(itemQty || '1') + 1).toString())}
+                      >
+                        <Plus size={14} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={{ flex: 1 }} />
+                    <TouchableOpacity style={[styles.iconActionBtn]} onPress={() => setShowAddForm(false)}>
+                      <X color={colors.textMuted} size={20} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.iconActionBtn, { backgroundColor: colors.saveBtnBg, opacity: itemName.trim() ? 1 : 0.4, borderRadius: 23 }]}
+                      onPress={handleAddItem}
+                      disabled={!itemName.trim()}
+                    >
+                      <Plus color={colors.saveBtnText} size={24} strokeWidth={3} />
+                    </TouchableOpacity>
                   </View>
                 </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.addItemBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle, marginHorizontal: 16 }]}
+                  onPress={() => setShowAddForm(true)}
+                >
+                  <Plus color={colors.accent} size={18} />
+                  <Text style={[styles.addItemBtnText, { color: colors.accent }]}>Add Item</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
-                <View style={[styles.compactAddRow, { marginTop: 8 }]}>
-                  <View style={styles.stepperContainer}>
-                    <TouchableOpacity
-                      style={[styles.stepBtn, { backgroundColor: colors.pillBg }]}
-                      onPress={() => setItemQty(Math.max(1, parseInt(itemQty || '1') - 1).toString())}
-                    >
-                      <Minus size={12} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                    <Text style={[styles.stepValue, { color: colors.textPrimary, fontSize: 14 }]}>{itemQty || '1'}</Text>
-                    <TouchableOpacity
-                      style={[styles.stepBtn, { backgroundColor: colors.pillBg }]}
-                      onPress={() => setItemQty((parseInt(itemQty || '1') + 1).toString())}
-                    >
-                      <Plus size={12} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                  <View style={{ flex: 1 }} />
-                  <TouchableOpacity style={[styles.iconActionBtn, { backgroundColor: colors.closeBtnBg }]} onPress={() => setShowAddForm(false)}>
-                    <X color={colors.textSecondary} size={18} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.iconActionBtn, { backgroundColor: colors.saveBtnBg, opacity: itemName.trim() ? 1 : 0.4 }]}
-                    onPress={handleAddItem}
-                    disabled={!itemName.trim()}
-                  >
-                    <Plus color={colors.saveBtnText} size={20} strokeWidth={3} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={[styles.addItemBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle, marginHorizontal: 16, marginBottom: 16 }]}
-                onPress={() => setShowAddForm(true)}
-              >
-                <Plus color={colors.accent} size={18} />
-                <Text style={[styles.addItemBtnText, { color: colors.accent }]}>Add Item</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-
-        {/* Running Total Bar Area */}
-        <View style={[styles.totalBarContainer, { height: list.items.length > 0 ? 70 : 0 }]}>
-          {list.items.length > 0 && (
-            <Animated.View 
+          {/* Running Total Bar Area */}
+          <View style={[styles.totalBarContainer, { height: (list.items.length > 0 && !editingItem) ? 70 : 0 }]}>
+            {(list.items.length > 0 && !editingItem) && (
+              <Animated.View 
               style={[
                 styles.totalBar, 
                 { 
@@ -610,6 +612,7 @@ export default function GroceryListDetailModal({ visible, listId, onClose }: Pro
               </View>
             </Animated.View>
           )}
+          </View>
         </View>
 
         {/* Support Components */}
@@ -652,7 +655,7 @@ const styles = StyleSheet.create({
   completeBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, marginTop: 4 },
   completeBadgeText: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1 },
   scrollView: { flex: 1 },
-  scrollContent: { paddingHorizontal: 16, paddingBottom: 24 },
+  scrollContent: { paddingHorizontal: 16 },
   // Group header
   groupHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, marginBottom: 8 },
   groupDot: { width: 8, height: 8, borderRadius: 4 },
@@ -697,29 +700,33 @@ const styles = StyleSheet.create({
   stickyAddContainer: { 
     width: '100%',
     zIndex: 10,
+    marginBottom: 16,
   },
   compactAddCard: { 
-    padding: 16, 
-    borderTopWidth: 1,
-    elevation: 20,
+    paddingHorizontal: 20, 
+    paddingTop: 16,
+    paddingBottom: 20,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
   },
   compactAddRow: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   compactInput: { 
     fontFamily: 'Inter_600SemiBold', 
-    fontSize: 14, 
-    borderRadius: 12, 
-    height: 46, 
-    paddingHorizontal: 14, 
-    borderWidth: 1.5 
+    fontSize: 15, 
+    borderRadius: 16, 
+    height: 52, 
+    paddingHorizontal: 16, 
+    borderWidth: 0 
   },
   compactPriceInput: { flexDirection: 'row', alignItems: 'center' },
-  addPrefix: { fontFamily: 'Inter_800ExtraBold', fontSize: 10, marginRight: 6, opacity: 0.5 },
-  addInputInner: { flex: 1, fontFamily: 'Outfit_700Bold', fontSize: 16, padding: 0 },
-  iconActionBtn: { width: 46, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  addPrefix: { fontFamily: 'Inter_800ExtraBold', fontSize: 11, marginRight: 6, opacity: 0.5 },
+  addInputInner: { flex: 1, fontFamily: 'Outfit_700Bold', fontSize: 17, padding: 0 },
+  iconActionBtn: { width: 46, height: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   // Edit item
   editItemCard: { borderRadius: 16, padding: 16, borderWidth: 1, marginVertical: 8 },
   editInput: { fontFamily: 'Inter_500Medium', fontSize: 15, borderRadius: 12, height: 44, paddingHorizontal: 14, borderWidth: 1, marginBottom: 8 },

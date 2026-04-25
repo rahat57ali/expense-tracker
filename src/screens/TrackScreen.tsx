@@ -1,8 +1,9 @@
-import React, { useState, useRef, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Platform, ScrollView, Keyboard, Dimensions } from 'react-native';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Platform, ScrollView, Keyboard, Dimensions, Animated } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { format } from 'date-fns';
 import { useLedgr } from '../lib/LedgrContext';
 import { useThemeColors } from '../lib/ThemeContext';
 import { ExpenseCategory, Expense, autoCategorize } from '../lib/store';
@@ -42,6 +43,9 @@ export default function TrackScreen() {
   const [scrollX, setScrollX] = useState(0);
   const [contentWidth, setContentWidth] = useState(0);
   const [viewWidth, setViewWidth] = useState(0);
+  const [toggleWidth, setToggleWidth] = useState(0);
+  const [categoryLayouts, setCategoryLayouts] = useState<Record<string, { x: number, width: number }>>({});
+  const toggleAnim = useRef(new Animated.Value(mode === 'expense' ? 0 : 1)).current;
   const SCREEN_WIDTH = Dimensions.get('window').width;
 
   const isAtStart = scrollX <= 5;
@@ -63,7 +67,7 @@ export default function TrackScreen() {
     return prompts[Math.floor(Math.random() * prompts.length)];
   }, []);
 
-  const activeMonth = budget.budgetMonth || new Date().toISOString().slice(0, 7);
+  const activeMonth = budget.budgetMonth || format(new Date(), 'yyyy-MM');
 
   const prevMonthStr = useMemo(() => {
     const [year, month] = activeMonth.split('-').map(Number);
@@ -74,14 +78,14 @@ export default function TrackScreen() {
   }, [activeMonth]);
 
   const currentMonthExpenses = useMemo(() => {
-    return expenses.filter(e => e.date.startsWith(activeMonth));
+    return expenses.filter(e => format(new Date(e.date), 'yyyy-MM') === activeMonth);
   }, [expenses, activeMonth]);
 
   const thisMonthSpent = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   const lastMonthSpent = useMemo(() => {
     return expenses
-      .filter(e => e.date.startsWith(prevMonthStr))
+      .filter(e => format(new Date(e.date), 'yyyy-MM') === prevMonthStr)
       .reduce((sum, e) => sum + e.amount, 0);
   }, [expenses, prevMonthStr]);
 
@@ -100,7 +104,13 @@ export default function TrackScreen() {
   }
 
   const todaySpent = expenses
-    .filter(e => isToday(e.date))
+    .filter(e => {
+      const d = new Date(e.date);
+      const today = new Date();
+      return d.getDate() === today.getDate() && 
+             d.getMonth() === today.getMonth() && 
+             d.getFullYear() === today.getFullYear();
+    })
     .reduce((sum, e) => sum + e.amount, 0);
 
   const daysLeft = getDaysRemainingInMonth();
@@ -144,6 +154,12 @@ export default function TrackScreen() {
 
   const handleModeSwitch = (newMode: 'expense' | 'grocery') => {
     setMode(newMode);
+    Animated.spring(toggleAnim, {
+      toValue: newMode === 'expense' ? 0 : 1,
+      useNativeDriver: true,
+      bounciness: 4,
+      speed: 12
+    }).start();
     horizontalScrollRef.current?.scrollTo({ x: newMode === 'expense' ? 0 : SCREEN_WIDTH, animated: true });
   };
 
@@ -151,7 +167,24 @@ export default function TrackScreen() {
     const offsetX = e.nativeEvent.contentOffset.x;
     const newIdx = Math.round(offsetX / SCREEN_WIDTH);
     const newMode = newIdx === 0 ? 'expense' : 'grocery';
-    if (newMode !== mode) setMode(newMode);
+    if (newMode !== mode) {
+      setMode(newMode);
+      Animated.spring(toggleAnim, {
+        toValue: newMode === 'expense' ? 0 : 1,
+        useNativeDriver: true,
+        bounciness: 4,
+        speed: 12
+      }).start();
+    }
+  };
+
+  const handleCategoryPress = (cat: ExpenseCategory) => {
+    setSelectedCategory(cat);
+    const layout = categoryLayouts[cat];
+    if (layout && viewWidth > 0) {
+      const targetX = layout.x - (viewWidth / 2) + (layout.width / 2);
+      catScrollRef.current?.scrollTo({ x: Math.max(0, targetX), animated: true });
+    }
   };
 
   return (
@@ -175,20 +208,40 @@ export default function TrackScreen() {
           </View>
 
           {/* Mode Toggle */}
-          <View style={[styles.modeToggle, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}>
+          <View 
+            style={[styles.modeToggle, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}
+            onLayout={(e) => setToggleWidth(e.nativeEvent.layout.width - 8)} // padding is 4 on each side
+          >
+            {toggleWidth > 0 && (
+              <Animated.View 
+                style={[
+                  styles.modeActivePill, 
+                  { 
+                    backgroundColor: colors.accent,
+                    width: toggleWidth / 2,
+                    transform: [{ 
+                      translateX: toggleAnim.interpolate({ 
+                        inputRange: [0, 1], 
+                        outputRange: [0, toggleWidth / 2] 
+                      }) 
+                    }]
+                  }
+                ]} 
+              />
+            )}
             <TouchableOpacity
-              style={[styles.modeBtn, mode === 'expense' && { backgroundColor: colors.accent }]}
+              style={styles.modeBtn}
               onPress={() => handleModeSwitch('expense')}
               activeOpacity={0.7}
             >
-              <Text style={[styles.modeBtnText, { color: colors.textTertiary }, mode === 'expense' && { color: colors.background }]}>Track Expense</Text>
+              <Text style={[styles.modeBtnText, { color: mode === 'expense' ? colors.background : colors.textTertiary }]}>Track Expense</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modeBtn, mode === 'grocery' && { backgroundColor: colors.accent }]}
+              style={styles.modeBtn}
               onPress={() => handleModeSwitch('grocery')}
               activeOpacity={0.7}
             >
-              <Text style={[styles.modeBtnText, { color: colors.textTertiary }, mode === 'grocery' && { color: colors.background }]}>Grocery Lists</Text>
+              <Text style={[styles.modeBtnText, { color: mode === 'grocery' ? colors.background : colors.textTertiary }]}>Grocery Lists</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -335,6 +388,9 @@ export default function TrackScreen() {
               scrollEventThrottle={16}
               onContentSizeChange={(w) => setContentWidth(w)}
               onLayout={(e) => setViewWidth(e.nativeEvent.layout.width)}
+              onTouchStart={() => horizontalScrollRef.current?.setNativeProps({ scrollEnabled: false })}
+              onTouchEnd={() => horizontalScrollRef.current?.setNativeProps({ scrollEnabled: true })}
+              onTouchCancel={() => horizontalScrollRef.current?.setNativeProps({ scrollEnabled: true })}
             >
               <View style={styles.catRow}>
                 {allCategories.map(cat => {
@@ -344,12 +400,16 @@ export default function TrackScreen() {
                   return (
                     <TouchableOpacity
                       key={cat}
+                      onLayout={(e) => {
+                        const { x, width } = e.nativeEvent.layout;
+                        setCategoryLayouts(prev => ({ ...prev, [cat]: { x, width } }));
+                      }}
                       style={[
                         styles.miniCatPill,
                         { backgroundColor: colors.pillBg, borderColor: colors.inputBorder },
                         isSelected && { backgroundColor: colors.saveBtnBg, borderColor: colors.saveBtnBg }
                       ]}
-                      onPress={() => setSelectedCategory(cat)}
+                      onPress={() => handleCategoryPress(cat)}
                     >
                       <Icon color={isSelected ? colors.saveBtnText : colors.iconMuted} size={14} />
                       <View>
@@ -439,7 +499,7 @@ export default function TrackScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingTop: 12, marginBottom: 16 },
+  header: { paddingHorizontal: 20, paddingTop: 12, marginBottom: 0 },
   glow: { position: 'absolute', width: 300, height: 300, borderRadius: 150 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, width: '100%' },
@@ -526,6 +586,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2
   },
-  modeBtn: { flex: 1, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  modeBtn: { flex: 1, height: 42, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   modeBtnText: { fontFamily: 'Outfit_700Bold', fontSize: 13 },
+  modeActivePill: { position: 'absolute', top: 4, left: 4, height: 42, borderRadius: 12, zIndex: 0 },
 });
