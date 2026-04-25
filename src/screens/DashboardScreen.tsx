@@ -374,7 +374,7 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
-  header: { marginBottom: 12 },
+  header: { marginBottom: 0 },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, width: '100%' },
   headerTopLeft: { flexDirection: 'row', alignItems: 'center' },
   headerDivider: { width: 1, height: 12, marginHorizontal: 12, opacity: 0.3 },
@@ -403,9 +403,9 @@ const styles = StyleSheet.create({
   sectionTitle: { fontFamily: 'Outfit_600SemiBold', fontSize: 20 },
   sectionSubtitle: { fontFamily: 'Inter_500Medium', fontSize: 12, marginTop: 2 },
   viewAllBtn: { 
-    paddingHorizontal: 12, 
-    paddingVertical: 4, 
-    borderRadius: 8, 
+    paddingHorizontal: 16, 
+    paddingVertical: 8, 
+    borderRadius: 12, 
     borderWidth: 1 
   },
   viewAllText: { 

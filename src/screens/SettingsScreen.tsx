@@ -426,7 +426,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
-  header: { marginBottom: 12 },
+  header: { marginBottom: 0 },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, width: '100%' },
   headerTopLeft: { flexDirection: 'row', alignItems: 'center' },
   headerDivider: { width: 1, height: 12, marginHorizontal: 12, opacity: 0.3 },

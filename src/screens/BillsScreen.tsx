@@ -287,7 +287,7 @@ export default function BillsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
-  header: { marginBottom: 16 },
+  header: { marginBottom: 0 },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   headerTopLeft: { flexDirection: 'row', alignItems: 'center' },
   headerRight: { flexDirection: 'row', alignItems: 'center' },

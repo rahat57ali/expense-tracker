@@ -182,7 +182,7 @@ export default function CalendarScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { marginBottom: 12 },
+  header: { marginBottom: 0 },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   headerTopLeft: { flexDirection: 'row', alignItems: 'center' },
   headerDivider: { width: 1, height: 12, marginHorizontal: 12, opacity: 0.3 },

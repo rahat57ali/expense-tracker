@@ -220,7 +220,7 @@ export default function SummaryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { marginBottom: 16 },
+  header: { marginBottom: 0 },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   headerTopLeft: { flexDirection: 'row', alignItems: 'center' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -235,8 +235,8 @@ const styles = StyleSheet.create({
   totalValue: { fontSize: 28, fontFamily: 'Outfit_600SemiBold', marginBottom: 16 },
 
   cardControlsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-  monthPicker: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1, height: 38, paddingHorizontal: 2 },
-  pickerBtn: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
+  monthPicker: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1, height: 44, paddingHorizontal: 2 },
+  pickerBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   monthLabelBox: { paddingHorizontal: 6 },
   monthLabelText: { fontFamily: 'Outfit_600SemiBold', fontSize: 13, textTransform: 'uppercase' },
 
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', 
     alignItems: 'center', 
     paddingHorizontal: 16, 
-    height: 38,
+    height: 44,
     borderRadius: 12,
     gap: 8,
     shadowOffset: { width: 0, height: 2 },
