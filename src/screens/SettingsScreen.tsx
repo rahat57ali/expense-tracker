@@ -51,6 +51,8 @@ export default function SettingsScreen() {
   };
 
   const [localBudget, setLocalBudget] = useState<Budget>(budget);
+  const [totalStr, setTotalStr] = useState(budget.total.toString());
+  const [catStrs, setCatStrs] = useState<Record<string, string>>({});
   const [newCatName, setNewCatName] = useState('');
   const [isAddingCat, setIsAddingCat] = useState(false);
 
@@ -61,7 +63,15 @@ export default function SettingsScreen() {
   const categoryRefs = useRef<Record<string, TextInput | null>>({});
 
   useEffect(() => {
-    if (isLoaded) setLocalBudget(budget);
+    if (isLoaded) {
+      setLocalBudget(budget);
+      setTotalStr(budget.total.toString());
+      const strs: Record<string, string> = {};
+      for (const cat of Object.keys(budget.categories)) {
+        strs[cat] = (budget.categories[cat] || 0).toString();
+      }
+      setCatStrs(strs);
+    }
   }, [budget, isLoaded]);
 
   const totalAllocated = useMemo(() =>
@@ -76,9 +86,30 @@ export default function SettingsScreen() {
     showSnackbar('Budget configuration saved!', 'success');
   };
 
+  const handleTotalChange = (val: string) => {
+    const cleaned = val.replace(/[^0-9]/g, '');
+    setTotalStr(cleaned);
+    setLocalBudget(prev => ({ ...prev, total: parseInt(cleaned) || 0 }));
+  };
+
+  const handleTotalBlur = () => {
+    if (!totalStr.trim()) {
+      setTotalStr('0');
+      setLocalBudget(prev => ({ ...prev, total: 0 }));
+    }
+  };
+
   const handleCatChange = (cat: ExpenseCategory, val: string) => {
-    const num = parseInt(val) || 0;
-    setLocalBudget(prev => ({ ...prev, categories: { ...prev.categories, [cat]: num } }));
+    const cleaned = val.replace(/[^0-9]/g, '');
+    setCatStrs(prev => ({ ...prev, [cat]: cleaned }));
+    setLocalBudget(prev => ({ ...prev, categories: { ...prev.categories, [cat]: parseInt(cleaned) || 0 } }));
+  };
+
+  const handleCatBlur = (cat: string) => {
+    if (!catStrs[cat]?.trim()) {
+      setCatStrs(prev => ({ ...prev, [cat]: '0' }));
+      setLocalBudget(prev => ({ ...prev, categories: { ...prev.categories, [cat]: 0 } }));
+    }
   };
 
   const [isExporting, setIsExporting] = useState<false | 'download' | 'share'>(false);
@@ -206,8 +237,11 @@ export default function SettingsScreen() {
                 ref={budgetRef}
                 style={[styles.totalInput, { color: colors.textPrimary }]}
                 keyboardType="numeric"
-                value={localBudget.total.toString()}
-                onChangeText={(val) => setLocalBudget(p => ({ ...p, total: parseInt(val) || 0 }))}
+                placeholder="0.0"
+                placeholderTextColor={colors.textMuted}
+                value={totalStr}
+                onChangeText={handleTotalChange}
+                onBlur={handleTotalBlur}
                 returnKeyType="next"
                 onSubmitEditing={() => {
                   if (allCategories.length > 0) {
@@ -291,8 +325,11 @@ export default function SettingsScreen() {
                     ref={el => { categoryRefs.current[cat] = el; }}
                     style={[styles.catInput, { color: colors.textPrimary }]}
                     keyboardType="numeric"
-                    value={amount.toString()}
+                    placeholder="0.0"
+                    placeholderTextColor={colors.textMuted}
+                    value={catStrs[cat] ?? amount.toString()}
                     onChangeText={(val) => handleCatChange(cat, val)}
+                    onBlur={() => handleCatBlur(cat)}
                     returnKeyType={index === allCategories.length - 1 ? 'done' : 'next'}
                     onSubmitEditing={() => {
                       if (index < allCategories.length - 1) {

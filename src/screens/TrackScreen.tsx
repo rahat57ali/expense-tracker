@@ -330,11 +330,14 @@ export default function TrackScreen() {
             <TextInput
               ref={amountRef}
               style={[styles.inputAmount, { color: colors.textPrimary }]}
-              placeholder="0.00"
+              placeholder="0.0"
               placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
               value={amountStr}
               onChangeText={setAmountStr}
+              onBlur={() => {
+                if (amountStr.trim() && parseFloat(amountStr) === 0) setAmountStr('');
+              }}
               returnKeyType="done"
               onSubmitEditing={() => {
                 Keyboard.dismiss();

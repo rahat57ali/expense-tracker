@@ -68,8 +68,11 @@ export default function BillPaymentModal({ visible, onClose, onConfirm, bill }: 
                     style={[styles.amountInput, { color: colors.textPrimary }]}
                     value={amount}
                     onChangeText={setAmount}
+                    onBlur={() => {
+                      if (!amount.trim()) setAmount('');
+                    }}
                     keyboardType="numeric"
-                    placeholder="0.00"
+                    placeholder="0.0"
                     placeholderTextColor={colors.textMuted}
                     autoFocus
                     returnKeyType="done"

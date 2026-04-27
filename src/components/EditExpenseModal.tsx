@@ -153,7 +153,10 @@ export default function EditExpenseModal({ visible, onClose, expense }: EditExpe
                   style={[styles.inputAmount, { color: colors.textPrimary, padding: 0 }]}
                   value={amount}
                   onChangeText={setAmount}
-                  placeholder="0.00"
+                  onBlur={() => {
+                    if (!amount.trim()) setAmount('');
+                  }}
+                  placeholder="0.0"
                   placeholderTextColor={colors.textMuted}
                   keyboardType="numeric"
                   returnKeyType="done"

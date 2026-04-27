@@ -239,9 +239,12 @@ export default function BillsScreen() {
                   ref={amountInputRef}
                   style={[styles.input, { backgroundColor: colors.inputBg, color: colors.textPrimary, borderColor: colors.inputBorder }]} 
                   value={amount} 
-                  onChangeText={setAmount} 
+                  onChangeText={setAmount}
+                  onBlur={() => {
+                    if (!amount.trim()) setAmount('');
+                  }}
                   keyboardType="numeric" 
-                  placeholder="0.00" 
+                  placeholder="0.0" 
                   placeholderTextColor={colors.textMuted} 
                   returnKeyType="done"
                   onSubmitEditing={() => Keyboard.dismiss()}

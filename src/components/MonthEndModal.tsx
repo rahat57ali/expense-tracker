@@ -56,6 +56,7 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
   const [rolloverCache, setRolloverCache] = useState<number>(0);
   
   const [localTotal, setLocalTotal] = useState<number>(currentBudget.total);
+  const [localTotalStr, setLocalTotalStr] = useState(currentBudget.total.toString());
 
   useEffect(() => {
     if (visible && data) {
@@ -70,6 +71,7 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
         setRolloverCache(0);
       }
       setLocalTotal(currentBudget.total);
+      setLocalTotalStr(currentBudget.total.toString());
     }
   }, [visible, data, currentBudget]);
 
@@ -523,8 +525,20 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
                         <TextInput
                           style={[styles.totalInput, { color: colors.textPrimary }]}
                           keyboardType="numeric"
-                          value={localTotal.toString()}
-                          onChangeText={(val) => setLocalTotal(parseInt(val) || 0)}
+                          placeholder="0.0"
+                          placeholderTextColor={colors.textMuted}
+                          value={localTotalStr}
+                          onChangeText={(val) => {
+                            const cleaned = val.replace(/[^0-9]/g, '');
+                            setLocalTotalStr(cleaned);
+                            setLocalTotal(parseInt(cleaned) || 0);
+                          }}
+                          onBlur={() => {
+                            if (!localTotalStr.trim()) {
+                              setLocalTotalStr('0');
+                              setLocalTotal(0);
+                            }
+                          }}
                         />
                         <Pencil size={20} color={colors.accent} style={{ marginLeft: 12 }} />
                       </View>
