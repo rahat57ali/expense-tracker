@@ -231,7 +231,7 @@ export default function InsightsScreen() {
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Insights</Text>
       </View>
       
-      <View style={styles.monthSelector}>
+      <View style={[styles.monthSelector, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}>
         <TouchableOpacity onPress={handlePrevMonth} style={styles.monthBtn}>
           <ChevronLeft color={colors.textPrimary} size={24} />
         </TouchableOpacity>
@@ -331,13 +331,13 @@ export default function InsightsScreen() {
             {topItems.map((item, index) => (
               <View key={index} style={[styles.listItem, index < topItems.length - 1 && { borderBottomColor: colors.divider, borderBottomWidth: 1 }]}>
                 <View style={styles.listLeft}>
-                  <Text style={[styles.itemRank, { color: colors.textTertiary }]}>#{index + 1}</Text>
+                  <Text style={[styles.itemRank, { color: colors.textTertiary, backgroundColor: colors.divider }]}>#{index + 1}</Text>
                   <View>
                     <Text style={[styles.itemName, { color: colors.textPrimary }]}>{item.name}</Text>
                     <Text style={[styles.itemFreq, { color: colors.textTertiary }]}>Purchased {item.count}x</Text>
                   </View>
                 </View>
-                <Text style={[styles.itemTotal, { color: colors.textPrimary }]}>PKR {item.total.toLocaleString()}</Text>
+                <Text style={[styles.itemTotal, { color: colors.textPrimary }]}><Text style={{ color: colors.textTertiary, fontSize: 11, fontFamily: 'Inter_500Medium' }}>PKR </Text>{item.total.toLocaleString()}</Text>
               </View>
             ))}
           </View>
@@ -364,7 +364,7 @@ export default function InsightsScreen() {
                       )}
                     </View>
                     <Text style={[styles.budgetAmt, { color: cat.isOver ? colors.danger : colors.textPrimary }]}>
-                      PKR {cat.spent.toLocaleString()} <Text style={{ color: colors.textTertiary, fontFamily: 'Inter_500Medium' }}>/ {cat.limit > 0 ? cat.limit.toLocaleString() : 'No Limit'}</Text>
+                      <Text style={{ color: colors.textTertiary, fontSize: 11, fontFamily: 'Inter_500Medium' }}>PKR </Text>{cat.spent.toLocaleString()} <Text style={{ color: colors.textTertiary, fontFamily: 'Inter_500Medium' }}>/ {cat.limit > 0 ? cat.limit.toLocaleString() : 'No Limit'}</Text>
                     </Text>
                   </View>
                   {cat.limit > 0 && (
@@ -520,14 +520,14 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' },
   headerTitle: { fontFamily: 'Outfit_800ExtraBold', fontSize: 24, letterSpacing: 1 },
   
-  monthSelector: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16 },
+  monthSelector: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 30, borderWidth: 1, marginTop: 12, marginBottom: 20, gap: 16 },
   monthBtn: { padding: 4 },
-  monthLabel: { fontFamily: 'Outfit_600SemiBold', fontSize: 18 },
+  monthLabel: { fontFamily: 'Outfit_600SemiBold', fontSize: 16 },
   
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
   
   section: { marginBottom: 24 },
-  sectionTitle: { fontFamily: 'Outfit_600SemiBold', fontSize: 18, marginBottom: 12 },
+  sectionTitle: { fontFamily: 'Outfit_600SemiBold', fontSize: 18, marginBottom: 16 },
   card: { borderRadius: 20, padding: 20, borderWidth: 1 },
   
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 100 },
@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
   donutContainer: { width: 140, height: 140, alignItems: 'center', justifyContent: 'center' },
   donutCenter: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   donutTotalLabel: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1 },
-  donutTotalValue: { fontFamily: 'Outfit_600SemiBold', fontSize: 18, marginTop: -2 },
+  donutTotalValue: { fontFamily: 'Outfit_700Bold', fontSize: 20, marginTop: -2 },
   legendContainer: { flex: 1, marginLeft: 20, gap: 12 },
   legendItem: { flexDirection: 'row', alignItems: 'center' },
   legendDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
@@ -554,19 +554,19 @@ const styles = StyleSheet.create({
 
   listItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 },
   listLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  itemRank: { fontFamily: 'Outfit_800ExtraBold', fontSize: 14, width: 30 },
+  itemRank: { fontFamily: 'Outfit_800ExtraBold', fontSize: 12, width: 28, height: 28, borderRadius: 14, textAlign: 'center', lineHeight: 28, overflow: 'hidden', marginRight: 12 },
   itemName: { fontFamily: 'Inter_600SemiBold', fontSize: 15, marginBottom: 2 },
   itemFreq: { fontFamily: 'Inter_400Regular', fontSize: 12 },
   itemTotal: { fontFamily: 'Outfit_600SemiBold', fontSize: 15 },
 
-  budgetRow: { paddingVertical: 12 },
+  budgetRow: { paddingVertical: 14 },
   budgetHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   budgetCatName: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
   budgetAmt: { fontFamily: 'Outfit_700Bold', fontSize: 14 },
   progressBarBg: { height: 6, borderRadius: 3, overflow: 'hidden' },
   progressBarFill: { height: '100%', borderRadius: 3 },
 
-  expandedCategoryList: { paddingBottom: 12, paddingHorizontal: 4 },
+  expandedCategoryList: { paddingBottom: 12, paddingHorizontal: 12, backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: 12, marginTop: 8 },
   expandedExpRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 },
   expandedExpName: { fontFamily: 'Inter_500Medium', fontSize: 13, marginBottom: 2 },
   expandedExpDate: { fontFamily: 'Inter_400Regular', fontSize: 11 },
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
   wowLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 11, marginTop: 10, marginBottom: 2 },
   wowAmt: { fontFamily: 'Outfit_500Medium', fontSize: 12 },
 
-  tipsCard: { borderRadius: 16, padding: 16, borderWidth: 1 },
-  tipRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  tipsCard: { borderRadius: 16, padding: 20, borderWidth: 1 },
+  tipRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 },
   tipText: { fontFamily: 'Inter_500Medium', fontSize: 14, flex: 1, lineHeight: 20 },
 });
