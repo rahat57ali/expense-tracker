@@ -83,7 +83,11 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
       const historyObj = savedHistory ? JSON.parse(savedHistory) : {};
       
       if (savedDevTools) setShowDevTools(JSON.parse(savedDevTools));
-      if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
+      if (savedExpenses) {
+        const parsedExpenses = JSON.parse(savedExpenses);
+        parsedExpenses.sort((a: Expense, b: Expense) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setExpenses(parsedExpenses);
+      }
       if (savedBills) setBills(JSON.parse(savedBills));
 
       // Migration logic for categories
@@ -180,7 +184,7 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
       date: expense.date || new Date().toISOString(),
     };
     
-    const updated = [newExpense, ...expenses];
+    const updated = [newExpense, ...expenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setExpenses(updated);
     await AsyncStorage.setItem('ledgr_expenses', JSON.stringify(updated));
   };
@@ -204,7 +208,7 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateExpense = async (updatedExpense: Expense) => {
-    const updated = expenses.map(e => e.id === updatedExpense.id ? updatedExpense : e);
+    const updated = expenses.map(e => e.id === updatedExpense.id ? updatedExpense : e).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setExpenses(updated);
     await AsyncStorage.setItem('ledgr_expenses', JSON.stringify(updated));
   };

@@ -23,7 +23,7 @@ import { SnackbarProvider, useSnackbar } from './src/components/Snackbar';
 import { ThemeProvider, useTheme } from './src/lib/ThemeContext';
 import TrackScreen from './src/screens/TrackScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
-import SummaryScreen from './src/screens/SummaryScreen';
+import InsightsScreen from './src/screens/InsightsScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import BillsScreen from './src/screens/BillsScreen';
@@ -101,7 +101,7 @@ function Navigation() {
         />
         <Tab.Screen
           name="Insights"
-          component={SummaryScreen}
+          component={InsightsScreen}
           options={{
             tabBarIcon: ({ color, focused }) => <BarChart2 color={focused ? colors.warning : color} size={22} />
           }}
