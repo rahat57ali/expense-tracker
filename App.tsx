@@ -6,12 +6,15 @@ import {
   Outfit_300Light,
   Outfit_400Regular,
   Outfit_600SemiBold,
+  Outfit_700Bold,
   Outfit_800ExtraBold
 } from '@expo-google-fonts/outfit';
 import {
   Inter_400Regular,
   Inter_500Medium,
-  Inter_700Bold
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold
 } from '@expo-google-fonts/inter';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, Platform } from 'react-native';
@@ -152,8 +155,8 @@ function Navigation() {
 
 export default function App() {
   const [fontsLoaded] = useFonts({
-    Outfit_300Light, Outfit_400Regular, Outfit_600SemiBold, Outfit_800ExtraBold,
-    Inter_400Regular, Inter_500Medium, Inter_700Bold,
+    Outfit_300Light, Outfit_400Regular, Outfit_600SemiBold, Outfit_700Bold, Outfit_800ExtraBold,
+    Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold,
   });
 
   if (!fontsLoaded) {

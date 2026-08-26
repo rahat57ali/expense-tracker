@@ -4,6 +4,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { GroceryList, GroceryItem, ExpenseCategory } from './store';
 import { useLedgr } from './LedgrContext';
+import { format } from 'date-fns';
 
 const STORAGE_KEY = 'ledgr_grocery_lists';
 const PHOTO_DIR = `${FileSystem.documentDirectory || ''}grocery_photos/`;
@@ -243,17 +244,23 @@ export const GroceryProvider = ({ children }: { children: ReactNode }) => {
 
   const getStorageSize = async (): Promise<number> => {
     let totalBytes = 0;
-    // JSON data size
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (raw) totalBytes += new Blob([raw]).size;
-    // Photo files size
-    for (const list of lists) {
-      for (const uri of list.photoUris) {
-        try {
-          const info = await FileSystem.getInfoAsync(uri);
-          if (info.exists && 'size' in info) totalBytes += (info as any).size || 0;
-        } catch (_) {}
+    try {
+      // JSON data size
+      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        totalBytes += typeof TextEncoder !== 'undefined' ? new TextEncoder().encode(raw).length : raw.length;
       }
+      // Photo files size
+      for (const list of lists) {
+        for (const uri of list.photoUris) {
+          try {
+            const info = await FileSystem.getInfoAsync(uri);
+            if (info.exists && 'size' in info) totalBytes += (info as any).size || 0;
+          } catch (_) {}
+        }
+      }
+    } catch (e) {
+      console.error('Failed to calculate grocery storage size', e);
     }
     return totalBytes;
   };
@@ -279,7 +286,7 @@ export const GroceryProvider = ({ children }: { children: ReactNode }) => {
         name: `Grocery: ${name}`,
         amount: data.total,
         category: cat as ExpenseCategory,
-        date: new Date().toISOString(),
+        date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
       });
     }
   };

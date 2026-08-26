@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'rea
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Calendar } from 'react-native-calendars';
 import { useLedgr } from '../lib/LedgrContext';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, ShoppingBasket } from 'lucide-react-native';
 import { ExpenseCategory, Expense } from '../lib/store';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -116,7 +116,7 @@ export default function CalendarScreen() {
 
         <View style={styles.detailsHeader}>
           <View>
-            <Text style={[styles.detailsDate, { color: colors.textPrimary }]}>{format(new Date(selectedDate), 'MMMM do, yyyy')}</Text>
+            <Text style={[styles.detailsDate, { color: colors.textPrimary }]}>{format(parse(selectedDate, 'yyyy-MM-dd', new Date()), 'MMMM do, yyyy')}</Text>
             <Text style={[styles.detailsCount, { color: colors.textSecondary }]}>{dailyExpenses.length} transactions</Text>
           </View>
           <View style={[styles.totalBadge, { backgroundColor: colors.accentBg, borderColor: colors.accent + '33' }]}>

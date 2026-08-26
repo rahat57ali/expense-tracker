@@ -121,15 +121,17 @@ export default function InsightsScreen() {
 
   // 7. Food vs. Essential Spend Ratio
   const splitRatio = useMemo(() => {
-    const discretionaryCats = ['Food', 'Shopping', 'Other'];
     const essentialCats = ['Grocery', 'Transport', 'Bills', 'Health'];
     
     let discretionary = 0;
     let essential = 0;
     
     monthExpenses.forEach(e => {
-      if (discretionaryCats.includes(e.category)) discretionary += e.amount;
-      else if (essentialCats.includes(e.category)) essential += e.amount;
+      if (essentialCats.includes(e.category)) {
+        essential += e.amount;
+      } else {
+        discretionary += e.amount;
+      }
     });
     
     const total = discretionary + essential;

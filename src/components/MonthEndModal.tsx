@@ -22,7 +22,7 @@ import {
 import { useLedgr } from '../lib/LedgrContext';
 import { Budget, ExpenseCategory } from '../lib/store';
 import { useThemeColors } from '../lib/ThemeContext';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 
 const CATEGORY_ICONS: Record<string, any> = {
   Food: Coffee,
@@ -96,14 +96,14 @@ export default function MonthEndModal({ visible, data }: { visible: boolean; dat
   const remaining = data?.remaining || 0;
   const isOverspent = remaining <= 0;
   
-  const dateObj = prevMonth ? new Date(prevMonth + '-02') : new Date();
+  const dateObj = prevMonth ? parse(prevMonth, 'yyyy-MM', new Date()) : new Date();
   const monthName = dateObj.toLocaleString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
   const shortMonthName = dateObj.toLocaleString('en-US', { month: 'long' });
   const yearStr = dateObj.getFullYear().toString();
   const daysInMonth = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate();
 
   const availableMonths = useMemo(() => {
-    return [...new Set(expenses.map(e => e.date.substring(0, 7)))].sort();
+    return [...new Set(expenses.map(e => format(new Date(e.date), 'yyyy-MM')))].sort();
   }, [expenses]);
 
   const handleMonthSwitch = (delta: number) => {

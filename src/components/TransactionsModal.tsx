@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLedgr } from '../lib/LedgrContext';
 import { useThemeColors } from '../lib/ThemeContext';
 import { ExpenseCategory, Expense } from '../lib/store';
-import { isToday, isThisWeek, isThisMonth, isWithinInterval, startOfDay, endOfDay, format } from 'date-fns';
+import { isToday, isThisWeek, isThisMonth, isWithinInterval, startOfDay, endOfDay, format, parse } from 'date-fns';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Calendar } from 'react-native-calendars';
 
@@ -56,8 +56,8 @@ export default function TransactionsModal({ visible, onClose, onEditExpense }: T
       setCustomStartDate(day.dateString);
       setCustomEndDate(null);
     } else {
-      const d1 = new Date(customStartDate);
-      const d2 = new Date(day.dateString);
+      const d1 = parse(customStartDate, 'yyyy-MM-dd', new Date());
+      const d2 = parse(day.dateString, 'yyyy-MM-dd', new Date());
       if (d2 < d1) {
         setCustomStartDate(day.dateString);
         setCustomEndDate(customStartDate);
@@ -76,8 +76,8 @@ export default function TransactionsModal({ visible, onClose, onEditExpense }: T
     markedDates[customEndDate] = { endingDay: true, color: colors.accent, textColor: colors.background };
   }
   if (customStartDate && customEndDate) {
-    const end = new Date(customEndDate);
-    let curr = new Date(customStartDate);
+    const end = parse(customEndDate, 'yyyy-MM-dd', new Date());
+    let curr = parse(customStartDate, 'yyyy-MM-dd', new Date());
     curr.setDate(curr.getDate() + 1);
     while (curr < end) {
       markedDates[format(curr, 'yyyy-MM-dd')] = { color: colors.accentBg, textColor: colors.accent };
@@ -96,8 +96,8 @@ export default function TransactionsModal({ visible, onClose, onEditExpense }: T
     } else if (activeTab === 'This Month') {
       result = result.filter(e => isThisMonth(new Date(e.date)));
     } else if (activeTab === 'Custom' && customStartDate && customEndDate) {
-      const start = startOfDay(new Date(customStartDate));
-      const end = endOfDay(new Date(customEndDate));
+      const start = startOfDay(parse(customStartDate, 'yyyy-MM-dd', new Date()));
+      const end = endOfDay(parse(customEndDate, 'yyyy-MM-dd', new Date()));
       result = result.filter(e => isWithinInterval(new Date(e.date), { start, end }));
     }
 

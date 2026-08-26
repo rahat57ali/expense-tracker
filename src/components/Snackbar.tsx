@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
+import React, { useState, useEffect, createContext, useContext, useCallback, useRef } from 'react';
 import { Animated, Text, StyleSheet, View, Dimensions } from 'react-native';
 import { CheckCircle, AlertCircle, Info } from 'lucide-react-native';
 import { useThemeColors } from '../lib/ThemeContext';
@@ -20,8 +20,15 @@ export const SnackbarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [opacity] = useState(new Animated.Value(0));
   const [translateY] = useState(new Animated.Value(20));
   const colors = useThemeColors();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showSnackbar = useCallback((msg: string, t: SnackbarType = 'success') => {
+    // Clear any existing timer to prevent premature dismissal
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+
     setMessage(msg);
     setType(t);
     setVisible(true);
@@ -39,14 +46,12 @@ export const SnackbarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }),
     ]).start();
 
-    // Store timeout to clear if needed
-    const timer = setTimeout(() => {
+    timerRef.current = setTimeout(() => {
       setVisible(false);
       opacity.setValue(0);
       translateY.setValue(20);
+      timerRef.current = null;
     }, 3000);
-
-    return () => clearTimeout(timer);
   }, [opacity, translateY]);
 
   const hideSnackbar = useCallback(() => {

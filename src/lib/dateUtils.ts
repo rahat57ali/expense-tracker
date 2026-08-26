@@ -3,7 +3,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import * as XLSX from 'xlsx';
-import { Expense, ExpenseCategory } from './store';
+import { Expense, ExpenseCategory, DEFAULT_CATEGORIES } from './store';
 
 /**
  * Calculates the number of days remaining in the current month,
@@ -36,22 +36,37 @@ export function isToday(dateStr: string): boolean {
 }
 
 /**
- * Normalizes a date string into an ISO string.
- * STRICT: Only accepts YYYY-MM-DD format to ensure consistency.
+ * Normalizes a date string into a standard "yyyy-MM-dd'T'HH:mm:ss" format.
+ * Supports YYYY-MM-DD, YYYY/MM/DD, DD-MM-YYYY, DD/MM/YYYY, and ISO timestamps.
  */
 function normalizeDate(dateStr: string): string | null {
   if (!dateStr) return null;
   const trimmed = dateStr.trim();
   
-  // Strict regex check for YYYY-MM-DD
-  const ymdRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (!ymdRegex.test(trimmed)) {
-    return null;
+  // Try YYYY-MM-DD or YYYY/MM/DD (with optional time)
+  const ymdMatch = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[T\s](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+  if (ymdMatch) {
+    const [, y, m, d, hh = '0', mm = '0', ss = '0'] = ymdMatch;
+    const year = parseInt(y, 10);
+    const month = parseInt(m, 10) - 1;
+    const day = parseInt(d, 10);
+    const date = new Date(year, month, day, parseInt(hh, 10), parseInt(mm, 10), parseInt(ss, 10));
+    if (isValid(date) && !isNaN(date.getTime())) {
+      return formatDate(date, "yyyy-MM-dd'T'HH:mm:ss");
+    }
   }
 
-  const date = new Date(trimmed);
-  if (isValid(date) && !isNaN(date.getTime())) {
-    return date.toISOString();
+  // Try DD-MM-YYYY or DD/MM/YYYY
+  const dmyMatch = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (dmyMatch) {
+    const [, d, m, y] = dmyMatch;
+    const year = parseInt(y, 10);
+    const month = parseInt(m, 10) - 1;
+    const day = parseInt(d, 10);
+    const date = new Date(year, month, day);
+    if (isValid(date) && !isNaN(date.getTime())) {
+      return formatDate(date, "yyyy-MM-dd'T'HH:mm:ss");
+    }
   }
 
   return null;
@@ -165,8 +180,17 @@ export async function importExpensesFromFile(existingExpenses: Expense[]): Promi
         continue;
       }
 
-      // Check for duplicates in existing data
+      // Match category against DEFAULT_CATEGORIES case-insensitively, or capitalize
+      const trimmedCategory = String(rawCategory || 'Other').trim();
+      const matchedDefault = DEFAULT_CATEGORIES.find(c => c.toLowerCase() === trimmedCategory.toLowerCase());
+      const finalCategory = matchedDefault || (trimmedCategory.charAt(0).toUpperCase() + trimmedCategory.slice(1));
+
+      // Check for duplicates in existing data or within the current batch
       const isDuplicate = existingExpenses.some(e => 
+        formatDate(new Date(e.date), 'yyyy-MM-dd') === formatDate(new Date(normalizedDate), 'yyyy-MM-dd') &&
+        e.name.trim().toLowerCase() === String(rawDesc).trim().toLowerCase() &&
+        e.amount === amount
+      ) || newExpenses.some(e => 
         formatDate(new Date(e.date), 'yyyy-MM-dd') === formatDate(new Date(normalizedDate), 'yyyy-MM-dd') &&
         e.name.trim().toLowerCase() === String(rawDesc).trim().toLowerCase() &&
         e.amount === amount
@@ -178,11 +202,12 @@ export async function importExpensesFromFile(existingExpenses: Expense[]): Promi
       }
 
       newExpenses.push({
-        id: Math.random().toString(36).substring(2, 11),
+        id: Date.now().toString(36) + Math.random().toString(36).substring(2),
         date: normalizedDate,
         name: String(rawDesc).trim(),
         amount: amount,
-        category: String(rawCategory) as ExpenseCategory
+        category: finalCategory as ExpenseCategory,
+        createdAt: new Date().toISOString(),
       });
       imported++;
     }

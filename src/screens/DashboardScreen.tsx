@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -108,6 +108,11 @@ export default function DashboardScreen() {
     categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.amount;
   });
 
+  const spendingCategories: string[] = useMemo(() => {
+    const catsWithSpend = Object.keys(categoryTotals).filter(cat => (categoryTotals[cat] || 0) > 0);
+    return Array.from(new Set([...allCategories, ...catsWithSpend]));
+  }, [allCategories, categoryTotals]);
+
   const isOverspent = remainingBudget < 0;
 
   if (!isLoaded) return <View style={[styles.container, { backgroundColor: colors.background }]} />;
@@ -194,7 +199,7 @@ export default function DashboardScreen() {
                   ) : (
                     (() => {
                       let cumulativePercent = 0;
-                      return allCategories.map((cat, index) => {
+                      return spendingCategories.map((cat: string, index: number) => {
                         const spent = categoryTotals[cat] || 0;
                         if (spent <= 0) return null;
                         const percent = spent / totalSpent;
@@ -229,11 +234,11 @@ export default function DashboardScreen() {
             </View>
 
             <View style={styles.vizList}>
-              {allCategories
-                .filter(cat => (categoryTotals[cat] || 0) > 0)
-                .sort((a, b) => (categoryTotals[b] || 0) - (categoryTotals[a] || 0))
+              {spendingCategories
+                .filter((cat: string) => (categoryTotals[cat] || 0) > 0)
+                .sort((a: string, b: string) => (categoryTotals[b] || 0) - (categoryTotals[a] || 0))
                 .slice(0, 4)
-                .map(cat => {
+                .map((cat: string) => {
                   const spent = categoryTotals[cat] || 0;
                   const percent = Math.round((spent / totalSpent) * 100);
                   const color = CATEGORY_COLORS[cat as ExpenseCategory] || colors.accent;
@@ -248,7 +253,7 @@ export default function DashboardScreen() {
                     </View>
                   );
                 })}
-              {allCategories.filter(cat => (categoryTotals[cat] || 0) > 0).length === 0 && (
+              {spendingCategories.filter((cat: string) => (categoryTotals[cat] || 0) > 0).length === 0 && (
                 <Text style={[styles.noDataText, { color: colors.textTertiary }]}>No spending recorded yet this month.</Text>
               )}
             </View>

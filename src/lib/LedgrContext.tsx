@@ -234,15 +234,16 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addCategory = async (name: string) => {
-    if (!name || allCategories.includes(name)) return;
-    const updated = [...activeCategories, name];
+    const trimmed = name.trim();
+    if (!trimmed || activeCategories.some(c => c.toLowerCase() === trimmed.toLowerCase())) return;
+    const updated = [...activeCategories, trimmed];
     setActiveCategories(updated);
     await AsyncStorage.setItem('ledgr_categories', JSON.stringify(updated));
     
     // Also initialize budget for this category
     const updatedBudget = {
       ...budget,
-      categories: { ...budget.categories, [name]: 0 }
+      categories: { ...budget.categories, [trimmed]: 0 }
     };
     setBudget(updatedBudget);
     await AsyncStorage.setItem('ledgr_budget', JSON.stringify(updatedBudget));
@@ -313,7 +314,7 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const importExpenses = async (newExpenses: Expense[]) => {
-    const updated = [...newExpenses, ...expenses];
+    const updated = [...newExpenses, ...expenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setExpenses(updated);
     await AsyncStorage.setItem('ledgr_expenses', JSON.stringify(updated));
   };

@@ -11,7 +11,7 @@ import {
 import { useLedgr } from '../lib/LedgrContext';
 import { useThemeColors } from '../lib/ThemeContext';
 import { Bill, autoCategorize } from '../lib/store';
-import { format, differenceInDays, addDays, isBefore, startOfDay } from 'date-fns';
+import { format, differenceInDays, addMonths, isBefore, startOfDay } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSnackbar } from '../components/Snackbar';
 import BillPaymentModal from '../components/BillPaymentModal';
@@ -59,7 +59,7 @@ export default function BillsScreen() {
   const handleConfirmPayment = async (amount: number) => {
     if (!selectedBill) return;
     await addExpense({ name: `Paid: ${selectedBill.name}`, amount, category: 'Bills', date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss") });
-    const nextDueDate = addDays(new Date(selectedBill.dueDate), 30);
+    const nextDueDate = addMonths(new Date(selectedBill.dueDate), 1);
     await updateBill({ ...selectedBill, dueDate: format(nextDueDate, "yyyy-MM-dd'T'HH:mm:ss"), isPaid: false });
     setIsPayModalVisible(false);
     showSnackbar(`Paid ${selectedBill.name} - PKR ${amount.toLocaleString()}`);
