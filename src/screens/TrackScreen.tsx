@@ -388,7 +388,8 @@ export default function TrackScreen() {
               value={expenseDate}
               mode="date"
               display="default"
-              onChange={onDateChange}
+              onValueChange={onDateChange}
+              onDismiss={() => setShowDatePicker(false)}
               maximumDate={new Date()}
             />
           )}

@@ -179,7 +179,8 @@ export default function EditExpenseModal({ visible, onClose, expense }: EditExpe
                   value={date}
                   mode="date"
                   display="default"
-                  onChange={onDateChange}
+                  onValueChange={onDateChange}
+                  onDismiss={() => setShowDatePicker(false)}
                   maximumDate={new Date()}
                 />
               )}

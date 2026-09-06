@@ -12,6 +12,7 @@ interface CrossPlatformDatePickerProps {
 export default function CrossPlatformDatePicker({
   value,
   visible,
+  onClose,
   onChange,
   maximumDate,
 }: CrossPlatformDatePickerProps) {
@@ -22,7 +23,8 @@ export default function CrossPlatformDatePicker({
       value={value}
       mode="date"
       display="default"
-      onChange={onChange}
+      onValueChange={(event, date) => onChange(event, date)}
+      onDismiss={onClose}
       maximumDate={maximumDate}
     />
   );

@@ -14,7 +14,7 @@ import {
   CreditCard, Plus, Calendar as CalendarIcon, Clock, AlertCircle, RefreshCw,
   Trash2, Check, X, Music, Tv, Zap, Flame, Globe, Home as HomeIcon,
   Copy, Pencil, RotateCcw, PauseCircle, PlayCircle, Layers, CheckCircle2,
-  Repeat, Hash, FileText
+  Repeat, Hash
 } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useLedgr } from '../lib/LedgrContext';
@@ -410,15 +410,7 @@ export default function BillsScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Notes Preview (if any) */}
-        {bill.notes && (
-          <View style={styles.notesRow}>
-            <FileText color={colors.textTertiary} size={11} style={{ marginRight: 6 }} />
-            <Text style={[styles.notesText, { color: colors.textTertiary }]} numberOfLines={1}>
-              {bill.notes}
-            </Text>
-          </View>
-        )}
+
 
         {/* Bottom Actions Row */}
         <View style={[styles.cardActions, { borderTopColor: colors.divider }]}>
@@ -787,7 +779,6 @@ export default function BillsScreen() {
         visible={isAddEditModalVisible}
         bill={editingBill}
         initialName={initialQuickName}
-        categories={allCategories}
         onClose={() => {
           setIsAddEditModalVisible(false);
           setEditingBill(null);
@@ -932,8 +923,6 @@ const styles = StyleSheet.create({
   copyPill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   copyPillText: { fontSize: 10, fontFamily: 'Inter_700Bold' },
 
-  notesRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingHorizontal: 4 },
-  notesText: { fontSize: 11, fontFamily: 'Inter_400Regular', fontStyle: 'italic', flex: 1 },
 
   cardActions: {
     flexDirection: 'row',

@@ -32,7 +32,10 @@
         {
           "microphonePermission": "Allow LEDGR to access your microphone to record voice memos."
         }
-      ]
+      ],
+      "expo-font",
+      "expo-sharing",
+      "expo-status-bar"
     ],
     "extra": {
       "eas": {

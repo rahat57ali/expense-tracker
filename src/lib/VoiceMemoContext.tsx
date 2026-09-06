@@ -41,8 +41,8 @@ export const VoiceMemoProvider = ({ children }: { children: ReactNode }) => {
 
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const playerRef = useRef<AudioPlayer | null>(null);
-  const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const playCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const durationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const playCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const appState = useRef(AppState.currentState);
   const isUserHoldingRef = useRef(false);
   const recordingStartTimeRef = useRef(0);

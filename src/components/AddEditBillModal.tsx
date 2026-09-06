@@ -15,11 +15,11 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  X, Calendar as CalendarIcon, Check, Trash2, Repeat, Tag,
-  Hash, FileText, PauseCircle, PlayCircle
+  X, Calendar as CalendarIcon, Check, Trash2, Repeat,
+  Hash, PauseCircle, PlayCircle
 } from 'lucide-react-native';
 import { useThemeColors } from '../lib/ThemeContext';
-import { Bill, BillFrequency, ExpenseCategory, autoCategorize } from '../lib/store';
+import { Bill, BillFrequency } from '../lib/store';
 import { format } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -30,7 +30,7 @@ interface AddEditBillModalProps {
   onDelete?: (billId: string) => void;
   bill?: Bill | null;
   initialName?: string;
-  categories: ExpenseCategory[];
+  categories?: string[];
 }
 
 const FREQUENCIES: { label: string; value: BillFrequency }[] = [
@@ -48,7 +48,6 @@ export default function AddEditBillModal({
   onDelete,
   bill,
   initialName = '',
-  categories,
 }: AddEditBillModalProps) {
   const colors = useThemeColors();
   const isEditing = !!bill;
@@ -56,10 +55,8 @@ export default function AddEditBillModal({
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date());
-  const [category, setCategory] = useState<ExpenseCategory>('Bills');
   const [frequency, setFrequency] = useState<BillFrequency>('monthly');
   const [consumerNumber, setConsumerNumber] = useState('');
-  const [notes, setNotes] = useState('');
   const [isPaused, setIsPaused] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -72,19 +69,15 @@ export default function AddEditBillModal({
         setName(bill.name);
         setAmount(bill.amount.toString());
         setDate(new Date(bill.dueDate));
-        setCategory(bill.category || 'Bills');
         setFrequency(bill.frequency || 'monthly');
         setConsumerNumber(bill.consumerNumber || '');
-        setNotes(bill.notes || '');
         setIsPaused(!!bill.isPaused);
       } else {
         setName(initialName);
         setAmount('');
         setDate(new Date());
-        setCategory(initialName ? autoCategorize(initialName) : 'Bills');
         setFrequency('monthly');
         setConsumerNumber('');
-        setNotes('');
         setIsPaused(false);
       }
       setIsDeleting(false);
@@ -93,12 +86,6 @@ export default function AddEditBillModal({
 
   const handleNameChange = (text: string) => {
     setName(text);
-    if (!isEditing && text.trim() && category === 'Bills') {
-      const suggested = autoCategorize(text);
-      if (suggested && suggested !== 'Other') {
-        setCategory(suggested);
-      }
-    }
   };
 
   const handleSave = () => {
@@ -118,10 +105,9 @@ export default function AddEditBillModal({
       name: trimmedName,
       amount: parsedAmount,
       dueDate: format(date, "yyyy-MM-dd'T'HH:mm:ss"),
-      category: category || 'Bills',
+      category: bill?.category || 'Bills',
       frequency,
       consumerNumber: consumerNumber.trim() || undefined,
-      notes: notes.trim() || undefined,
       isPaused,
     };
 
@@ -235,10 +221,11 @@ export default function AddEditBillModal({
                     value={date}
                     mode="date"
                     display="default"
-                    onChange={(event, selectedDate) => {
+                    onValueChange={(event, selectedDate) => {
                       setShowDatePicker(false);
                       if (selectedDate) setDate(selectedDate);
                     }}
+                    onDismiss={() => setShowDatePicker(false)}
                   />
                 )}
 
@@ -304,68 +291,7 @@ export default function AddEditBillModal({
                   />
                 </View>
 
-                {/* Category Picker */}
-                <View style={styles.inputGroup}>
-                  <View style={styles.labelRow}>
-                    <Tag color={colors.textSecondary} size={13} style={{ marginRight: 6 }} />
-                    <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 0 }]}>
-                      CATEGORY
-                    </Text>
-                  </View>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.chipsRow}
-                  >
-                    {categories.map(cat => {
-                      const isSelected = category === cat;
-                      return (
-                        <TouchableOpacity
-                          key={cat}
-                          onPress={() => setCategory(cat)}
-                          style={[
-                            styles.chip,
-                            {
-                              backgroundColor: isSelected ? colors.accent : colors.pillBg,
-                              borderColor: isSelected ? colors.accent : colors.cardBorderSubtle,
-                            }
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.chipText,
-                              { color: isSelected ? '#000000' : colors.textSecondary }
-                            ]}
-                          >
-                            {cat}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
-                </View>
 
-                {/* Notes */}
-                <View style={styles.inputGroup}>
-                  <View style={styles.labelRow}>
-                    <FileText color={colors.textSecondary} size={13} style={{ marginRight: 6 }} />
-                    <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 0 }]}>
-                      NOTES (OPTIONAL)
-                    </Text>
-                  </View>
-                  <TextInput
-                    style={[
-                      styles.inputMultiline,
-                      { backgroundColor: colors.inputBg, color: colors.textPrimary, borderColor: colors.inputBorder }
-                    ]}
-                    value={notes}
-                    onChangeText={setNotes}
-                    placeholder="e.g. Card used, login link, package details"
-                    placeholderTextColor={colors.textMuted}
-                    multiline
-                    numberOfLines={2}
-                  />
-                </View>
 
                 {/* Pause / Resume Toggle (Edit Mode) */}
                 {isEditing && (
@@ -527,16 +453,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Inter_500Medium',
     borderWidth: 1,
-  },
-  inputMultiline: {
-    minHeight: 64,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    borderWidth: 1,
-    textAlignVertical: 'top',
   },
   dateSelector: {
     flexDirection: 'row',
