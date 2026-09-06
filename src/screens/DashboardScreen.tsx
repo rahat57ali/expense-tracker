@@ -1,13 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import { format } from 'date-fns';
+import { format, differenceInDays, startOfDay } from 'date-fns';
 import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
 import Svg, { G, Path, Circle, Text as SvgText } from 'react-native-svg';
 import { useLedgr } from '../lib/LedgrContext';
 import { useThemeColors } from '../lib/ThemeContext';
-import { ExpenseCategory, Expense } from '../lib/store';
-import { Wallet, Target, TrendingUp, Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, AlertCircle, ShoppingBasket, CheckCircle2, Minus, Info, TrendingDown } from 'lucide-react-native';
+import { ExpenseCategory, Expense, Bill } from '../lib/store';
+import { 
+  Wallet, Target, TrendingUp, Coffee, Car, Home as HomeIcon, ShoppingBag, 
+  Heart, MoreHorizontal, AlertCircle, ShoppingBasket, CheckCircle2, Minus, 
+  Info, TrendingDown, ShieldCheck, ChevronRight, CreditCard 
+} from 'lucide-react-native';
 import EditExpenseModal from '../components/EditExpenseModal';
 import DailyDetailModal from '../components/DailyDetailModal';
 import TransactionsModal from '../components/TransactionsModal';
@@ -34,7 +39,8 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
 };
 
 export default function DashboardScreen() {
-  const { expenses, budget, isLoaded, allCategories } = useLedgr();
+  const { expenses, budget, isLoaded, allCategories, bills } = useLedgr();
+  const navigation = useNavigation<any>();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -42,18 +48,51 @@ export default function DashboardScreen() {
   const [isDailyDetailVisible, setIsDailyDetailVisible] = useState(false);
   const [isTransactionsModalVisible, setIsTransactionsModalVisible] = useState(false);
 
+  // Calculate unpaid committed bills and urgent deadlines for the current month
+  const currentMonthStr = format(new Date(), 'yyyy-MM');
+  const today = startOfDay(new Date());
+
+  const { unpaidCommitted, urgentBills } = useMemo(() => {
+    let unpaid = 0;
+    const urgent: Bill[] = [];
+
+    bills.forEach(bill => {
+      if (bill.isPaused) return;
+      const isSettled =
+        (bill.frequency === 'one-time' && bill.isPaid) ||
+        (bill.lastPaidDate && format(new Date(bill.lastPaidDate), 'yyyy-MM') === currentMonthStr);
+
+      if (!isSettled) {
+        unpaid += bill.amount;
+        const dueDate = startOfDay(new Date(bill.dueDate));
+        const diff = differenceInDays(dueDate, today);
+        if (diff <= 3) {
+          urgent.push(bill);
+        }
+      }
+    });
+
+    return { unpaidCommitted: unpaid, urgentBills: urgent };
+  }, [bills, currentMonthStr, today]);
+
   const stats = useMemo(() => {
     const activeMonth = budget.budgetMonth || format(new Date(), 'yyyy-MM');
     const filteredExpenses = expenses.filter(e => format(new Date(e.date), 'yyyy-MM') === activeMonth);
     const spent = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
     const remaining = budget.total - spent;
     const days = getDaysRemainingInMonth();
+    
+    // Standard allowance vs Safe-to-Spend allowance
     const allowance = Math.max(0, remaining / days);
+    const safeRemaining = Math.max(0, remaining - unpaidCommitted);
+    const safeAllowance = Math.max(0, safeRemaining / days);
     
     const now = new Date();
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const target = budget.total / daysInMonth;
-    const ratio = allowance / target;
+    // Ratio based on safe allowance when bills are pending
+    const effectiveAllowance = unpaidCommitted > 0 ? safeAllowance : allowance;
+    const ratio = effectiveAllowance / target;
 
     const totals: Record<string, number> = {};
     filteredExpenses.forEach(e => {
@@ -73,16 +112,17 @@ export default function DashboardScreen() {
       remainingBudget: remaining,
       daysLeft: days,
       dailyAllowance: allowance,
+      safeAllowance,
       dailyTarget: target,
       ratio,
       dailyStatus: status,
       categoryTotals: totals
     };
-  }, [expenses, budget, colors]);
+  }, [expenses, budget, colors, unpaidCommitted]);
 
   const { 
     currentMonthExpenses, totalSpent, remainingBudget, daysLeft, 
-    dailyAllowance, dailyTarget, ratio, dailyStatus, categoryTotals 
+    dailyAllowance, safeAllowance, dailyTarget, ratio, dailyStatus, categoryTotals 
   } = stats;
 
   const spendingCategories: string[] = useMemo(() => {
@@ -108,6 +148,28 @@ export default function DashboardScreen() {
             <Text style={[styles.headerTitleSmall, { color: colors.textPrimary }]}>Overview</Text>
           </View>
         </View>
+
+        {/* Urgent Bills Alert Banner */}
+        {urgentBills.length > 0 && (
+          <TouchableOpacity
+            style={[styles.urgentBanner, { backgroundColor: `${colors.danger}15`, borderColor: `${colors.danger}40` }]}
+            onPress={() => navigation.navigate('Bills')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.urgentBannerLeft}>
+              <AlertCircle color={colors.danger} size={18} style={{ marginRight: 10 }} />
+              <View>
+                <Text style={[styles.urgentBannerTitle, { color: colors.danger }]}>
+                  {urgentBills.length === 1 ? '1 Bill Due Soon' : `${urgentBills.length} Bills Due Soon`}
+                </Text>
+                <Text style={[styles.urgentBannerSub, { color: colors.textTertiary }]}>
+                  PKR {urgentBills.reduce((s, b) => s + b.amount, 0).toLocaleString()} upcoming • Tap to review
+                </Text>
+              </View>
+            </View>
+            <ChevronRight color={colors.danger} size={18} />
+          </TouchableOpacity>
+        )}
 
         <View style={styles.kpiGrid}>
           <View style={[styles.kpiCardSmall, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
@@ -138,15 +200,30 @@ export default function DashboardScreen() {
           </View>
         </View>
 
+        {/* Daily Allowance Card with Safe-to-Spend */}
         <View style={styles.kpiGrid}>
           <View style={[styles.kpiCard, { width: '100%', backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
             <View style={styles.kpiRowSplit}>
               <View style={{ flex: 1, marginRight: 12 }}>
-                <Text style={[styles.kpiLabel, { color: colors.textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>DAILY ALLOWANCE ({daysLeft} DAYS LEFT)</Text>
+                <View style={styles.allowanceLabelRow}>
+                  <Text style={[styles.kpiLabel, { color: colors.textSecondary, marginBottom: 0 }]} numberOfLines={1}>
+                    {unpaidCommitted > 0 ? 'SAFE DAILY ALLOWANCE' : 'DAILY ALLOWANCE'} ({daysLeft}D LEFT)
+                  </Text>
+                  {unpaidCommitted > 0 && (
+                    <ShieldCheck color={colors.accent} size={12} style={{ marginLeft: 5 }} />
+                  )}
+                </View>
                 <View style={styles.kpiValueRow}>
                   <Text style={[styles.kpiCurrency, { color: colors.textTertiary }]}>PKR</Text>
-                  <Text style={[styles.kpiValueLarge, { color: colors.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{Math.floor(dailyAllowance).toLocaleString()}</Text>
+                  <Text style={[styles.kpiValueLarge, { color: colors.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>
+                    {Math.floor(unpaidCommitted > 0 ? safeAllowance : dailyAllowance).toLocaleString()}
+                  </Text>
                 </View>
+                {unpaidCommitted > 0 && (
+                  <Text style={[styles.safeAllowanceSub, { color: colors.textTertiary }]}>
+                    PKR {unpaidCommitted.toLocaleString()} reserved for upcoming bills
+                  </Text>
+                )}
               </View>
               <TouchableOpacity
                 style={[styles.badge, { backgroundColor: dailyStatus.bgColor, borderColor: dailyStatus.color, flexShrink: 0 }]}
@@ -336,6 +413,9 @@ export default function DashboardScreen() {
         data={{
           dailyTarget,
           dailyRemaining: dailyAllowance,
+          safeAllowance,
+          unpaidBills: unpaidCommitted,
+          totalRemaining: remainingBudget,
           ratio,
           daysLeft,
           status: dailyStatus
@@ -365,6 +445,41 @@ const styles = StyleSheet.create({
   logoSmall: { width: 18, height: 18, marginRight: 10 },
   brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', fontSize: 10, letterSpacing: 2 },
   subtitle: { fontFamily: 'Inter_500Medium', fontSize: 13, marginTop: 2 },
+
+  urgentBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 14,
+    marginTop: 8,
+  },
+  urgentBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  urgentBannerTitle: {
+    fontFamily: 'Outfit_700Bold',
+    fontSize: 13,
+  },
+  urgentBannerSub: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  allowanceLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  safeAllowanceSub: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 10,
+    marginTop: 4,
+  },
 
   kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 12 },
   kpiCard: { minHeight: 110, flex: 1, minWidth: '45%', padding: 20, borderRadius: 24, borderWidth: 1, position: 'relative', overflow: 'hidden' },

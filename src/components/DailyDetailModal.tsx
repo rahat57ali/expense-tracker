@@ -8,7 +8,7 @@ import {
   ScrollView 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Info, TrendingDown, TrendingUp, Minus, AlertCircle, CheckCircle2 } from 'lucide-react-native';
+import { X, Info, TrendingDown, TrendingUp, Minus, AlertCircle, CheckCircle2, ShieldCheck, CreditCard } from 'lucide-react-native';
 import { useThemeColors } from '../lib/ThemeContext';
 
 interface DailyDetailModalProps {
@@ -19,6 +19,9 @@ interface DailyDetailModalProps {
     dailyRemaining: number;
     ratio: number;
     daysLeft: number;
+    unpaidBills?: number;
+    safeAllowance?: number;
+    totalRemaining?: number;
     status: {
       label: string;
       color: string;
@@ -31,9 +34,12 @@ interface DailyDetailModalProps {
 }
 
 export default function DailyDetailModal({ visible, onClose, data }: DailyDetailModalProps) {
-  const { dailyTarget, dailyRemaining, ratio, daysLeft, status } = data;
+  const { dailyTarget, dailyRemaining, ratio, daysLeft, status, unpaidBills = 0, safeAllowance, totalRemaining = 0 } = data;
   const colors = useThemeColors();
   const StatusIcon = status.icon;
+
+  const safePool = Math.max(0, totalRemaining - unpaidBills);
+  const effectiveSafeAllowance = safeAllowance !== undefined ? safeAllowance : dailyRemaining;
 
   return (
     <Modal
@@ -68,6 +74,45 @@ export default function DailyDetailModal({ visible, onClose, data }: DailyDetail
               </View>
 
               <Text style={[styles.descriptionText, { color: colors.textPrimary }]}>{status.description}</Text>
+
+              {/* Safe-to-Spend Breakdown (Phase 3 Integration) */}
+              {unpaidBills > 0 && (
+                <View style={[styles.safeSpendCard, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}>
+                  <View style={styles.safeSpendHeader}>
+                    <ShieldCheck color={colors.accent} size={18} style={{ marginRight: 8 }} />
+                    <Text style={[styles.safeSpendTitle, { color: colors.textPrimary }]}>SAFE-TO-SPEND CALCULATION</Text>
+                  </View>
+
+                  <View style={styles.calcRow}>
+                    <Text style={[styles.calcLabel, { color: colors.textSecondary }]}>Remaining Monthly Budget</Text>
+                    <Text style={[styles.calcValue, { color: colors.textPrimary }]}>PKR {totalRemaining.toLocaleString()}</Text>
+                  </View>
+
+                  <View style={styles.calcRow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <CreditCard color={colors.warning} size={13} style={{ marginRight: 6 }} />
+                      <Text style={[styles.calcLabel, { color: colors.warning }]}>Held for Pending Bills</Text>
+                    </View>
+                    <Text style={[styles.calcValue, { color: colors.warning }]}>- PKR {unpaidBills.toLocaleString()}</Text>
+                  </View>
+
+                  <View style={[styles.calcDivider, { backgroundColor: colors.divider }]} />
+
+                  <View style={styles.calcRow}>
+                    <Text style={[styles.calcLabelBold, { color: colors.textPrimary }]}>Safe Discretionary Pool</Text>
+                    <Text style={[styles.calcValueBold, { color: colors.accent }]}>PKR {safePool.toLocaleString()}</Text>
+                  </View>
+
+                  <View style={[styles.safeResultBox, { backgroundColor: `${colors.accent}15`, borderColor: `${colors.accent}30` }]}>
+                    <Text style={[styles.safeResultLabel, { color: colors.textSecondary }]}>
+                      Divided by {daysLeft} days remaining:
+                    </Text>
+                    <Text style={[styles.safeResultAmount, { color: colors.accent }]}>
+                      PKR {Math.floor(effectiveSafeAllowance).toLocaleString()} / day
+                    </Text>
+                  </View>
+                </View>
+              )}
 
               <View style={[styles.legendContainer, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}>
                 <Text style={[styles.legendHeader, { color: colors.textTertiary }]}>ALL STATUS LEVELS</Text>
@@ -138,8 +183,21 @@ const styles = StyleSheet.create({
   statusLabel: { fontFamily: 'Outfit_800ExtraBold', fontSize: 18, letterSpacing: 1 },
   statusThreshold: { fontFamily: 'Inter_500Medium', fontSize: 11, marginTop: 2 },
   
-  descriptionText: { fontFamily: 'Inter_500Medium', fontSize: 15, lineHeight: 22, marginBottom: 24 },
+  descriptionText: { fontFamily: 'Inter_500Medium', fontSize: 15, lineHeight: 22, marginBottom: 20 },
   
+  safeSpendCard: { borderRadius: 18, borderWidth: 1, padding: 16, marginBottom: 20 },
+  safeSpendHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  safeSpendTitle: { fontFamily: 'Inter_700Bold', fontSize: 11, letterSpacing: 1 },
+  calcRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 4 },
+  calcLabel: { fontFamily: 'Inter_500Medium', fontSize: 13 },
+  calcValue: { fontFamily: 'Outfit_600SemiBold', fontSize: 14 },
+  calcDivider: { height: 1, marginVertical: 8 },
+  calcLabelBold: { fontFamily: 'Outfit_700Bold', fontSize: 13 },
+  calcValueBold: { fontFamily: 'Outfit_800ExtraBold', fontSize: 15 },
+  safeResultBox: { marginTop: 12, padding: 12, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
+  safeResultLabel: { fontFamily: 'Inter_500Medium', fontSize: 11, marginBottom: 2 },
+  safeResultAmount: { fontFamily: 'Outfit_800ExtraBold', fontSize: 18 },
+
   legendContainer: { borderRadius: 16, borderWidth: 1, padding: 16, marginBottom: 8 },
   legendHeader: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1, marginBottom: 12 },
   legendRow: { flexDirection: 'column', paddingVertical: 12, borderBottomWidth: 1 },

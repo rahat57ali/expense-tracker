@@ -270,7 +270,12 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const isBillDueSoon = bills.some(bill => {
+    if (bill.isPaused) return false;
     if (bill.isPaid) return false;
+    const currentMonth = format(new Date(), 'yyyy-MM');
+    if (bill.lastPaidDate && format(new Date(bill.lastPaidDate), 'yyyy-MM') === currentMonth) {
+      return false;
+    }
     const dueDate = startOfDay(new Date(bill.dueDate));
     const today = startOfDay(new Date());
     const threeDaysFromNow = addDays(today, 3);

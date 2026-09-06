@@ -5,7 +5,11 @@ import { useThemeColors } from '../lib/ThemeContext';
 import { useLedgr } from '../lib/LedgrContext';
 import { ExpenseCategory, Expense } from '../lib/store';
 import { format, subMonths, addMonths } from 'date-fns';
-import { ChevronLeft, ChevronRight, TrendingUp, AlertCircle, ShoppingBag, Coffee, Car, Home as HomeIcon, Heart, ShoppingBasket, MoreHorizontal, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { 
+  ChevronLeft, ChevronRight, TrendingUp, AlertCircle, ShoppingBag, Coffee, 
+  Car, Home as HomeIcon, Heart, ShoppingBasket, MoreHorizontal, Lightbulb, 
+  ChevronDown, ChevronUp, Repeat, CreditCard 
+} from 'lucide-react-native';
 import Svg, { Circle, G, Rect } from 'react-native-svg';
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -32,7 +36,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function InsightsScreen() {
   const colors = useThemeColors();
-  const { expenses, budget } = useLedgr();
+  const { expenses, budget, bills } = useLedgr();
 
   // Month Selector State
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -173,7 +177,39 @@ export default function InsightsScreen() {
     return weeks.map(w => ({ ...w, heightPct: (w.total / maxWeek) * 100 }));
   }, [monthExpenses]);
 
-  // 10. Smart Suggestions Panel
+  // 10. Recurring Commitments & Fixed Outflow Analysis
+  const billsInsights = useMemo(() => {
+    const activeBills = (bills || []).filter(b => !b.isPaused);
+    let monthlyTotal = 0;
+    activeBills.forEach(b => {
+      switch (b.frequency) {
+        case 'yearly': monthlyTotal += b.amount / 12; break;
+        case 'quarterly': monthlyTotal += b.amount / 3; break;
+        case 'weekly': monthlyTotal += b.amount * 4.33; break;
+        case 'one-time': break;
+        case 'monthly':
+        default:
+          monthlyTotal += b.amount;
+          break;
+      }
+    });
+
+    const annualizedTotal = monthlyTotal * 12;
+    const fixedRatio = budget.total > 0 ? Math.min(100, Math.round((monthlyTotal / budget.total) * 100)) : 0;
+    const flexibleRatio = Math.max(0, 100 - fixedRatio);
+    const topBills = [...activeBills].sort((a, b) => b.amount - a.amount).slice(0, 4);
+
+    return {
+      monthlyTotal: Math.round(monthlyTotal),
+      annualizedTotal: Math.round(annualizedTotal),
+      fixedRatio,
+      flexibleRatio,
+      activeCount: activeBills.length,
+      topBills
+    };
+  }, [bills, budget.total]);
+
+  // 11. Smart Suggestions Panel
   const suggestions = useMemo(() => {
     const tips: string[] = [];
     const overspentCat = categoryBudgets.find(c => c.isOver);
@@ -194,6 +230,10 @@ export default function InsightsScreen() {
       tips.push(`At this pace, you're projected to spend PKR ${Math.round(spendStats.projected).toLocaleString()} by month-end, exceeding your total budget.`);
     }
 
+    if (billsInsights.fixedRatio > 40) {
+      tips.push(`Fixed recurring commitments take up ${billsInsights.fixedRatio}% of your budget. Keeping fixed costs under 50% ensures healthy financial flexibility.`);
+    }
+
     if (topDays.length > 0) {
       const biggestDay = new Date(topDays[0].date).getDate();
       const suffix = biggestDay > 3 && biggestDay < 21 ? 'th' : ['th', 'st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th', 'th'][biggestDay % 10];
@@ -201,7 +241,7 @@ export default function InsightsScreen() {
     }
 
     return tips;
-  }, [categoryBudgets, repeatPurchases, spendStats, topDays, budget.total]);
+  }, [categoryBudgets, repeatPurchases, spendStats, billsInsights, topDays, budget.total]);
 
   // Empty State Check
   if (monthExpenses.length === 0) {
@@ -459,6 +499,76 @@ export default function InsightsScreen() {
           </View>
         </View>
 
+        {/* 8. Recurring Commitments & Fixed Outflow (Phase 3 Integration) */}
+        {billsInsights.activeCount > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionTitleRow}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Recurring Commitments</Text>
+              <View style={[styles.badgeSmall, { backgroundColor: `${colors.purple}20`, borderColor: `${colors.purple}40` }]}>
+                <Repeat color={colors.purple} size={11} style={{ marginRight: 4 }} />
+                <Text style={[styles.badgeSmallText, { color: colors.purple }]}>{billsInsights.activeCount} ACTIVE</Text>
+              </View>
+            </View>
+
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle, padding: 18 }]}>
+              <View style={styles.billsInsightRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.statLabel, { color: colors.textTertiary }]}>MONTHLY COMMITTED</Text>
+                  <Text style={[styles.statValue, { color: colors.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>
+                    PKR {billsInsights.monthlyTotal.toLocaleString()}
+                  </Text>
+                </View>
+                <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                  <Text style={[styles.statLabel, { color: colors.textTertiary }]}>ANNUALIZED RUN-RATE</Text>
+                  <Text style={[styles.statValue, { color: colors.purple }]} numberOfLines={1} adjustsFontSizeToFit>
+                    PKR {billsInsights.annualizedTotal.toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={{ marginTop: 14, marginBottom: 14 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <Text style={[styles.splitBarLabel, { color: colors.textSecondary }]}>
+                    Fixed Outflow: {billsInsights.fixedRatio}%
+                  </Text>
+                  <Text style={[styles.splitBarLabel, { color: colors.textSecondary }]}>
+                    Flexible: {billsInsights.flexibleRatio}%
+                  </Text>
+                </View>
+                <View style={[styles.splitBarBg, { backgroundColor: 'rgba(255,255,255,0.06)' }]}>
+                  <View style={[styles.splitBarFill, { width: `${billsInsights.fixedRatio}%`, backgroundColor: colors.purple }]} />
+                </View>
+              </View>
+
+              {billsInsights.topBills.length > 0 && (
+                <View style={styles.topBillsList}>
+                  <Text style={[styles.topBillsHeader, { color: colors.textTertiary, marginBottom: 8 }]}>
+                    TOP RECURRING SERVICES
+                  </Text>
+                  {billsInsights.topBills.map(b => (
+                    <View key={b.id} style={styles.topBillItem}>
+                      <View style={styles.topBillLeft}>
+                        <CreditCard color={colors.textSecondary} size={14} style={{ marginRight: 8 }} />
+                        <Text style={[styles.topBillName, { color: colors.textPrimary }]} numberOfLines={1}>
+                          {b.name}
+                        </Text>
+                      </View>
+                      <View style={styles.topBillRight}>
+                        <Text style={[styles.topBillAmount, { color: colors.textPrimary }]}>
+                          PKR {b.amount.toLocaleString()}
+                        </Text>
+                        <Text style={[styles.topBillFreq, { color: colors.textTertiary }]}>
+                          /{b.frequency || 'mo'}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
         {/* 8. Most Expensive Single Days */}
         {topDays.length > 0 && (
           <View style={styles.section}>
@@ -602,4 +712,81 @@ const styles = StyleSheet.create({
   tipsCard: { borderRadius: 16, padding: 20, borderWidth: 1 },
   tipRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 },
   tipText: { fontFamily: 'Inter_500Medium', fontSize: 14, flex: 1, lineHeight: 20 },
+
+  sectionTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  badgeSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  badgeSmallText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 9,
+    letterSpacing: 0.5,
+  },
+  billsInsightRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  splitBarLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+  },
+  splitBarBg: {
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  splitBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  topBillsList: {
+    marginTop: 6,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.05)',
+  },
+  topBillsHeader: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 10,
+    letterSpacing: 1,
+  },
+  topBillItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  topBillLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 10,
+  },
+  topBillName: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+  },
+  topBillRight: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  topBillAmount: {
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 13,
+  },
+  topBillFreq: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 10,
+    marginLeft: 2,
+  },
 });

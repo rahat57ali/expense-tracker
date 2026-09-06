@@ -14,14 +14,23 @@ export interface Expense {
   notes?: string;
 }
 
+export type BillFrequency = 'monthly' | 'yearly' | 'quarterly' | 'weekly' | 'one-time';
+
 export interface Bill {
   id: string;
   name: string;
   amount: number;
   dueDate: string; // ISO date for next occurrence
   category: ExpenseCategory;
+  frequency?: BillFrequency;
+  consumerNumber?: string; // e.g. LESCO 14-digit, PTCL ID, account number
+  notes?: string;
   isPaid?: boolean;
+  isPaused?: boolean;
+  lastPaidDate?: string;
+  lastPaidAmount?: number;
 }
+
 
 export interface Budget {
   total: number;
