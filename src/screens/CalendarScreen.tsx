@@ -3,16 +3,14 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'rea
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Calendar } from 'react-native-calendars';
 import { useLedgr } from '../lib/LedgrContext';
-import { format, parse, addMonths, addYears, addWeeks, differenceInDays, startOfDay } from 'date-fns';
+import { format, parse, addDays, subDays } from 'date-fns';
 import { 
   Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, 
-  ShoppingBasket, CreditCard, Zap, Flame, Globe, Clock, CheckCircle2, RefreshCw 
+  ShoppingBasket, ChevronLeft, ChevronRight, RotateCcw
 } from 'lucide-react-native';
-import { ExpenseCategory, Expense, Bill } from '../lib/store';
+import { ExpenseCategory, Expense } from '../lib/store';
 import { LinearGradient } from 'expo-linear-gradient';
 import EditExpenseModal from '../components/EditExpenseModal';
-import BillPaymentModal from '../components/BillPaymentModal';
-import { useSnackbar } from '../components/Snackbar';
 import { useTheme } from '../lib/ThemeContext';
 
 const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
@@ -26,64 +24,56 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
 };
 
 export default function CalendarScreen() {
-  const { expenses, budget, isLoaded, bills, updateBill, addExpense } = useLedgr();
-  const { showSnackbar } = useSnackbar();
+  const { expenses, budget, isLoaded } = useLedgr();
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-  const [selectedBillToPay, setSelectedBillToPay] = useState<Bill | null>(null);
-  const [isBillPayModalVisible, setIsBillPayModalVisible] = useState(false);
 
-  const currentMonthStr = format(new Date(), 'yyyy-MM');
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const isTodaySelected = selectedDate === todayStr;
+
+  const handlePrevDay = () => {
+    const prev = subDays(parse(selectedDate, 'yyyy-MM-dd', new Date()), 1);
+    setSelectedDate(format(prev, 'yyyy-MM-dd'));
+  };
+
+  const handleNextDay = () => {
+    const next = addDays(parse(selectedDate, 'yyyy-MM-dd', new Date()), 1);
+    setSelectedDate(format(next, 'yyyy-MM-dd'));
+  };
+
+  const handleJumpToToday = () => {
+    setSelectedDate(todayStr);
+  };
 
   const markedDates = useMemo(() => {
-    const marks: any = {};
+    const marks: Record<string, any> = {};
     
     // Map expenses
     expenses.forEach(e => {
       const dateStr = format(new Date(e.date), 'yyyy-MM-dd');
-      if (!marks[dateStr]) marks[dateStr] = { dots: [] };
-      if (!marks[dateStr].dots.some((d: any) => d.key === 'expense')) {
-        marks[dateStr].dots.push({ key: 'expense', color: colors.accent });
-      }
-    });
-
-    // Map bills due
-    bills.forEach(b => {
-      if (b.isPaused) return;
-      const dateStr = format(new Date(b.dueDate), 'yyyy-MM-dd');
-      if (!marks[dateStr]) marks[dateStr] = { dots: [] };
-      if (!marks[dateStr].dots.some((d: any) => d.key === 'bill')) {
-        marks[dateStr].dots.push({ key: 'bill', color: colors.purple });
-      }
+      marks[dateStr] = {
+        marked: true,
+        dotColor: colors.accent,
+      };
     });
     
     // Handle selected date
-    if (!marks[selectedDate]) {
-      marks[selectedDate] = { dots: [] };
-    }
     marks[selectedDate] = {
       ...marks[selectedDate],
       selected: true,
       selectedColor: colors.accent + '33',
-      selectedTextColor: colors.accent
+      selectedTextColor: colors.accent,
     };
     
     return marks;
-  }, [expenses, bills, selectedDate, colors]);
+  }, [expenses, selectedDate, colors]);
 
   const dailyExpenses = useMemo(() => {
     return expenses.filter(e => format(new Date(e.date), 'yyyy-MM-dd') === selectedDate);
   }, [expenses, selectedDate]);
-
-  const dailyBills = useMemo(() => {
-    return bills.filter(b => {
-      if (b.isPaused) return false;
-      return format(new Date(b.dueDate), 'yyyy-MM-dd') === selectedDate;
-    });
-  }, [bills, selectedDate]);
 
   const totalDaily = dailyExpenses.reduce((sum, e) => sum + e.amount, 0);
 
@@ -91,46 +81,6 @@ export default function CalendarScreen() {
     const limit = budget.categories[cat] || 0;
     const spent = expenses.filter(e => e.category === cat).reduce((sum, e) => sum + e.amount, 0);
     return { isOver: spent > limit };
-  };
-
-  const handlePayBillFromCalendar = (bill: Bill) => {
-    setSelectedBillToPay(bill);
-    setIsBillPayModalVisible(true);
-  };
-
-  const handleConfirmCalendarPayment = async (amount: number) => {
-    if (!selectedBillToPay) return;
-
-    await addExpense({
-      name: `Paid: ${selectedBillToPay.name}`,
-      amount,
-      category: selectedBillToPay.category || 'Bills',
-      date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss")
-    });
-
-    const currentDue = new Date(selectedBillToPay.dueDate);
-    let nextDue: Date;
-    switch (selectedBillToPay.frequency) {
-      case 'yearly': nextDue = addYears(currentDue, 1); break;
-      case 'quarterly': nextDue = addMonths(currentDue, 3); break;
-      case 'weekly': nextDue = addWeeks(currentDue, 1); break;
-      case 'one-time': nextDue = currentDue; break;
-      case 'monthly':
-      default:
-        nextDue = addMonths(currentDue, 1);
-        break;
-    }
-
-    await updateBill({
-      ...selectedBillToPay,
-      dueDate: format(nextDue, "yyyy-MM-dd'T'HH:mm:ss"),
-      lastPaidDate: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
-      lastPaidAmount: amount,
-      isPaid: selectedBillToPay.frequency === 'one-time'
-    });
-
-    setIsBillPayModalVisible(false);
-    showSnackbar(`Paid ${selectedBillToPay.name} - PKR ${amount.toLocaleString()}`);
   };
 
   if (!isLoaded) return <View style={[styles.container, { backgroundColor: colors.background }]} />;
@@ -154,7 +104,7 @@ export default function CalendarScreen() {
         <View style={[styles.calendarContainer, { borderBottomColor: colors.divider }]}>
           <Calendar
             key={isDark ? 'dark-mode' : 'light-mode'}
-            markingType={'multi-dot'}
+            current={selectedDate}
             theme={{
               backgroundColor: colors.calendarBg,
               calendarBackground: colors.calendarBg,
@@ -181,82 +131,53 @@ export default function CalendarScreen() {
           />
         </View>
 
-        {/* Legend for Calendar Dots */}
-        <View style={styles.calendarLegend}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: colors.accent }]} />
-            <Text style={[styles.legendLabel, { color: colors.textTertiary }]}>Expense</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: colors.purple }]} />
-            <Text style={[styles.legendLabel, { color: colors.textTertiary }]}>Bill Due</Text>
-          </View>
-        </View>
 
-        {/* Bills Due On This Day Section */}
-        {dailyBills.length > 0 && (
-          <View style={styles.dayBillsSection}>
-            <View style={styles.sectionHeaderRow}>
-              <Clock color={colors.purple} size={14} style={{ marginRight: 6 }} />
-              <Text style={[styles.dayBillsTitle, { color: colors.purple }]}>
-                BILLS DUE ON THIS DAY ({dailyBills.length})
-              </Text>
+
+        <View style={[styles.detailsHeader, { borderBottomColor: colors.divider }]}>
+          <View style={styles.detailsHeaderTop}>
+            <Text style={[styles.detailsDate, { color: colors.textPrimary }]}>
+              {format(parse(selectedDate, 'yyyy-MM-dd', new Date()), 'MMMM do, yyyy')}
+            </Text>
+            <View style={[styles.totalBadge, { backgroundColor: colors.accentBg, borderColor: colors.accent + '33' }]}>
+              <Text style={[styles.totalBadgeText, { color: colors.accent }]}>PKR {totalDaily.toLocaleString()}</Text>
             </View>
-            {dailyBills.map(bill => {
-              const isSettled =
-                (bill.frequency === 'one-time' && bill.isPaid) ||
-                (bill.lastPaidDate && format(new Date(bill.lastPaidDate), 'yyyy-MM') === currentMonthStr);
+          </View>
 
-              return (
-                <LinearGradient
-                  key={bill.id}
-                  colors={isSettled ? [`${colors.success}10`, colors.gradientEnd] : [`${colors.purple}15`, colors.gradientEnd]}
-                  style={[styles.billStrip, { borderColor: isSettled ? `${colors.success}30` : `${colors.purple}40` }]}
+          <View style={styles.detailsHeaderBottom}>
+            <View style={styles.navControlsRow}>
+              <TouchableOpacity
+                onPress={handlePrevDay}
+                style={[styles.navArrowBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.7}
+              >
+                <ChevronLeft color={colors.textPrimary} size={18} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleNextDay}
+                style={[styles.navArrowBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.7}
+              >
+                <ChevronRight color={colors.textPrimary} size={18} />
+              </TouchableOpacity>
+
+              {!isTodaySelected && (
+                <TouchableOpacity
+                  onPress={handleJumpToToday}
+                  style={[styles.todayJumpBtn, { backgroundColor: `${colors.accent}15`, borderColor: `${colors.accent}40` }]}
+                  activeOpacity={0.7}
                 >
-                  <View style={styles.billStripLeft}>
-                    <View style={[styles.billIconCircle, { backgroundColor: isSettled ? `${colors.success}20` : `${colors.purple}20` }]}>
-                      <CreditCard color={isSettled ? colors.success : colors.purple} size={16} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.billStripName, { color: colors.textPrimary }]}>{bill.name}</Text>
-                      <Text style={[styles.billStripCategory, { color: colors.textTertiary }]}>
-                        {bill.category} {bill.frequency ? `• ${bill.frequency}` : ''}
-                      </Text>
-                    </View>
-                  </View>
+                  <RotateCcw color={colors.accent} size={12} style={{ marginRight: 5 }} />
+                  <Text style={[styles.todayJumpText, { color: colors.accent }]}>Today</Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
-                  <View style={styles.billStripRight}>
-                    <Text style={[styles.billStripAmount, { color: colors.textPrimary }]}>
-                      PKR {bill.amount.toLocaleString()}
-                    </Text>
-                    {isSettled ? (
-                      <View style={styles.settledBadge}>
-                        <CheckCircle2 color={colors.success} size={12} style={{ marginRight: 4 }} />
-                        <Text style={[styles.settledText, { color: colors.success }]}>Settled</Text>
-                      </View>
-                    ) : (
-                      <TouchableOpacity
-                        style={[styles.payNowBtn, { backgroundColor: colors.purple }]}
-                        onPress={() => handlePayBillFromCalendar(bill)}
-                      >
-                        <RefreshCw color="#FFFFFF" size={10} style={{ marginRight: 4 }} />
-                        <Text style={styles.payNowText}>Pay Now</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </LinearGradient>
-              );
-            })}
-          </View>
-        )}
-
-        <View style={styles.detailsHeader}>
-          <View>
-            <Text style={[styles.detailsDate, { color: colors.textPrimary }]}>{format(parse(selectedDate, 'yyyy-MM-dd', new Date()), 'MMMM do, yyyy')}</Text>
-            <Text style={[styles.detailsCount, { color: colors.textSecondary }]}>{dailyExpenses.length} transactions</Text>
-          </View>
-          <View style={[styles.totalBadge, { backgroundColor: colors.accentBg, borderColor: colors.accent + '33' }]}>
-            <Text style={[styles.totalBadgeText, { color: colors.accent }]}>PKR {totalDaily.toLocaleString()}</Text>
+            <Text style={[styles.detailsCount, { color: colors.textSecondary }]}>
+              {isTodaySelected ? 'Today • ' : ''}{dailyExpenses.length} {dailyExpenses.length === 1 ? 'transaction' : 'transactions'}
+            </Text>
           </View>
         </View>
         {dailyExpenses.length === 0 ? (
@@ -312,13 +233,6 @@ export default function CalendarScreen() {
         onClose={() => setIsEditModalVisible(false)}
         expense={editingExpense}
       />
-
-      <BillPaymentModal
-        visible={isBillPayModalVisible}
-        bill={selectedBillToPay}
-        onClose={() => setIsBillPayModalVisible(false)}
-        onConfirm={handleConfirmCalendarPayment}
-      />
     </SafeAreaView>
   );
 }
@@ -336,112 +250,52 @@ const styles = StyleSheet.create({
   
   calendarContainer: { marginHorizontal: 16, borderRadius: 24, paddingBottom: 16, borderBottomWidth: 1 },
   
-  calendarLegend: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 20,
-    marginTop: 10,
-    marginBottom: 4,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  legendDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-  },
-  legendLabel: {
-    fontSize: 11,
-    fontFamily: 'Inter_500Medium',
-  },
 
-  dayBillsSection: {
-    marginTop: 16,
-    marginBottom: 4,
-    gap: 8,
+
+  detailsHeader: {
+    paddingHorizontal: 4,
+    paddingTop: 16,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    marginBottom: 6,
   },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-    paddingLeft: 4,
-  },
-  dayBillsTitle: {
-    fontSize: 10,
-    fontFamily: 'Inter_700Bold',
-    letterSpacing: 1.2,
-  },
-  billStrip: {
+  detailsHeaderTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
+    marginBottom: 10,
   },
-  billStripLeft: {
+  detailsDate: { fontFamily: 'Outfit_600SemiBold', fontSize: 18 },
+  totalBadge: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 100, borderWidth: 1, flexShrink: 0 },
+  totalBadgeText: { fontFamily: 'Outfit_600SemiBold', fontSize: 13 },
+  detailsHeaderBottom: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  navControlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    flex: 1,
-    marginRight: 10,
+    gap: 8,
   },
-  billIconCircle: {
-    width: 32,
-    height: 32,
+  navArrowBtn: {
+    width: 36,
+    height: 36,
     borderRadius: 10,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  billStripName: {
-    fontFamily: 'Outfit_600SemiBold',
-    fontSize: 14,
-  },
-  billStripCategory: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 10,
-    textTransform: 'capitalize',
-    marginTop: 1,
-  },
-  billStripRight: {
-    alignItems: 'flex-end',
-    flexShrink: 0,
-  },
-  billStripAmount: {
-    fontFamily: 'Outfit_600SemiBold',
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  settledBadge: {
+  todayJumpBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    height: 36,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
   },
-  settledText: {
-    fontSize: 10,
-    fontFamily: 'Inter_700Bold',
-  },
-  payNowBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  payNowText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontFamily: 'Inter_700Bold',
-  },
-
-  detailsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 4, paddingVertical: 16 },
-  detailsDate: { fontFamily: 'Outfit_600SemiBold', fontSize: 18 },
-  detailsCount: { fontFamily: 'Inter_500Medium', fontSize: 12, marginTop: 2 },
-  totalBadge: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 100, borderWidth: 1 },
-  totalBadgeText: { fontFamily: 'Outfit_600SemiBold', fontSize: 14 },
+  todayJumpText: { fontFamily: 'Inter_700Bold', fontSize: 11, letterSpacing: 0.3 },
+  detailsCount: { fontFamily: 'Inter_500Medium', fontSize: 12 },
 
   scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
   strip: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderRadius: 18, borderWidth: 1, marginBottom: 10 },
