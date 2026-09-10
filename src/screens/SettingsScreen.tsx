@@ -1,21 +1,56 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Switch, Keyboard } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  Switch,
+  Keyboard,
+  ScrollView,
+  useWindowDimensions
+} from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLedgr } from '../lib/LedgrContext';
-import { useTheme, useThemeColors } from '../lib/ThemeContext';
+import { useTheme } from '../lib/ThemeContext';
 import { ExpenseCategory, Budget, DEFAULT_CATEGORIES } from '../lib/store';
-import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, ShoppingBasket, PlusCircle, Pencil, Trash2, Sun, Moon, Mic } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import {
+  Coffee,
+  Car,
+  Home as HomeIcon,
+  ShoppingBag,
+  Heart,
+  MoreHorizontal,
+  ShoppingBasket,
+  PlusCircle,
+  Pencil,
+  Trash2,
+  Sun,
+  Moon,
+  Mic,
+  Minimize,
+  Maximize,
+  ChevronUp,
+  ChevronDown,
+  Download,
+  Upload,
+  Share,
+  HardDrive,
+  Trash2 as TrashIcon,
+  Sparkles,
+  Check,
+  X
+} from 'lucide-react-native';
 import { useSnackbar } from '../components/Snackbar';
 import DeleteCategoryModal from '../components/DeleteCategoryModal';
+import AddToBudgetModal from '../components/AddToBudgetModal';
 import { exportExpensesToXLSX, importExpensesFromFile } from '../lib/dateUtils';
-import { Download, Upload, Share, HardDrive, Trash2 as TrashIcon } from 'lucide-react-native';
 import CustomAlert from '../components/CustomAlert';
 import { useGrocery } from '../lib/GroceryContext';
 import { useVoiceMemos } from '../lib/VoiceMemoContext';
-import { Alert } from 'react-native';
 
 const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
   Food: Coffee,
@@ -27,11 +62,35 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
   Other: MoreHorizontal,
 };
 
+const TABS = ['Budget', 'Preferences', 'Data'] as const;
+type TabType = typeof TABS[number];
+
 export default function SettingsScreen() {
-  const { budget, updateBudget, isLoaded, expenses, allCategories, addCategory, deleteCategory, reloadBudgetState, showDevTools, importExpenses, simulateRollover } = useLedgr();
+  const [activeTab, setActiveTab] = useState<TabType>('Budget');
+  const {
+    budget,
+    updateBudget,
+    isLoaded,
+    expenses,
+    allCategories,
+    addCategory,
+    deleteCategory,
+    moveCategoryUp,
+    moveCategoryDown,
+    showDevTools,
+    importExpenses,
+    simulateRollover,
+    currentMonthAdditions,
+    totalAdditionsThisMonth,
+    deleteBudgetAddition,
+  } = useLedgr();
+
   const { showSnackbar } = useSnackbar();
-  const { colors, isDark, toggleTheme } = useTheme();
+  const { colors, isDark, toggleTheme, isCompactMode, toggleCompactMode } = useTheme();
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
+  const horizontalScrollRef = useRef<ScrollView>(null);
+
   const { clearCompletedLists, getStorageSize: getGroceryStorage, lists: groceryLists } = useGrocery();
   const { clearAllMemos, getStorageSize: getVoiceStorage, memos } = useVoiceMemos();
   const [groceryStorageBytes, setGroceryStorageBytes] = useState(0);
@@ -59,14 +118,11 @@ export default function SettingsScreen() {
 
   const [alertVisible, setAlertVisible] = useState(false);
   const [voiceAlertVisible, setVoiceAlertVisible] = useState(false);
+  const [isAddBudgetModalVisible, setIsAddBudgetModalVisible] = useState(false);
+  const [deletingAdditionId, setDeletingAdditionId] = useState<string | null>(null);
 
-  const handleClearCompleted = () => {
-    setAlertVisible(true);
-  };
-
-  const handleClearVoice = () => {
-    setVoiceAlertVisible(true);
-  };
+  const handleClearCompleted = () => setAlertVisible(true);
+  const handleClearVoice = () => setVoiceAlertVisible(true);
 
   const [localBudget, setLocalBudget] = useState<Budget>(budget);
   const [totalStr, setTotalStr] = useState(budget.total.toString());
@@ -107,7 +163,7 @@ export default function SettingsScreen() {
   const handleTotalChange = (val: string) => {
     const cleaned = val.replace(/[^0-9]/g, '');
     setTotalStr(cleaned);
-    setLocalBudget(prev => ({ ...prev, total: parseInt(cleaned) || 0 }));
+    setLocalBudget(prev => ({ ...prev, total: parseInt(cleaned, 10) || 0 }));
   };
 
   const handleTotalBlur = () => {
@@ -120,7 +176,7 @@ export default function SettingsScreen() {
   const handleCatChange = (cat: ExpenseCategory, val: string) => {
     const cleaned = val.replace(/[^0-9]/g, '');
     setCatStrs(prev => ({ ...prev, [cat]: cleaned }));
-    setLocalBudget(prev => ({ ...prev, categories: { ...prev.categories, [cat]: parseInt(cleaned) || 0 } }));
+    setLocalBudget(prev => ({ ...prev, categories: { ...prev.categories, [cat]: parseInt(cleaned, 10) || 0 } }));
   };
 
   const handleCatBlur = (cat: string) => {
@@ -154,7 +210,7 @@ export default function SettingsScreen() {
         if (result.duplicateSkipped) msg += ` ${result.duplicateSkipped} duplicates skipped.`;
         showSnackbar(msg, 'success');
       } else if (result.formatSkipped > 0 || result.duplicateSkipped > 0) {
-        let reasons = [];
+        const reasons = [];
         if (result.formatSkipped > 0) reasons.push(`${result.formatSkipped} rows had invalid formatting`);
         if (result.duplicateSkipped > 0) reasons.push(`${result.duplicateSkipped} rows were exact duplicates`);
         showSnackbar(`Import failed: ${reasons.join(' and ')}. No new entries added.`, 'error');
@@ -186,18 +242,17 @@ export default function SettingsScreen() {
     showSnackbar(`Category "${catName}" deleted`, 'success');
   };
 
+  const handleTabPress = (tab: TabType, idx: number) => {
+    setActiveTab(tab);
+    horizontalScrollRef.current?.scrollTo({ x: idx * screenWidth, animated: true });
+  };
+
   if (!isLoaded) return <View style={[styles.container, { backgroundColor: colors.background }]} />;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <KeyboardAwareScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
-        showsVerticalScrollIndicator={false}
-        extraScrollHeight={120}
-        enableOnAndroid={true}
-        keyboardShouldPersistTaps="handled"
-        keyboardOpeningTime={0}
-      >
+      {/* Pinned Top: Header + Tab Bar */}
+      <View style={styles.topHeaderContainer}>
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.headerTopLeft}>
@@ -207,263 +262,457 @@ export default function SettingsScreen() {
             <Text style={[styles.headerTitleSmall, { color: colors.textPrimary }]}>Settings</Text>
           </View>
         </View>
-        {/* Appearance Settings */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Appearance</Text>
-        </View>
 
-        <View style={[styles.dataCard, { backgroundColor: colors.card, borderColor: colors.cardBorder, marginBottom: 16 }]}>
-          <View style={styles.dataAction}>
-            <View style={[styles.dataIconBox, { backgroundColor: isDark ? `${colors.purple}15` : `${colors.accent}15` }]}>
-              {isDark ? <Moon color={colors.purple} size={20} /> : <Sun color={colors.accent} size={20} />}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.dataActionTitle, { color: colors.textPrimary }]}>Dark Mode</Text>
-              <Text style={[styles.dataActionSub, { color: colors.textTertiary }]}>
-                {isDark ? 'Luminous interface active' : 'Sleek dark interface inactive'}
+        {/* Tab Selector */}
+        <View style={[styles.tabBar, { backgroundColor: colors.surface, borderColor: colors.borderSubtle }]}>
+          {TABS.map((tab, idx) => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tabBtn, activeTab === tab && { backgroundColor: colors.accentBg }]}
+              onPress={() => handleTabPress(tab, idx)}
+            >
+              <Text style={[styles.tabText, { color: activeTab === tab ? colors.accent : colors.textTertiary }]}>
+                {tab}
               </Text>
-            </View>
-            <Switch
-              value={isDark}
-              onValueChange={toggleTheme}
-              trackColor={{ false: colors.switchTrackFalse, true: colors.switchTrackTrue }}
-              thumbColor="#FFFFFF"
-              ios_backgroundColor={colors.switchTrackFalse}
-            />
-          </View>
-        </View>
-
-        {/* Budget Configuration Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Budget Configuration</Text>
-        </View>
-
-        <View style={[styles.budgetMainCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-          <View style={styles.allocationHeader}>
-            <Text style={[styles.allocationLabel, { color: colors.textTertiary }]}>TOTAL MONTHLY BUDGET</Text>
-            <View style={[styles.allocationPill, isOverAllocated ? styles.pillDanger : styles.pillSuccess]}>
-              <Text style={[styles.pillText, isOverAllocated ? styles.pillTextDanger : styles.pillTextSuccess]}>
-                {isOverAllocated ? 'OVER-ALLOCATED' : 'ALLOCATED'}
-              </Text>
-            </View>
-          </View>
-
-          <View style={[styles.totalInputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
-            <View style={styles.totalInputRow}>
-              <Text style={[styles.totalCurrency, { color: colors.accent }]}>PKR</Text>
-              <TextInput
-                ref={budgetRef}
-                style={[styles.totalInput, { color: colors.textPrimary }]}
-                keyboardType="numeric"
-                placeholder="0.0"
-                placeholderTextColor={colors.textMuted}
-                value={totalStr}
-                onChangeText={handleTotalChange}
-                onBlur={handleTotalBlur}
-                returnKeyType="next"
-                onSubmitEditing={() => {
-                  if (allCategories.length > 0) {
-                    categoryRefs.current[allCategories[0]]?.focus();
-                  }
-                }}
-              />
-              <Pencil size={20} color={colors.accent} style={{ marginLeft: 12 }} />
-            </View>
-          </View>
-
-          <View style={styles.allocationBarContainer}>
-            <View style={[styles.allocationBarBg, { backgroundColor: colors.divider }]}>
-              <View style={[styles.allocationBarFill, { width: `${Math.min(100, (totalAllocated / localBudget.total) * 100)}%`, backgroundColor: colors.purple }, isOverAllocated && styles.allocationBarFillDanger]} />
-            </View>
-            <View style={styles.allocationStats}>
-              <Text style={[styles.statText, { color: colors.textTertiary }]}>Allocated: PKR {totalAllocated.toLocaleString()}</Text>
-              <Text style={[styles.statValue, { color: colors.textSecondary }, isOverAllocated && { color: colors.danger }]}>
-                {isOverAllocated ? `Exceeded by: PKR ${Math.abs(unallocated).toLocaleString()}` : `Remaining: PKR ${unallocated.toLocaleString()}`}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.catGridHeader}>
-          <Text style={[styles.catSectionLabel, { color: colors.textTertiary }]}>CATEGORY ALLOCATION</Text>
-          <TouchableOpacity style={[styles.addCatBtnSmall, { backgroundColor: colors.accentBg }]} onPress={() => setIsAddingCat(true)}>
-            <PlusCircle size={14} color={colors.accent} />
-            <Text style={[styles.addCatBtnTextSmall, { color: colors.accent }]}>NEW</Text>
-          </TouchableOpacity>
-        </View>
-
-        {isAddingCat && (
-          <View style={[styles.quickAddCat, { backgroundColor: colors.surface, borderColor: colors.cardBorder }]}>
-            <TextInput
-              style={[styles.quickAddInput, { color: colors.textPrimary }]}
-              placeholder="Category Name"
-              placeholderTextColor={colors.textMuted}
-              value={newCatName}
-              onChangeText={setNewCatName}
-              autoFocus
-              returnKeyType="done"
-              onSubmitEditing={() => {
-                Keyboard.dismiss();
-              }}
-            />
-            <TouchableOpacity style={[styles.quickAddDone, { backgroundColor: colors.accent }]} onPress={handleAddCategory}>
-              <Text style={[styles.quickAddDoneText, { color: colors.background }]}>ADD</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.quickAddCancel} onPress={() => setIsAddingCat(false)}>
-              <Text style={[styles.quickAddCancelText, { color: colors.textTertiary }]}>✕</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          ))}
+        </View>
+      </View>
 
-        <View style={styles.catBudgetGrid}>
-          {allCategories.map((cat, index) => {
-            const Icon = CATEGORY_ICONS[cat as ExpenseCategory] || MoreHorizontal;
-            const amount = localBudget.categories[cat] || 0;
-            const percentage = localBudget.total > 0 ? ((amount / localBudget.total) * 100).toFixed(1) : '0.0';
+      {/* Swipeable Tabs Container */}
+      <ScrollView
+        ref={horizontalScrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onMomentumScrollEnd={(e) => {
+          const offsetX = e.nativeEvent.contentOffset.x;
+          const index = Math.round(offsetX / screenWidth);
+          if (index >= 0 && index < TABS.length) {
+            setActiveTab(TABS[index]);
+          }
+        }}
+        style={{ flex: 1 }}
+      >
+        {/* ==================== TAB 0: BUDGET ==================== */}
+        <View style={{ width: screenWidth }}>
+          <KeyboardAwareScrollView
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 }]}
+            showsVerticalScrollIndicator={false}
+            extraScrollHeight={120}
+            enableOnAndroid={true}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Budget Configuration Section */}
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Budget Configuration</Text>
+            </View>
 
-            return (
-              <View key={cat} style={[styles.modernCatCard, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}>
-                <View style={styles.catCardHeader}>
-                  <View style={[styles.catIconBox, { backgroundColor: colors.accentBg }]}>
-                    <Icon color={colors.accent} size={14} />
-                  </View>
-                  <Text style={[styles.catName, { color: colors.textSecondary }]} numberOfLines={1}>{cat}</Text>
-
-                  {!DEFAULT_CATEGORIES.includes(cat) && (
-                    <TouchableOpacity style={styles.deleteCatBtn} onPress={() => handleDeleteCategory(cat)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                      <Trash2 size={12} color={colors.danger} opacity={0.6} />
-                    </TouchableOpacity>
-                  )}
-
-                  <Text style={[styles.catPercent, { color: colors.accent }]}>{percentage}%</Text>
+            {/* Total Monthly Budget Card */}
+            <View style={[styles.budgetMainCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+              <View style={styles.allocationHeader}>
+                <Text style={[styles.allocationLabel, { color: colors.textTertiary }]}>TOTAL MONTHLY BUDGET</Text>
+                <View style={[styles.allocationPill, isOverAllocated ? styles.pillDanger : styles.pillSuccess]}>
+                  <Text style={[styles.pillText, isOverAllocated ? styles.pillTextDanger : styles.pillTextSuccess]}>
+                    {isOverAllocated ? 'OVER-ALLOCATED' : 'ALLOCATED'}
+                  </Text>
                 </View>
-                <View style={[styles.catInputContainer, { backgroundColor: colors.innerCardBg }]}>
-                  <Text style={[styles.catInputCurrency, { color: colors.textTertiary }]}>PKR</Text>
+              </View>
+
+              <View style={[styles.totalInputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+                <View style={styles.totalInputRow}>
+                  <Text style={[styles.totalCurrency, { color: colors.accent }]}>PKR</Text>
                   <TextInput
-                    ref={el => { categoryRefs.current[cat] = el; }}
-                    style={[styles.catInput, { color: colors.textPrimary }]}
+                    ref={budgetRef}
+                    style={[styles.totalInput, { color: colors.textPrimary }]}
                     keyboardType="numeric"
                     placeholder="0.0"
                     placeholderTextColor={colors.textMuted}
-                    value={catStrs[cat] ?? amount.toString()}
-                    onChangeText={(val) => handleCatChange(cat, val)}
-                    onBlur={() => handleCatBlur(cat)}
-                    returnKeyType={index === allCategories.length - 1 ? 'done' : 'next'}
+                    value={totalStr}
+                    onChangeText={handleTotalChange}
+                    onBlur={handleTotalBlur}
+                    returnKeyType="next"
                     onSubmitEditing={() => {
-                      if (index < allCategories.length - 1) {
-                        categoryRefs.current[allCategories[index + 1]]?.focus();
-                      } else {
-                        Keyboard.dismiss();
+                      if (allCategories.length > 0) {
+                        categoryRefs.current[allCategories[0]]?.focus();
                       }
                     }}
                   />
+                  <Pencil size={20} color={colors.accent} style={{ marginLeft: 12 }} />
                 </View>
               </View>
-            );
-          })}
-        </View>
 
-        <TouchableOpacity
-          style={[styles.mainSaveButton, { backgroundColor: colors.saveBtnBg, opacity: (JSON.stringify(localBudget) !== JSON.stringify(budget)) ? 1 : 0.6 }]}
-          onPress={handleSaveBudget}
-          disabled={JSON.stringify(localBudget) === JSON.stringify(budget)}
-        >
-          <Text style={[styles.mainSaveText, { color: colors.saveBtnText }]}>Update Budget Configuration</Text>
-        </TouchableOpacity>
-
-        {/* Data Management */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Data Management</Text>
-        </View>
-
-        <View style={[styles.dataCard, { backgroundColor: colors.card, borderColor: colors.cardBorder, marginBottom: 12 }]}>
-          <View style={[styles.dataAction, { paddingBottom: 12 }]}>
-            <View style={[styles.dataIconBox, { backgroundColor: colors.accentBg }]}>
-              <Download color={colors.accent} size={20} />
+              <View style={styles.allocationBarContainer}>
+                <View style={[styles.allocationBarBg, { backgroundColor: colors.divider }]}>
+                  <View
+                    style={[
+                      styles.allocationBarFill,
+                      { width: `${Math.min(100, (totalAllocated / (localBudget.total || 1)) * 100)}%`, backgroundColor: colors.purple },
+                      isOverAllocated && styles.allocationBarFillDanger
+                    ]}
+                  />
+                </View>
+                <View style={styles.allocationStats}>
+                  <Text style={[styles.statText, { color: colors.textTertiary }]}>Allocated: PKR {totalAllocated.toLocaleString()}</Text>
+                  <Text style={[styles.statValue, { color: colors.textSecondary }, isOverAllocated && { color: colors.danger }]}>
+                    {isOverAllocated ? `Exceeded by: PKR ${Math.abs(unallocated).toLocaleString()}` : `Remaining: PKR ${unallocated.toLocaleString()}`}
+                  </Text>
+                </View>
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.dataActionTitle, { color: colors.textPrimary }]}>Export Data</Text>
-              <Text style={[styles.dataActionSub, { color: colors.textTertiary, lineHeight: 16 }]}>Backup your transaction history as a standard .xlsx spreadsheet.</Text>
-            </View>
-          </View>
 
-          <View style={styles.exportBtnRow}>
-            <TouchableOpacity style={[styles.smallActionBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]} onPress={() => handleExport('download')} disabled={isExporting !== false}>
-              <Download size={14} color={colors.textPrimary} />
-              <Text style={[styles.smallActionText, { color: colors.textPrimary }]}>Download</Text>
-            </TouchableOpacity>
+            {/* Mid-Month Additions Card (Add to Budget) */}
+            <View style={[styles.additionCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+              <View style={styles.additionHeader}>
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Sparkles size={16} color={colors.accent} />
+                    <Text style={[styles.additionTitle, { color: colors.textPrimary }]}>Mid-Month Income</Text>
+                  </View>
+                  <Text style={[styles.additionSubtitle, { color: colors.textTertiary }]}>
+                    Received money in between the month? Add it to your budget.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.addBudgetBtn, { backgroundColor: colors.accent }]}
+                  onPress={() => setIsAddBudgetModalVisible(true)}
+                  activeOpacity={0.8}
+                >
+                  <PlusCircle size={14} color="#0A0A0A" />
+                  <Text style={styles.addBudgetBtnText}>Add Funds</Text>
+                </TouchableOpacity>
+              </View>
 
-            <TouchableOpacity style={[styles.smallActionBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]} onPress={() => handleExport('share')} disabled={isExporting !== false}>
-              <Share size={14} color={colors.textPrimary} />
-              <Text style={[styles.smallActionText, { color: colors.textPrimary }]}>Share</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+              {currentMonthAdditions.length > 0 && (
+                <View style={styles.additionsList}>
+                  <View style={[styles.additionDivider, { backgroundColor: colors.divider }]} />
+                  <Text style={[styles.additionsListTitle, { color: colors.textTertiary }]}>
+                    ADDED THIS MONTH ({currentMonthAdditions.length}) · +PKR {totalAdditionsThisMonth.toLocaleString()}
+                  </Text>
+                  {currentMonthAdditions.map(item => (
+                    <View key={item.id} style={[styles.additionItem, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={[styles.additionAmount, { color: colors.accent }]}>+PKR {item.amount.toLocaleString()}</Text>
+                          <View style={[styles.reasonBadge, { backgroundColor: colors.accentBg }]}>
+                            <Text style={[styles.reasonBadgeText, { color: colors.accent }]}>{item.reason}</Text>
+                          </View>
+                        </View>
+                        <Text style={[styles.additionMeta, { color: colors.textTertiary }]}>
+                          {item.targetCategory ? `Allocated to ${item.targetCategory}` : 'Overall Budget'} · {item.date}
+                        </Text>
+                      </View>
+                      {deletingAdditionId === item.id ? (
+                        <View style={styles.confirmDeleteContainer}>
+                          <TouchableOpacity
+                            style={[styles.miniActionBtn, styles.confirmAction]}
+                            onPress={async () => {
+                              setDeletingAdditionId(null);
+                              await deleteBudgetAddition(item.id);
+                              showSnackbar('Budget addition removed', 'info');
+                            }}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <Check color="#FFFFFF" size={13} />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.miniActionBtn, styles.cancelAction]}
+                            onPress={() => setDeletingAdditionId(null)}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <X color="#FFFFFF" size={13} />
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <TouchableOpacity
+                          style={styles.deleteAdditionBtn}
+                          onPress={() => setDeletingAdditionId(item.id)}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Trash2 size={14} color={colors.danger} opacity={0.7} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
 
-        <View style={[styles.dataCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-          <TouchableOpacity style={styles.dataAction} onPress={handleImport} disabled={isImporting}>
-            <View style={[styles.dataIconBox, { backgroundColor: colors.purpleBg }]}>
-              <Upload color={colors.purple} size={20} />
+            {/* Category Allocation Header */}
+            <View style={styles.catGridHeader}>
+              <Text style={[styles.catSectionLabel, { color: colors.textTertiary }]}>CATEGORY ALLOCATION</Text>
+              <TouchableOpacity style={[styles.addCatBtnSmall, { backgroundColor: colors.accentBg }]} onPress={() => setIsAddingCat(true)}>
+                <PlusCircle size={14} color={colors.accent} />
+                <Text style={[styles.addCatBtnTextSmall, { color: colors.accent }]}>NEW</Text>
+              </TouchableOpacity>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.dataActionTitle, { color: colors.textPrimary }]}>Import from Excel / CSV</Text>
-              <Text style={[styles.dataActionSub, { color: colors.textTertiary }]}>Append .xlsx or .csv records</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
 
-        {/* Grocery Data */}
-        <View style={[styles.dataCard, { backgroundColor: colors.card, borderColor: colors.cardBorder, marginTop: 12 }]}>
-          <View style={[styles.dataAction, { paddingBottom: 12 }]}>
-            <View style={[styles.dataIconBox, { backgroundColor: colors.accentBg }]}>
-              <HardDrive color={colors.accent} size={20} />
+            {isAddingCat && (
+              <View style={[styles.quickAddCat, { backgroundColor: colors.surface, borderColor: colors.cardBorder }]}>
+                <TextInput
+                  style={[styles.quickAddInput, { color: colors.textPrimary }]}
+                  placeholder="Category Name"
+                  placeholderTextColor={colors.textMuted}
+                  value={newCatName}
+                  onChangeText={setNewCatName}
+                  autoFocus
+                  returnKeyType="done"
+                  onSubmitEditing={() => {
+                    Keyboard.dismiss();
+                  }}
+                />
+                <TouchableOpacity style={[styles.quickAddDone, { backgroundColor: colors.accent }]} onPress={handleAddCategory}>
+                  <Text style={[styles.quickAddDoneText, { color: colors.background }]}>ADD</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.quickAddCancel} onPress={() => setIsAddingCat(false)}>
+                  <Text style={[styles.quickAddCancelText, { color: colors.textTertiary }]}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <View style={styles.catBudgetGrid}>
+              {allCategories.map((cat, index) => {
+                const Icon = CATEGORY_ICONS[cat as ExpenseCategory] || MoreHorizontal;
+                const amount = localBudget.categories[cat] || 0;
+                const percentage = localBudget.total > 0 ? ((amount / localBudget.total) * 100).toFixed(1) : '0.0';
+
+                return (
+                  <View key={cat} style={[styles.modernCatCard, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]}>
+                    <View style={styles.catCardHeader}>
+                      <View style={[styles.catIconBox, { backgroundColor: colors.accentBg }]}>
+                        <Icon color={colors.accent} size={14} />
+                      </View>
+                      <Text style={[styles.catName, { color: colors.textSecondary }]} numberOfLines={1}>{cat}</Text>
+                      <View style={{ flexDirection: 'column', marginLeft: 4 }}>
+                        {index > 0 ? (
+                          <TouchableOpacity onPress={() => moveCategoryUp(cat)} style={{ padding: 2 }}>
+                            <ChevronUp size={16} color={colors.textTertiary} />
+                          </TouchableOpacity>
+                        ) : <View style={{ height: 20 }} />}
+                        {index < allCategories.length - 1 ? (
+                          <TouchableOpacity onPress={() => moveCategoryDown(cat)} style={{ padding: 2 }}>
+                            <ChevronDown size={16} color={colors.textTertiary} />
+                          </TouchableOpacity>
+                        ) : <View style={{ height: 20 }} />}
+                      </View>
+
+                      {!DEFAULT_CATEGORIES.includes(cat) && (
+                        <TouchableOpacity style={styles.deleteCatBtn} onPress={() => handleDeleteCategory(cat)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                          <Trash2 size={12} color={colors.danger} opacity={0.6} />
+                        </TouchableOpacity>
+                      )}
+
+                      <Text style={[styles.catPercent, { color: colors.accent }]}>{percentage}%</Text>
+                    </View>
+                    <View style={[styles.catInputContainer, { backgroundColor: colors.innerCardBg }]}>
+                      <Text style={[styles.catInputCurrency, { color: colors.textTertiary }]}>PKR</Text>
+                      <TextInput
+                        ref={el => { categoryRefs.current[cat] = el; }}
+                        style={[styles.catInput, { color: colors.textPrimary }]}
+                        keyboardType="numeric"
+                        placeholder="0.0"
+                        placeholderTextColor={colors.textMuted}
+                        value={catStrs[cat] ?? amount.toString()}
+                        onChangeText={(val) => handleCatChange(cat, val)}
+                        onBlur={() => handleCatBlur(cat)}
+                        returnKeyType={index === allCategories.length - 1 ? 'done' : 'next'}
+                        onSubmitEditing={() => {
+                          if (index < allCategories.length - 1) {
+                            categoryRefs.current[allCategories[index + 1]]?.focus();
+                          } else {
+                            Keyboard.dismiss();
+                          }
+                        }}
+                      />
+                    </View>
+                  </View>
+                );
+              })}
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.dataActionTitle, { color: colors.textPrimary }]}>Grocery & Voice Data</Text>
-              <Text style={[styles.dataActionSub, { color: colors.textTertiary }]}>
-                {formatBytes(groceryStorageBytes + voiceStorageBytes)} used · {groceryLists.filter(l => l.status === 'complete').length} completed lists · {memos.length} voice memos
-              </Text>
-            </View>
-          </View>
-          <View style={{ gap: 8, paddingHorizontal: 16, marginBottom: 16 }}>
+
             <TouchableOpacity
-              style={[styles.smallActionBtn, { backgroundColor: colors.dangerBg, borderColor: `${colors.danger}30`, height: 44, justifyContent: 'center' }]}
-              onPress={handleClearCompleted}
-              disabled={groceryLists.filter(l => l.status === 'complete').length === 0}
+              style={[styles.mainSaveButton, { backgroundColor: colors.saveBtnBg, opacity: (JSON.stringify(localBudget) !== JSON.stringify(budget)) ? 1 : 0.6 }]}
+              onPress={handleSaveBudget}
+              disabled={JSON.stringify(localBudget) === JSON.stringify(budget)}
             >
-              <Text style={{ fontFamily: 'Outfit_600SemiBold', fontSize: 13, color: colors.danger, opacity: groceryLists.filter(l => l.status === 'complete').length === 0 ? 0.4 : 1 }}>Clear All Completed Lists</Text>
+              <Text style={[styles.mainSaveText, { color: colors.saveBtnText }]}>Update Budget Configuration</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.smallActionBtn, { backgroundColor: colors.dangerBg, borderColor: `${colors.danger}30`, height: 44, justifyContent: 'center' }]}
-              onPress={handleClearVoice}
-              disabled={memos.length === 0}
-            >
-              <Text style={{ fontFamily: 'Outfit_600SemiBold', fontSize: 13, color: colors.danger, opacity: memos.length === 0 ? 0.4 : 1 }}>Clear All Voice Memos</Text>
-            </TouchableOpacity>
-          </View>
+
+            <View style={{ height: 40 }} />
+          </KeyboardAwareScrollView>
         </View>
 
-        {/* DEV TOOLS */}
-        {showDevTools && (
-          <View style={styles.devSection}>
-            <Text style={styles.devHeader}>🛠 DEV TOOLS</Text>
-            <TouchableOpacity style={styles.devBtn} onPress={async () => { await simulateRollover(); showSnackbar('Simulated Month Rollover', 'success'); }}>
-              <Text style={styles.devBtnText}>Simulate Month Rollover</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.devBtn} onPress={async () => {
-              const keys = await AsyncStorage.getAllKeys();
-              for (const key of keys) { const val = await AsyncStorage.getItem(key); console.log(`${key}:`, val); }
-              showSnackbar('Logged to Console', 'success');
-            }}>
-              <Text style={styles.devBtnText}>Log AsyncStorage Data</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* ==================== TAB 1: PREFERENCES ==================== */}
+        <View style={{ width: screenWidth }}>
+          <ScrollView
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 }]}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Appearance Settings */}
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Appearance</Text>
+            </View>
 
-      <View style={{ height: 30 }} />
-      </KeyboardAwareScrollView>
+            <View style={[styles.dataCard, { backgroundColor: colors.card, borderColor: colors.cardBorder, marginBottom: 16 }]}>
+              <View style={styles.dataAction}>
+                <View style={[styles.dataIconBox, { backgroundColor: isDark ? `${colors.purple}15` : `${colors.accent}15` }]}>
+                  {isDark ? <Moon color={colors.purple} size={20} /> : <Sun color={colors.accent} size={20} />}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.dataActionTitle, { color: colors.textPrimary }]}>Dark Mode</Text>
+                  <Text style={[styles.dataActionSub, { color: colors.textTertiary }]}>
+                    {isDark ? 'Luminous interface active' : 'Sleek dark interface inactive'}
+                  </Text>
+                </View>
+                <Switch
+                  value={isDark}
+                  onValueChange={toggleTheme}
+                  trackColor={{ false: colors.switchTrackFalse, true: colors.switchTrackTrue }}
+                  thumbColor="#FFFFFF"
+                  ios_backgroundColor={colors.switchTrackFalse}
+                />
+              </View>
+            </View>
 
+            <View style={[styles.dataCard, { backgroundColor: colors.card, borderColor: colors.cardBorder, marginBottom: 16 }]}>
+              <View style={styles.dataAction}>
+                <View style={[styles.dataIconBox, { backgroundColor: isCompactMode ? `${colors.blue}15` : `${colors.accent}15` }]}>
+                  {isCompactMode ? <Minimize color={colors.blue} size={20} /> : <Maximize color={colors.accent} size={20} />}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.dataActionTitle, { color: colors.textPrimary }]}>Compact Mode</Text>
+                  <Text style={[styles.dataActionSub, { color: colors.textTertiary }]}>
+                    {isCompactMode ? 'Showing more items on screen' : 'Standard spacing'}
+                  </Text>
+                </View>
+                <Switch
+                  value={isCompactMode}
+                  onValueChange={toggleCompactMode}
+                  trackColor={{ false: colors.switchTrackFalse, true: colors.switchTrackTrue }}
+                  thumbColor="#FFFFFF"
+                  ios_backgroundColor={colors.switchTrackFalse}
+                />
+              </View>
+            </View>
+
+            {/* DEV TOOLS */}
+            {showDevTools && (
+              <View style={styles.devSection}>
+                <Text style={styles.devHeader}>🛠 DEV TOOLS</Text>
+                <TouchableOpacity
+                  style={styles.devBtn}
+                  onPress={async () => {
+                    await simulateRollover();
+                    showSnackbar('Simulated Month Rollover', 'success');
+                  }}
+                >
+                  <Text style={styles.devBtnText}>Simulate Month Rollover</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.devBtn}
+                  onPress={async () => {
+                    const keys = await AsyncStorage.getAllKeys();
+                    for (const key of keys) {
+                      const val = await AsyncStorage.getItem(key);
+                      console.log(`${key}:`, val);
+                    }
+                    showSnackbar('Logged to Console', 'success');
+                  }}
+                >
+                  <Text style={styles.devBtnText}>Log AsyncStorage Data</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        </View>
+
+        {/* ==================== TAB 2: DATA ==================== */}
+        <View style={{ width: screenWidth }}>
+          <ScrollView
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 }]}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Data Management */}
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Data Management</Text>
+            </View>
+
+            <View style={[styles.dataCard, { backgroundColor: colors.card, borderColor: colors.cardBorder, marginBottom: 12 }]}>
+              <View style={[styles.dataAction, { paddingBottom: 12 }]}>
+                <View style={[styles.dataIconBox, { backgroundColor: colors.accentBg }]}>
+                  <Download color={colors.accent} size={20} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.dataActionTitle, { color: colors.textPrimary }]}>Export Data</Text>
+                  <Text style={[styles.dataActionSub, { color: colors.textTertiary, lineHeight: 16 }]}>Backup your transaction history as a standard .xlsx spreadsheet.</Text>
+                </View>
+              </View>
+
+              <View style={styles.exportBtnRow}>
+                <TouchableOpacity style={[styles.smallActionBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]} onPress={() => handleExport('download')} disabled={isExporting !== false}>
+                  <Download size={14} color={colors.textPrimary} />
+                  <Text style={[styles.smallActionText, { color: colors.textPrimary }]}>Download</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.smallActionBtn, { backgroundColor: colors.surface, borderColor: colors.cardBorderSubtle }]} onPress={() => handleExport('share')} disabled={isExporting !== false}>
+                  <Share size={14} color={colors.textPrimary} />
+                  <Text style={[styles.smallActionText, { color: colors.textPrimary }]}>Share</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={[styles.dataCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+              <TouchableOpacity style={styles.dataAction} onPress={handleImport} disabled={isImporting}>
+                <View style={[styles.dataIconBox, { backgroundColor: colors.purpleBg }]}>
+                  <Upload color={colors.purple} size={20} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.dataActionTitle, { color: colors.textPrimary }]}>Import from Excel / CSV</Text>
+                  <Text style={[styles.dataActionSub, { color: colors.textTertiary }]}>Append .xlsx or .csv records</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* Grocery Data */}
+            <View style={[styles.dataCard, { backgroundColor: colors.card, borderColor: colors.cardBorder, marginTop: 12 }]}>
+              <View style={[styles.dataAction, { paddingBottom: 12 }]}>
+                <View style={[styles.dataIconBox, { backgroundColor: colors.accentBg }]}>
+                  <HardDrive color={colors.accent} size={20} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.dataActionTitle, { color: colors.textPrimary }]}>Grocery & Voice Data</Text>
+                  <Text style={[styles.dataActionSub, { color: colors.textTertiary }]}>
+                    {formatBytes(groceryStorageBytes + voiceStorageBytes)} used · {groceryLists.filter(l => l.status === 'complete').length} completed lists · {memos.length} voice memos
+                  </Text>
+                </View>
+              </View>
+              <View style={{ gap: 8, paddingHorizontal: 16, marginBottom: 16 }}>
+                <TouchableOpacity
+                  style={[styles.smallActionBtn, { backgroundColor: colors.dangerBg, borderColor: `${colors.danger}30`, height: 44, justifyContent: 'center' }]}
+                  onPress={handleClearCompleted}
+                  disabled={groceryLists.filter(l => l.status === 'complete').length === 0}
+                >
+                  <Text style={{ fontFamily: 'Outfit_600SemiBold', fontSize: 13, color: colors.danger, opacity: groceryLists.filter(l => l.status === 'complete').length === 0 ? 0.4 : 1 }}>Clear All Completed Lists</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.smallActionBtn, { backgroundColor: colors.dangerBg, borderColor: `${colors.danger}30`, height: 44, justifyContent: 'center' }]}
+                  onPress={handleClearVoice}
+                  disabled={memos.length === 0}
+                >
+                  <Text style={{ fontFamily: 'Outfit_600SemiBold', fontSize: 13, color: colors.danger, opacity: memos.length === 0 ? 0.4 : 1 }}>Clear All Voice Memos</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        </View>
+      </ScrollView>
+
+      {/* Modals */}
       <DeleteCategoryModal
         visible={isDeleteModalVisible}
         onClose={() => setIsDeleteModalVisible(false)}
@@ -471,55 +720,66 @@ export default function SettingsScreen() {
         categoryName={categoryToDelete || ''}
       />
 
-        <CustomAlert
-          visible={alertVisible}
-          title="Clear Completed Lists"
-          message="This will permanently delete all completed grocery lists and their attached receipt photos. This cannot be undone."
-          confirmLabel="Clear Data"
-          confirmVariant="danger"
-          Icon={TrashIcon}
-          onConfirm={async () => {
-            setAlertVisible(false);
-            await clearCompletedLists();
-            showSnackbar('Completed lists cleared', 'success');
-          }}
-          onCancel={() => setAlertVisible(false)}
-        />
+      <AddToBudgetModal
+        visible={isAddBudgetModalVisible}
+        onClose={() => setIsAddBudgetModalVisible(false)}
+      />
 
-        <CustomAlert
-          visible={voiceAlertVisible}
-          title="Clear Voice Memos"
-          message="This will permanently delete all saved voice memos. This cannot be undone."
-          confirmLabel="Clear Memos"
-          confirmVariant="danger"
-          Icon={Mic}
-          onConfirm={async () => {
-            setVoiceAlertVisible(false);
-            await clearAllMemos();
-            showSnackbar('Voice memos cleared', 'success');
-          }}
-          onCancel={() => setVoiceAlertVisible(false)}
-        />
-    </SafeAreaView>  );
+      <CustomAlert
+        visible={alertVisible}
+        title="Clear Completed Lists"
+        message="This will permanently delete all completed grocery lists and their attached receipt photos. This cannot be undone."
+        confirmLabel="Clear Data"
+        confirmVariant="danger"
+        Icon={TrashIcon}
+        onConfirm={async () => {
+          setAlertVisible(false);
+          await clearCompletedLists();
+          showSnackbar('Completed lists cleared', 'success');
+        }}
+        onCancel={() => setAlertVisible(false)}
+      />
+
+      <CustomAlert
+        visible={voiceAlertVisible}
+        title="Clear Voice Memos"
+        message="This will permanently delete all saved voice memos. This cannot be undone."
+        confirmLabel="Clear Memos"
+        confirmVariant="danger"
+        Icon={Mic}
+        onConfirm={async () => {
+          setVoiceAlertVisible(false);
+          await clearAllMemos();
+          showSnackbar('Voice memos cleared', 'success');
+        }}
+        onCancel={() => setVoiceAlertVisible(false)}
+      />
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
+  topHeaderContainer: { paddingHorizontal: 20, paddingTop: 8 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 4 },
   header: { marginBottom: 0 },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, width: '100%' },
   headerTopLeft: { flexDirection: 'row', alignItems: 'center' },
   headerDivider: { width: 1, height: 12, marginHorizontal: 12, opacity: 0.3 },
   headerTitleSmall: { fontFamily: 'Outfit_600SemiBold', fontSize: 13, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.8 },
+  tabBar: { flexDirection: 'row', borderRadius: 12, padding: 4, marginBottom: 12, borderWidth: 1, marginTop: 12 },
+  tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 8 },
+  tabText: { fontFamily: 'Outfit_600SemiBold', fontSize: 13 },
+
   logoSmall: { width: 18, height: 18, marginRight: 10 },
   brandNameSmall: { fontFamily: 'Outfit_800ExtraBold', fontSize: 10, letterSpacing: 2 },
   subtitle: { fontFamily: 'Inter_500Medium', fontSize: 13, marginTop: 2 },
 
-  sectionHeader: { marginBottom: 12, marginTop: 16 },
+  sectionHeader: { marginBottom: 12, marginTop: 12 },
   sectionTitle: { fontFamily: 'Outfit_600SemiBold', fontSize: 18 },
   sectionSubtitle: { fontFamily: 'Inter_500Medium', fontSize: 11, marginTop: 1 },
 
-  budgetMainCard: { padding: 20, borderRadius: 24, borderWidth: 1, marginBottom: 20 },
+  budgetMainCard: { padding: 20, borderRadius: 24, borderWidth: 1, marginBottom: 16 },
   allocationHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   allocationLabel: { fontSize: 9, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
   totalInputWrapper: { borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, marginTop: 4, borderWidth: 1, minHeight: 64, justifyContent: 'center' },
@@ -541,6 +801,27 @@ const styles = StyleSheet.create({
   allocationStats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
   statText: { fontSize: 10, fontFamily: 'Inter_500Medium' },
   statValue: { fontSize: 10, fontFamily: 'Inter_700Bold' },
+
+  /* Mid-Month Budget Additions Card */
+  additionCard: { borderRadius: 20, borderWidth: 1, padding: 16, marginBottom: 20 },
+  additionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  additionTitle: { fontFamily: 'Outfit_600SemiBold', fontSize: 15 },
+  additionSubtitle: { fontFamily: 'Inter_500Medium', fontSize: 11, marginTop: 2, lineHeight: 15 },
+  addBudgetBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, gap: 6 },
+  addBudgetBtnText: { fontFamily: 'Outfit_700Bold', fontSize: 12, color: '#0A0A0A' },
+  additionsList: { marginTop: 12 },
+  additionDivider: { height: 1, marginBottom: 10 },
+  additionsListTitle: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1, marginBottom: 8 },
+  additionItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 10, borderRadius: 12, borderWidth: 1, marginBottom: 6 },
+  additionAmount: { fontFamily: 'Outfit_700Bold', fontSize: 14 },
+  reasonBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  reasonBadgeText: { fontFamily: 'Inter_700Bold', fontSize: 10 },
+  additionMeta: { fontFamily: 'Inter_500Medium', fontSize: 10, marginTop: 2 },
+  deleteAdditionBtn: { padding: 6 },
+  confirmDeleteContainer: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  miniActionBtn: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  confirmAction: { backgroundColor: '#10B981' },
+  cancelAction: { backgroundColor: '#EF4444' },
 
   catSectionLabel: { fontSize: 9, fontFamily: 'Inter_800ExtraBold', letterSpacing: 1.5 },
   catGridHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },

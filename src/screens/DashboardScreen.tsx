@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import Svg, { G, Path, Circle, Text as SvgText } from 'react-native-svg';
 import { useLedgr } from '../lib/LedgrContext';
-import { useThemeColors } from '../lib/ThemeContext';
+import { useTheme } from '../lib/ThemeContext';
 import { ExpenseCategory, Expense, Bill } from '../lib/store';
 import { 
   Wallet, Target, TrendingUp, Coffee, Car, Home as HomeIcon, ShoppingBag, 
@@ -39,9 +39,9 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
 };
 
 export default function DashboardScreen() {
-  const { expenses, budget, isLoaded, allCategories, bills } = useLedgr();
+  const { expenses, budget, effectiveBudget, isLoaded, allCategories, bills, totalAdditionsThisMonth } = useLedgr();
   const navigation = useNavigation<any>();
-  const colors = useThemeColors();
+  const { colors, isCompactMode } = useTheme();
   const insets = useSafeAreaInsets();
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
@@ -83,7 +83,8 @@ export default function DashboardScreen() {
     const activeMonth = budget.budgetMonth || format(new Date(), 'yyyy-MM');
     const filteredExpenses = expenses.filter(e => format(new Date(e.date), 'yyyy-MM') === activeMonth);
     const spent = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
-    const remaining = budget.total - spent;
+    const currentEffectiveBudget = effectiveBudget || budget;
+    const remaining = currentEffectiveBudget.total - spent;
     const days = getDaysRemainingInMonth();
     
     // Standard allowance vs Safe-to-Spend allowance
@@ -93,7 +94,7 @@ export default function DashboardScreen() {
     
     const now = new Date();
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const target = budget.total / daysInMonth;
+    const target = currentEffectiveBudget.total / daysInMonth;
     // Ratio based on safe allowance when bills are pending
     const effectiveAllowance = unpaidCommitted > 0 ? safeAllowance : allowance;
     const ratio = effectiveAllowance / target;
@@ -122,7 +123,7 @@ export default function DashboardScreen() {
       dailyStatus: status,
       categoryTotals: totals
     };
-  }, [expenses, budget, colors, unpaidCommitted]);
+  }, [expenses, budget, effectiveBudget, colors, unpaidCommitted]);
 
   const { 
     currentMonthExpenses, totalSpent, remainingBudget, daysLeft, 
@@ -181,7 +182,7 @@ export default function DashboardScreen() {
             <Text style={[styles.kpiLabel, { color: colors.textSecondary }]}>BUDGET</Text>
             <View style={styles.kpiValueStack}>
               <Text style={[styles.kpiCurrencySmall, { color: colors.textTertiary }]}>PKR</Text>
-              <Text style={[styles.kpiValueSmall, { color: colors.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{budget.total.toLocaleString()}</Text>
+              <Text style={[styles.kpiValueSmall, { color: colors.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{(effectiveBudget || budget).total.toLocaleString()}</Text>
             </View>
           </View>
 
@@ -327,7 +328,7 @@ export default function DashboardScreen() {
           {allCategories.map(cat => {
             const Icon = CATEGORY_ICONS[cat as ExpenseCategory] || MoreHorizontal;
             const spent = categoryTotals[cat] || 0;
-            const limit = budget.categories[cat] || 0;
+            const limit = (effectiveBudget || budget).categories[cat] || 0;
             const remaining = limit - spent;
             const isOver = remaining < 0;
             const progress = Math.min(1, spent / (limit || 1));
@@ -368,7 +369,7 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.expensesList}>
+        <View style={[styles.expensesList, isCompactMode && { gap: 8 }]}>
           {currentMonthExpenses.slice(0, 10).map((expense) => {
             const Icon = CATEGORY_ICONS[expense.category as ExpenseCategory] || MoreHorizontal;
             return (
@@ -379,19 +380,19 @@ export default function DashboardScreen() {
                   setIsEditModalVisible(true);
                 }}
               >
-                <LinearGradient colors={[colors.gradientStart, colors.gradientEnd]} style={[styles.listCard, { borderColor: colors.cardBorderSubtle }]}>
+                <LinearGradient colors={[colors.gradientStart, colors.gradientEnd]} style={[styles.listCard, { borderColor: colors.cardBorderSubtle, padding: isCompactMode ? 10 : 16, borderRadius: isCompactMode ? 16 : 20 }]}>
                   <View style={styles.listCardRow}>
                     <View style={styles.airlineGroup}>
-                      <View style={[styles.iconBox, { backgroundColor: colors.pillBg, borderColor: colors.cardBorder }]}>
-                        <Icon color={colors.iconDefault} size={18} />
+                      <View style={[styles.iconBox, { backgroundColor: colors.pillBg, borderColor: colors.cardBorder, width: isCompactMode ? 28 : 36, height: isCompactMode ? 28 : 36, borderRadius: isCompactMode ? 6 : 8 }]}>
+                        <Icon color={colors.iconDefault} size={isCompactMode ? 14 : 18} />
                       </View>
                       <View style={{ flex: 1, marginRight: 12 }}>
-                        <Text style={[styles.expenseName, { color: colors.textPrimary }]} numberOfLines={2}>{expense.name}</Text>
+                        <Text style={[styles.expenseName, { color: colors.textPrimary, fontSize: isCompactMode ? 14 : 16 }]} numberOfLines={2}>{expense.name}</Text>
                         <Text style={[styles.expenseCat, { color: colors.textSecondary }]}>{expense.category}</Text>
                       </View>
                     </View>
                     <View style={styles.listRight}>
-                      <Text style={[styles.listAmount, { color: colors.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>
+                      <Text style={[styles.listAmount, { color: colors.textPrimary, fontSize: isCompactMode ? 16 : 18 }]} numberOfLines={1} adjustsFontSizeToFit>
                         PKR {expense.amount.toLocaleString()}
                       </Text>
                       <Text style={[styles.listDate, { color: colors.textSecondary }]}>{new Date(expense.date).toLocaleDateString()}</Text>

@@ -43,6 +43,15 @@ export interface RolloverRecoveryState {
   rolloverAmount: number;
 }
 
+export interface BudgetAddition {
+  id: string;
+  amount: number;
+  reason: string;
+  targetCategory?: ExpenseCategory; // undefined = overall budget
+  date: string;
+  createdAt: string;
+}
+
 export interface GroceryItem {
   id: string;
   name: string;

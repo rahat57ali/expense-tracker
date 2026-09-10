@@ -215,16 +215,20 @@ const LIGHT_COLORS: ThemeColors = {
 
 interface ThemeContextType {
   isDark: boolean;
+  isCompactMode: boolean;
   colors: ThemeColors;
   toggleTheme: () => Promise<void>;
+  toggleCompactMode: () => Promise<void>;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'ledgr_theme';
+const COMPACT_STORAGE_KEY = 'ledgr_compact_mode';
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [isDark, setIsDark] = useState(true);
+  const [isCompactMode, setIsCompactMode] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -232,6 +236,8 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       try {
         const saved = await AsyncStorage.getItem(STORAGE_KEY);
         if (saved === 'light') setIsDark(false);
+        const savedCompact = await AsyncStorage.getItem(COMPACT_STORAGE_KEY);
+        if (savedCompact === 'true') setIsCompactMode(true);
       } catch {}
       setIsLoaded(true);
     })();
@@ -243,12 +249,18 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     await AsyncStorage.setItem(STORAGE_KEY, next ? 'dark' : 'light');
   };
 
+  const toggleCompactMode = async () => {
+    const next = !isCompactMode;
+    setIsCompactMode(next);
+    await AsyncStorage.setItem(COMPACT_STORAGE_KEY, next ? 'true' : 'false');
+  };
+
   const colors = isDark ? DARK_COLORS : LIGHT_COLORS;
 
   if (!isLoaded) return null;
 
   return (
-    <ThemeContext.Provider value={{ isDark, colors, toggleTheme }}>
+    <ThemeContext.Provider value={{ isDark, isCompactMode, colors, toggleTheme, toggleCompactMode }}>
       {children}
     </ThemeContext.Provider>
   );

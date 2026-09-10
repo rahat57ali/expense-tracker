@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 import { useLedgr } from '../lib/LedgrContext';
 import { useThemeColors } from '../lib/ThemeContext';
 import { ExpenseCategory, Expense, autoCategorize } from '../lib/store';
-import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, Plus, ShoppingBasket, Calendar, Pencil, TrendingUp, TrendingDown, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react-native';
+import { Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, MoreHorizontal, Plus, ShoppingBasket, Calendar, Pencil, TrendingUp, TrendingDown, ChevronLeft, ChevronRight, Sparkles, CheckCircle2, Minus } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSnackbar } from '../components/Snackbar';
 import EditExpenseModal from '../components/EditExpenseModal';
@@ -25,7 +25,7 @@ const CATEGORY_ICONS: Record<ExpenseCategory, any> = {
 };
 
 export default function TrackScreen() {
-  const { expenses, budget, addExpense, isLoaded, allCategories } = useLedgr();
+  const { expenses, budget, effectiveBudget, addExpense, isLoaded, allCategories } = useLedgr();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { showSnackbar } = useSnackbar();
@@ -107,24 +107,67 @@ export default function TrackScreen() {
 
   const thisMonthSpent = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-  const lastMonthSpent = useMemo(() => {
+  const todayDay = new Date().getDate();
+
+  // Spending in previous month up to the exact same calendar day (MTD)
+  const lastMonthSamePeriodSpent = useMemo(() => {
     return expenses
-      .filter(e => format(new Date(e.date), 'yyyy-MM') === prevMonthStr)
+      .filter(e => {
+        try {
+          const d = new Date(e.date);
+          return format(d, 'yyyy-MM') === prevMonthStr && d.getDate() <= todayDay;
+        } catch {
+          return false;
+        }
+      })
+      .reduce((sum, e) => sum + e.amount, 0);
+  }, [expenses, prevMonthStr, todayDay]);
+
+  const lastMonthTotalSpent = useMemo(() => {
+    return expenses
+      .filter(e => {
+        try {
+          return format(new Date(e.date), 'yyyy-MM') === prevMonthStr;
+        } catch {
+          return false;
+        }
+      })
       .reduce((sum, e) => sum + e.amount, 0);
   }, [expenses, prevMonthStr]);
 
-  const budgetUsage = budget.total > 0 ? (thisMonthSpent / budget.total) : 0;
-  const isOverBudget = thisMonthSpent > budget.total;
+  const currentEffectiveBudget = effectiveBudget || budget;
+  const budgetUsage = currentEffectiveBudget.total > 0 ? (thisMonthSpent / currentEffectiveBudget.total) : 0;
+  const isOverBudget = thisMonthSpent > currentEffectiveBudget.total;
 
   let insight = "First month tracking!";
   let insightColor = colors.accent;
-  let InsightIcon = TrendingUp;
+  let InsightIcon = Sparkles;
 
-  if (lastMonthSpent > 0) {
-    const diff = ((thisMonthSpent - lastMonthSpent) / lastMonthSpent) * 100;
-    insight = `${Math.abs(Math.round(diff))}% ${diff > 0 ? 'more' : 'less'} than last month`;
-    insightColor = diff > 0 ? colors.danger : colors.success;
-    InsightIcon = diff > 0 ? TrendingUp : TrendingDown;
+  if (thisMonthSpent === 0) {
+    insight = "No spending yet this month";
+    insightColor = colors.success;
+    InsightIcon = CheckCircle2;
+  } else if (lastMonthSamePeriodSpent > 0) {
+    const diff = ((thisMonthSpent - lastMonthSamePeriodSpent) / lastMonthSamePeriodSpent) * 100;
+    const absDiff = Math.abs(Math.round(diff));
+    if (absDiff === 0) {
+      insight = "Same pace as last month";
+      insightColor = colors.accent;
+      InsightIcon = Minus;
+    } else if (diff > 0) {
+      insight = `${absDiff}% more vs same time last mo.`;
+      insightColor = colors.danger;
+      InsightIcon = TrendingUp;
+    } else {
+      insight = `${absDiff}% less vs same time last mo.`;
+      insightColor = colors.success;
+      InsightIcon = TrendingDown;
+    }
+  } else if (lastMonthTotalSpent > 0) {
+    const dailyAvg = Math.round(thisMonthSpent / Math.max(1, todayDay));
+    insight = `Avg PKR ${dailyAvg.toLocaleString()} / day`;
+    insightColor = colors.accent;
+    InsightIcon = TrendingUp;
   }
 
   const todaySpent = expenses

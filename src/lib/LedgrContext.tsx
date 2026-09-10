@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Expense, Budget, ExpenseCategory, autoCategorize, Bill, DEFAULT_CATEGORIES, RolloverRecoveryState } from './store';
+import { Expense, Budget, ExpenseCategory, autoCategorize, Bill, DEFAULT_CATEGORIES, RolloverRecoveryState, BudgetAddition } from './store';
 import { addDays, isBefore, startOfDay, format } from 'date-fns';
 
 export interface MonthEndData {
@@ -17,6 +17,7 @@ export interface MonthEndData {
 interface LedgrContextType {
   expenses: Expense[];
   budget: Budget;
+  effectiveBudget: Budget;
   budgetHistory: Record<string, Budget>;
   isLoaded: boolean;
   addExpense: (expense: Omit<Expense, 'id' | 'date' | 'category'> & { category?: ExpenseCategory, date?: string }) => Promise<void>;
@@ -30,7 +31,14 @@ interface LedgrContextType {
   isBillDueSoon: boolean;
   addCategory: (name: string) => Promise<void>;
   deleteCategory: (name: string) => Promise<void>;
+  moveCategoryUp: (name: string) => Promise<void>;
+  moveCategoryDown: (name: string) => Promise<void>;
   allCategories: ExpenseCategory[];
+  budgetAdditions: BudgetAddition[];
+  addBudgetAddition: (addition: Omit<BudgetAddition, 'id' | 'createdAt'>) => Promise<void>;
+  deleteBudgetAddition: (id: string) => Promise<void>;
+  currentMonthAdditions: BudgetAddition[];
+  totalAdditionsThisMonth: number;
   monthEndData: MonthEndData | null;
   resolveMonthEnd: (rolloverAmount: number, updatedBudget?: Budget) => Promise<void>;
   saveRolloverRecovery: (state: RolloverRecoveryState | null) => Promise<void>;
@@ -63,6 +71,7 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
   const [budget, setBudget] = useState<Budget>(DEFAULT_BUDGET);
   const [budgetHistory, setBudgetHistory] = useState<Record<string, Budget>>({});
   const [bills, setBills] = useState<Bill[]>([]);
+  const [budgetAdditions, setBudgetAdditions] = useState<BudgetAddition[]>([]);
   const [activeCategories, setActiveCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [monthEndData, setMonthEndData] = useState<MonthEndData | null>(null);
   const [showDevTools, setShowDevTools] = useState(false);
@@ -79,9 +88,11 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
       const savedCustomCats = await AsyncStorage.getItem('ledgr_custom_cats');
       const savedDevTools = await AsyncStorage.getItem('ledgr_dev_tools');
       const savedHistory = await AsyncStorage.getItem('ledgr_budget_history');
+      const savedAdditions = await AsyncStorage.getItem('ledgr_budget_additions');
       
       const historyObj = savedHistory ? JSON.parse(savedHistory) : {};
       
+      if (savedAdditions) setBudgetAdditions(JSON.parse(savedAdditions));
       if (savedDevTools) setShowDevTools(JSON.parse(savedDevTools));
       if (savedExpenses) {
         const parsedExpenses = JSON.parse(savedExpenses);
@@ -202,6 +213,60 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
     await AsyncStorage.setItem('ledgr_budget_history', JSON.stringify(newHistory));
   };
 
+  const addBudgetAddition = async (addition: Omit<BudgetAddition, 'id' | 'createdAt'>) => {
+    const newAddition: BudgetAddition = {
+      ...addition,
+      id: generateId(),
+      date: addition.date || format(new Date(), 'yyyy-MM-dd'),
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [newAddition, ...budgetAdditions];
+    setBudgetAdditions(updated);
+    await AsyncStorage.setItem('ledgr_budget_additions', JSON.stringify(updated));
+  };
+
+  const deleteBudgetAddition = async (id: string) => {
+    const updated = budgetAdditions.filter(a => a.id !== id);
+    setBudgetAdditions(updated);
+    await AsyncStorage.setItem('ledgr_budget_additions', JSON.stringify(updated));
+  };
+
+  const activeMonth = budget.budgetMonth || format(new Date(), 'yyyy-MM');
+
+  const currentMonthAdditions = useMemo(() => {
+    return budgetAdditions.filter(a => {
+      try {
+        return format(new Date(a.date), 'yyyy-MM') === activeMonth;
+      } catch {
+        return false;
+      }
+    });
+  }, [budgetAdditions, activeMonth]);
+
+  const totalAdditionsThisMonth = useMemo(() => {
+    return currentMonthAdditions.reduce((sum, a) => sum + a.amount, 0);
+  }, [currentMonthAdditions]);
+
+  const effectiveBudget = useMemo<Budget>(() => {
+    const categoryAdditions: Record<string, number> = {};
+    currentMonthAdditions.forEach(a => {
+      if (a.targetCategory) {
+        categoryAdditions[a.targetCategory] = (categoryAdditions[a.targetCategory] || 0) + a.amount;
+      }
+    });
+
+    const effectiveCategories: Record<string, number> = { ...budget.categories };
+    Object.keys(categoryAdditions).forEach(cat => {
+      effectiveCategories[cat] = (effectiveCategories[cat] || 0) + categoryAdditions[cat];
+    });
+
+    return {
+      ...budget,
+      total: budget.total + totalAdditionsThisMonth,
+      categories: effectiveCategories,
+    };
+  }, [budget, currentMonthAdditions, totalAdditionsThisMonth]);
+
   const deleteExpense = async (id: string) => {
     const updated = expenses.filter(e => e.id !== id);
     setExpenses(updated);
@@ -269,6 +334,26 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
     // This allows historical data to retain the original category name (Soft-Delete).
   };
 
+  const moveCategoryUp = async (name: string) => {
+    const idx = activeCategories.indexOf(name);
+    if (idx > 0) {
+      const newCategories = [...activeCategories];
+      [newCategories[idx - 1], newCategories[idx]] = [newCategories[idx], newCategories[idx - 1]];
+      setActiveCategories(newCategories);
+      await AsyncStorage.setItem('ledgr_categories', JSON.stringify(newCategories));
+    }
+  };
+
+  const moveCategoryDown = async (name: string) => {
+    const idx = activeCategories.indexOf(name);
+    if (idx > -1 && idx < activeCategories.length - 1) {
+      const newCategories = [...activeCategories];
+      [newCategories[idx + 1], newCategories[idx]] = [newCategories[idx], newCategories[idx + 1]];
+      setActiveCategories(newCategories);
+      await AsyncStorage.setItem('ledgr_categories', JSON.stringify(newCategories));
+    }
+  };
+
   const isBillDueSoon = bills.some(bill => {
     if (bill.isPaused) return false;
     if (bill.isPaid) return false;
@@ -332,10 +417,10 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
     
     setMonthEndData({
       prevMonth: currentMonth,
-      totalBudget: budget.total,
+      totalBudget: effectiveBudget.total,
       totalSpent: spent,
-      remaining: budget.total - spent,
-      budgetSnapshot: budget
+      remaining: effectiveBudget.total - spent,
+      budgetSnapshot: effectiveBudget
     });
   };
 
@@ -362,8 +447,9 @@ export const LedgrProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <LedgrContext.Provider value={{ 
-      expenses, budget, budgetHistory, isLoaded, addExpense, updateBudget, deleteExpense, updateExpense,
-      bills, addBill, updateBill, deleteBill, isBillDueSoon, addCategory, deleteCategory, allCategories,
+      expenses, budget, effectiveBudget, budgetHistory, isLoaded, addExpense, updateBudget, deleteExpense, updateExpense,
+      bills, addBill, updateBill, deleteBill, isBillDueSoon, addCategory, deleteCategory, moveCategoryUp, moveCategoryDown, allCategories,
+      budgetAdditions, addBudgetAddition, deleteBudgetAddition, currentMonthAdditions, totalAdditionsThisMonth,
       monthEndData, resolveMonthEnd, saveRolloverRecovery, reloadBudgetState,
       showDevTools, toggleDevTools, importExpenses, simulateRollover, showMonthSummary, dismissMonthSummary
     }}>

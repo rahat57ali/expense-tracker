@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity, FlatList, TextInput, K
 import { ArrowLeft, Search, ArrowUpDown, MoreHorizontal, Coffee, Car, Home as HomeIcon, ShoppingBag, Heart, ShoppingBasket, Calendar as CalendarIcon, X } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLedgr } from '../lib/LedgrContext';
-import { useThemeColors } from '../lib/ThemeContext';
+import { useTheme } from '../lib/ThemeContext';
 import { ExpenseCategory, Expense } from '../lib/store';
 import { isToday, isThisWeek, isThisMonth, isWithinInterval, startOfDay, endOfDay, format, parse } from 'date-fns';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -30,7 +30,7 @@ interface TransactionsModalProps {
 
 export default function TransactionsModal({ visible, onClose, onEditExpense }: TransactionsModalProps) {
   const { expenses } = useLedgr();
-  const colors = useThemeColors();
+  const { colors, isCompactMode } = useTheme();
 
   const [activeTab, setActiveTab] = useState<FilterTab>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -241,12 +241,12 @@ export default function TransactionsModal({ visible, onClose, onEditExpense }: T
               
               return (
                 <TouchableOpacity onPress={() => onEditExpense(expense)}>
-                  <LinearGradient colors={[colors.gradientStart, colors.gradientEnd]} style={[styles.transactionCard, { borderColor: colors.cardBorderSubtle }]}>
-                    <View style={[styles.iconBox, { backgroundColor: colors.pillBg, borderColor: colors.cardBorder }]}>
-                      <Icon color={colors.iconDefault} size={18} />
+                  <LinearGradient colors={[colors.gradientStart, colors.gradientEnd]} style={[styles.transactionCard, { borderColor: colors.cardBorderSubtle, padding: isCompactMode ? 10 : 16 }]}>
+                    <View style={[styles.iconBox, { backgroundColor: colors.pillBg, borderColor: colors.cardBorder, width: isCompactMode ? 32 : 40, height: isCompactMode ? 32 : 40, marginRight: isCompactMode ? 10 : 12 }]}>
+                      <Icon color={colors.iconDefault} size={isCompactMode ? 16 : 18} />
                     </View>
                     <View style={styles.txMiddle}>
-                      <Text style={[styles.txName, { color: colors.textPrimary }]} numberOfLines={1}>{expense.name}</Text>
+                      <Text style={[styles.txName, { color: colors.textPrimary, fontSize: isCompactMode ? 14 : 16, marginBottom: isCompactMode ? 2 : 4 }]} numberOfLines={1}>{expense.name}</Text>
                       <View style={styles.txSubRow}>
                         <Text style={[styles.txCat, { color: colors.textSecondary }]}>{expense.category}</Text>
                         <View style={[styles.dot, { backgroundColor: colors.textMuted }]} />
@@ -254,7 +254,7 @@ export default function TransactionsModal({ visible, onClose, onEditExpense }: T
                       </View>
                     </View>
                     <View style={styles.txRight}>
-                      <Text style={[styles.txAmount, { color: colors.textPrimary }]}>
+                      <Text style={[styles.txAmount, { color: colors.textPrimary, fontSize: isCompactMode ? 14 : 16 }]}>
                         {Number(expense.amount).toLocaleString()}
                       </Text>
                     </View>
