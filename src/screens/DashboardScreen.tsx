@@ -58,11 +58,15 @@ export default function DashboardScreen() {
 
     bills.forEach(bill => {
       if (bill.isPaused) return;
+
+      const dueDate = startOfDay(new Date(bill.dueDate));
+      const isDueThisMonthOrBefore = format(dueDate, 'yyyy-MM') <= currentMonthStr;
+      
       const isSettled =
         (bill.frequency === 'one-time' && bill.isPaid) ||
         (bill.lastPaidDate && format(new Date(bill.lastPaidDate), 'yyyy-MM') === currentMonthStr);
 
-      if (!isSettled) {
+      if (!isSettled && isDueThisMonthOrBefore) {
         unpaid += bill.amount;
         const dueDate = startOfDay(new Date(bill.dueDate));
         const diff = differenceInDays(dueDate, today);
